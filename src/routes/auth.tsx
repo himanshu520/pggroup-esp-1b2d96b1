@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { linkAuthUserToEmployee, sendCustomOtp } from "@/lib/auth.functions";
+import { linkAuthUserToEmployee, sendCustomOtp, verifyAdminOtp } from "@/lib/auth.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,7 @@ function AdminFlow() {
   const [loading, setLoading] = useState(false);
   const link = useServerFn(linkAuthUserToEmployee);
   const send = useServerFn(sendCustomOtp);
+  const verify = useServerFn(verifyAdminOtp);
   const navigate = useNavigate();
 
   const sendOtp = useCallback(async (targetEmail: string) => {
@@ -76,7 +77,10 @@ function AdminFlow() {
     if (otp.length !== 6) return;
     setLoading(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({ email, token: otp, type: "email" });
+      const { access_token, refresh_token } = await verify({
+        data: { email: email.trim(), token: otp }
+      });
+      const { error } = await supabase.auth.setSession({ access_token, refresh_token });
       if (error) throw error;
       await link({ data: undefined as never }).catch(() => {});
       toast.success("Signed in");
