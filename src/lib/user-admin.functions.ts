@@ -234,9 +234,30 @@ export const listEmployeesAdmin = createServerFn({ method: "POST" })
       )
       .order("created_at", { ascending: false });
     if (!data?.showDeleted) q = q.is("deleted_at", null);
-    const { data: rows, error } = await q;
-    if (error) throw new Error(error.message);
-    return rows ?? [];
+
+    const [{ data: rows, error: rowsError }, { data: roles, error: rolesError }, authList] = await Promise.all([
+      q,
+      supabaseAdmin.from("user_roles").select("user_id"),
+      supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
+    ]);
+
+    if (rowsError) throw new Error(rowsError.message);
+    if (rolesError) throw new Error(rolesError.message);
+
+    const adminUserIds = new Set(roles?.map((r) => r.user_id).filter(Boolean) ?? []);
+    const adminEmails = new Set(
+      authList.data.users
+        .filter((u) => adminUserIds.has(u.id))
+        .map((u) => (u.email ?? "").toLowerCase())
+    );
+
+    const filteredRows = (rows ?? []).filter((e) => {
+      if (e.user_id && adminUserIds.has(e.user_id)) return false;
+      if (e.email && adminEmails.has(e.email.toLowerCase())) return false;
+      return true;
+    });
+
+    return filteredRows;
   });
 
 const GENDER = z.enum(["male", "female", "other", "prefer_not_to_say"]);
