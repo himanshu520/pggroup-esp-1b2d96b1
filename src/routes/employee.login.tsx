@@ -32,11 +32,11 @@ const T = {
     yes: "Yes, continue",
     switch: "हिन्दी में देखें",
     enterId: "Enter your Employee ID",
-    idHint: "We'll verify your access and send a login OTP code.",
+    idHint: "We'll verify your access and send a login OTP code on WhatsApp.",
     empId: "Employee ID",
     sendOtp: "Send OTP",
     verify: "Verify OTP",
-    verifyHint: "Enter the 8-digit code sent to",
+    verifyHint: "Enter the 6-digit code sent to WhatsApp number:",
     resendIn: "Resend code in",
     resend: "Resend OTP",
     resending: "Resending…",
@@ -53,11 +53,11 @@ const T = {
     yes: "हाँ, जारी रखें",
     switch: "View in English",
     enterId: "अपना कर्मचारी आईडी दर्ज करें",
-    idHint: "हम आपकी पहचान सत्यापित करेंगे और लॉगिन ओटीपी भेजेंगे।",
+    idHint: "हम आपकी पहचान सत्यापित करेंगे और WhatsApp पर लॉगिन ओटीपी भेजेंगे।",
     empId: "कर्मचारी आईडी",
     sendOtp: "ओटीपी भेजें",
     verify: "ओटीपी सत्यापित करें",
-    verifyHint: "इस पते पर भेजा गया 8-अंकीय कोड दर्ज करें",
+    verifyHint: "आपके WhatsApp नंबर पर भेजा गया 6-अंकीय कोड दर्ज करें:",
     resendIn: "पुनः भेजें",
     resend: "ओटीपी पुनः भेजें",
     resending: "भेज रहे हैं…",
@@ -130,7 +130,7 @@ function EmployeeFlow({
   setStage: (s: "id" | "otp") => void;
 }) {
   const [empCode, setEmpCode] = useState("");
-  const [maskedEmail, setMaskedEmail] = useState("");
+  const [maskedPhone, setMaskedPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const start = useServerFn(startEmployeeOtp);
@@ -141,8 +141,8 @@ function EmployeeFlow({
   const sendOtp = useCallback(
     async (code: string) => {
       const res = await start({ data: { employee_code: code } });
-      setMaskedEmail(res.maskedEmail);
-      return res.maskedEmail;
+      setMaskedPhone(res.maskedPhone);
+      return res.maskedPhone;
     },
     [start],
   );
@@ -173,7 +173,7 @@ function EmployeeFlow({
   }
 
   async function verifyOtp() {
-    if (otp.length !== 8) return;
+    if (otp.length !== 6) return;
     setLoading(true);
     try {
       const { access_token, refresh_token } = await verify({
@@ -219,7 +219,7 @@ function EmployeeFlow({
   ) : (
     <OtpStage
       t={t}
-      email={maskedEmail}
+      phone={maskedPhone}
       otp={otp}
       setOtp={setOtp}
       onBack={() => {
@@ -235,7 +235,7 @@ function EmployeeFlow({
 
 function OtpStage({
   t,
-  email,
+  phone,
   otp,
   setOtp,
   onBack,
@@ -244,7 +244,7 @@ function OtpStage({
   loading,
 }: {
   t: (typeof T)[Lang];
-  email: string;
+  phone: string;
   otp: string;
   setOtp: (v: string) => void;
   onBack: () => void;
@@ -285,13 +285,13 @@ function OtpStage({
         <h2 className="text-xl font-bold text-[color:oklch(0.18_0.05_260)]">{t.verify}</h2>
         <p className="text-sm text-muted-foreground mt-1">
           {t.verifyHint}{" "}
-          <span className="font-medium text-foreground">{email}</span>
+          <span className="font-medium text-foreground">{phone}</span>
         </p>
       </div>
       <div className="flex justify-center">
-        <InputOTP maxLength={8} value={otp} onChange={setOtp}>
+        <InputOTP maxLength={6} value={otp} onChange={setOtp}>
           <InputOTPGroup>
-            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+            {[0, 1, 2, 3, 4, 5].map((i) => (
               <InputOTPSlot key={i} index={i} />
             ))}
           </InputOTPGroup>
@@ -321,7 +321,7 @@ function OtpStage({
         <Button
           className="flex-1 h-12 text-base bg-primary hover:bg-primary/90"
           onClick={onVerify}
-          disabled={loading || otp.length !== 8}
+          disabled={loading || otp.length !== 6}
         >
           {t.verifyBtn}
         </Button>

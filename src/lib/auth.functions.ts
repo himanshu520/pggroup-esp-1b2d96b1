@@ -13,6 +13,12 @@ function maskEmail(email: string): string {
   return `${head}${"*".repeat(Math.max(1, local.length - head.length))}@${domain}`;
 }
 
+function maskPhone(phone: string): string {
+  const clean = phone.replace(/[\s\-\+\(\)]/g, "");
+  if (clean.length <= 4) return "****";
+  return `+91 ******${clean.slice(-4)}`;
+}
+
 /**
  * Server-side existence check. Returns the real email only inside the trusted
  * server runtime — never returned to the client. Generic "not found" errors
@@ -22,18 +28,11 @@ async function resolveKnownEmail(rawEmail: string): Promise<{ email: string; nam
   const email = rawEmail.trim().toLowerCase();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  const { data: emp } = await supabaseAdmin
-    .from("employees")
-    .select("email, name, active")
-    .ilike("email", email)
-    .maybeSingle();
-  if (emp && emp.active) return { email: emp.email, name: emp.name };
-
   // Allow existing role-bearing users (corporate/super admins provisioned
   // outside the employees table). Look them up via the admin API and confirm
   // they carry at least one user_roles row before sending an OTP.
   try {
-    const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+    const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
     const authUser = list?.users?.find((u) => (u.email ?? "").toLowerCase() === email);
     if (!authUser) return null;
     const { data: roles } = await supabaseAdmin
@@ -95,9 +94,8 @@ export const sendCustomOtp = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 
 /**
- * Starts the employee OTP flow. Resolves the employee_code to an email
- * server-side and sends the OTP. Never returns the full email — only a masked
- * form for user confirmation ("th***@company.com").
+ * Starts the employee OTP flow. Resolves the employee_code to a mobile phone
+ * number and email server-side and sends the OTP via WhatsApp.
  */
 export const startEmployeeOtp = createServerFn({ method: "POST" })
   .inputValidator((d: { employee_code: string }) =>
@@ -107,18 +105,38 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: emp } = await supabaseAdmin
       .from("employees")
-      .select("email, name, active")
+      .select("email, name, active, mobile")
       .ilike("employee_code", data.employee_code)
       .maybeSingle();
     if (!emp || !emp.active || !emp.email) {
-      // Generic error prevents employee_code enumeration.
       throw new Error("Employee ID not found or inactive");
     }
+    if (!emp.mobile) {
+      throw new Error("WhatsApp mobile number not registered for this Employee ID");
+    }
+
+    // Ensure the auth user exists
     await supabaseAdmin.auth.admin
       .createUser({ email: emp.email, email_confirm: true })
       .catch(() => {});
-    await generateAndSendOtp(emp.email, emp.name);
-    return { maskedEmail: maskEmail(emp.email) };
+
+    // Generate native OTP via Supabase
+    const { data: link, error } = await supabaseAdmin.auth.admin.generateLink({
+      type: "magiclink",
+      email: emp.email,
+    });
+    if (error) throw new Error(error.message);
+    const otp = link.properties?.email_otp;
+    if (!otp) throw new Error("Failed to generate OTP");
+
+    // Send the OTP via WhatsApp Cloud API / Twilio / Custom gateway
+    const { sendOtpWhatsApp } = await import("./whatsapp.server");
+    const success = await sendOtpWhatsApp(emp.mobile, otp, emp.name);
+    if (!success) {
+      throw new Error("Failed to send WhatsApp OTP. Please contact admin.");
+    }
+
+    return { maskedPhone: maskPhone(emp.mobile) };
   });
 
 /**

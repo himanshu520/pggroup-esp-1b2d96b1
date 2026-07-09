@@ -127,11 +127,13 @@ export function UsersPage() {
       arr.push(r);
       rolesByUser.set(r.user_id, arr);
     }
-    return users.map((u) => ({
-      ...u,
-      employee: empByUser.get(u.user_id) ?? null,
-      roles: rolesByUser.get(u.user_id) ?? [],
-    }));
+    return users
+      .map((u) => ({
+        ...u,
+        employee: empByUser.get(u.user_id) ?? null,
+        roles: rolesByUser.get(u.user_id) ?? [],
+      }))
+      .filter((u) => u.roles.length > 0);
   }, [users, employees, roles]);
 
   const filtered = q
