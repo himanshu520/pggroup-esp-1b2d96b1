@@ -73,7 +73,7 @@ function AdminFlow() {
     }
   }
   async function verifyOtp() {
-    if (otp.length !== 8) return;
+    if (otp.length !== 6) return;
     setLoading(true);
     try {
       const { error } = await supabase.auth.verifyOtp({ email, token: otp, type: "email" });
