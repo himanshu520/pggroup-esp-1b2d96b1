@@ -138,10 +138,15 @@ export const verifyAdminOtp = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: user } = await supabaseAdmin.auth.admin.getUserByEmail(data.email);
-    if (!user || !user.user) {
+    const { data: list, error: getError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (getError) {
       throw new Error("Invalid or expired OTP");
     }
+    const match = list?.users?.find((u) => (u.email ?? "").toLowerCase() === data.email.toLowerCase());
+    if (!match) {
+      throw new Error("Invalid or expired OTP");
+    }
+    const user = { user: match };
 
     const mapping = user.user.user_metadata?.otp_mapping;
     if (!mapping || mapping.custom_otp !== data.token || mapping.expires_at < Date.now()) {
