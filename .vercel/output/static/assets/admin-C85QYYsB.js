@@ -1,1 +1,0 @@
-import{t as e}from"./app-shell-CYrjMAL9.js";import{t}from"./jsx-runtime-By8HlURe.js";import{On as n,gt as r}from"./index-B3qGfaP9.js";var i=t();function a(){return(0,i.jsx)(e,{navGroups:r,title:`Admin Console`,children:(0,i.jsx)(n,{})})}export{a as component};

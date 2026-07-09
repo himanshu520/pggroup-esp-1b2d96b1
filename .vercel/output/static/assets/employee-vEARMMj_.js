@@ -1,1 +1,0 @@
-import{Z as e}from"./app-shell-CYrjMAL9.js";import{t}from"./jsx-runtime-By8HlURe.js";import{On as n,Rt as r}from"./index-B3qGfaP9.js";var i=t();function a(){let t=e();return t.pathname===`/employee/login`||t.pathname.startsWith(`/employee/login/`)?(0,i.jsx)(n,{}):(0,i.jsx)(r,{children:(0,i.jsx)(n,{})})}export{a as component};
