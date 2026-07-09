@@ -51,9 +51,14 @@ function AdminFlow() {
   const verify = useServerFn(verifyAdminOtp);
   const navigate = useNavigate();
 
+  const lastVerifiedOtpRef = useRef("");
+
   useEffect(() => {
-    if (otp.length === 6 && !loading) {
+    if (otp.length === 6 && !loading && lastVerifiedOtpRef.current !== otp) {
+      lastVerifiedOtpRef.current = otp;
       verifyOtp();
+    } else if (otp.length !== 6) {
+      lastVerifiedOtpRef.current = "";
     }
   }, [otp, loading]);
 
