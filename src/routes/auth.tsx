@@ -14,7 +14,7 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Dashboard Sign in — ESP" },
+      { title: "Employee Suggestion Portal — ESP" },
       { name: "description", content: "Secure OTP sign-in for the ESP administration dashboard." },
     ],
   }),
@@ -27,8 +27,8 @@ function AuthPage() {
       <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-10">
         <BrandLogos className="justify-center mb-6" imgClassName="h-16" />
 
-        <h1 className="text-3xl font-bold text-center text-[color:oklch(0.18_0.05_260)]">Dashboard Sign in</h1>
-        <p className="text-center text-muted-foreground text-sm mt-1 mb-8">Administration &amp; management access</p>
+        <h1 className="text-3xl font-bold text-center text-[color:oklch(0.18_0.05_260)]">Employee Suggestion Portal</h1>
+        <p className="text-center text-muted-foreground text-sm mt-1 mb-8">Dashboard</p>
 
         <AdminFlow />
 
