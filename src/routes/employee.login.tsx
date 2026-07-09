@@ -143,6 +143,12 @@ function EmployeeFlow({
   const link = useServerFn(linkAuthUserToEmployee);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (otp.length === 6 && !loading) {
+      verifyOtp();
+    }
+  }, [otp, loading]);
+
   const sendOtp = useCallback(
     async (code: string) => {
       const res = await start({
@@ -203,7 +209,13 @@ function EmployeeFlow({
 
 
   return stage === "id" ? (
-    <div className="space-y-5">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        requestOtp();
+      }}
+      className="space-y-5"
+    >
       <div>
         <h2 className="text-xl font-bold text-[color:oklch(0.18_0.05_260)]">{t.enterId}</h2>
         <p className="text-sm text-muted-foreground mt-1">{t.idHint}</p>
@@ -233,13 +245,13 @@ function EmployeeFlow({
       </div>
 
       <Button
+        type="submit"
         className="w-full h-12 text-base bg-primary hover:bg-primary/90"
         disabled={loading || !empCode.trim()}
-        onClick={requestOtp}
       >
         <KeyRound className="w-4 h-4" /> {t.sendOtp}
       </Button>
-    </div>
+    </form>
   ) : (
     <OtpStage
       t={t}

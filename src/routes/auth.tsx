@@ -51,6 +51,12 @@ function AdminFlow() {
   const verify = useServerFn(verifyAdminOtp);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (otp.length === 6 && !loading) {
+      verifyOtp();
+    }
+  }, [otp, loading]);
+
   const sendOtp = useCallback(async (targetEmail: string) => {
     await send({ data: { email: targetEmail } });
   }, [send]);
@@ -89,7 +95,7 @@ function AdminFlow() {
   }
 
   return stage === "email" ? (
-    <div className="space-y-5">
+    <form onSubmit={(e) => { e.preventDefault(); requestOtp(); }} className="space-y-5">
       <div>
         <h2 className="text-xl font-bold text-[color:oklch(0.18_0.05_260)]">Enter your email</h2>
         <p className="text-sm text-muted-foreground mt-1">We'll verify your access and send a login OTP code.</p>
@@ -101,10 +107,10 @@ function AdminFlow() {
           <Input type="email" placeholder="admin@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 pl-9 bg-muted/40" />
         </div>
       </div>
-      <Button className="w-full h-12 text-base bg-primary hover:bg-primary/90" onClick={requestOtp} disabled={loading || !email.trim()}>
+      <Button type="submit" className="w-full h-12 text-base bg-primary hover:bg-primary/90" disabled={loading || !email.trim()}>
         <KeyRound className="w-4 h-4" /> Send OTP
       </Button>
-    </div>
+    </form>
   ) : (
     <OtpStage email={email} otp={otp} setOtp={setOtp} onBack={() => { setStage("email"); setOtp(""); }} onVerify={verifyOtp} onResend={resendOtp} loading={loading} />
   );
