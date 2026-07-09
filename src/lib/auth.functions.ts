@@ -59,11 +59,15 @@ async function generateAndSendOtp(email: string, name?: string | null) {
   });
 
   if (createError) {
-    const { data: existing, error: getError } = await supabaseAdmin.auth.admin.getUserByEmail(email);
-    if (getError || !existing?.user) {
-      throw new Error(getError?.message || "Failed to resolve user");
+    const { data: list, error: getError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (getError) {
+      throw new Error(getError.message || "Failed to resolve user");
     }
-    user = existing;
+    const existing = list?.users?.find((u) => (u.email ?? "").toLowerCase() === email.toLowerCase());
+    if (!existing) {
+      throw new Error("Failed to resolve user");
+    }
+    user = { user: existing };
   }
 
   const userId = user?.user?.id;
