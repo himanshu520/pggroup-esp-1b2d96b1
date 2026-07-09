@@ -1,0 +1,262 @@
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { AppShell, PageHeader } from "@/components/app-shell";
+import { ADMIN_NAV } from "@/lib/admin-nav";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { StatusBadge, PriorityBadge } from "@/components/status-badge";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { useState } from "react";
+import { Search, ExternalLink, Loader2 } from "lucide-react";
+import { STATUS_LABEL, PRIORITY_LABEL } from "@/lib/statuses";
+import { ExportMenu } from "@/components/export-menu";
+
+export const Route = createFileRoute("/admin/suggestions/")({
+  beforeLoad: () => { throw redirect({ to: "/admin", search: { section: "suggestions" } as any }); },
+  component: () => null,
+});
+
+export function SuggestionsList() {
+  const [q, setQ] = useState("");
+  const [status, setStatus] = useState("");
+  const [previewId, setPreviewId] = useState<string | null>(null);
+
+  const { data = [] } = useQuery({
+    queryKey: ["admin-suggestions", status],
+    queryFn: async () => {
+      let query = supabase.from("suggestions").select("*, employees(name, employee_code), categories(name), departments!suggestions_department_id_fkey(name), plants(name)").order("created_at", { ascending: false }).limit(500);
+      if (status === "under_review") {
+        query = query.not("status", "in", "(approved,implemented,rejected,closed,fake_closure)");
+      } else if (status) {
+        query = query.eq("status", status as any);
+      }
+      const { data } = await query;
+      return data ?? [];
+    },
+  });
+
+  const filtered = q ? data.filter((s: any) => `${s.code} ${s.title} ${s.employees?.name}`.toLowerCase().includes(q.toLowerCase())) : data;
+
+  return (
+    <AppShell navGroups={ADMIN_NAV} title="Admin Console">
+      <PageHeader
+        title="Suggestions"
+        description="Cross-plant register with role-scoped visibility. Click a row to preview."
+        actions={
+          <ExportMenu
+            data={filtered}
+            columns={[
+              { key: "code", header: "Code", format: (s: any) => s.code ?? "" },
+              { key: "title", header: "Title", format: (s: any) => s.title ?? "" },
+              { key: "employee", header: "Employee", format: (s: any) => s.employees?.name ?? "" },
+              { key: "employee_code", header: "Employee ID", format: (s: any) => s.employees?.employee_code ?? "" },
+              { key: "plant", header: "Plant", format: (s: any) => s.plants?.name ?? "" },
+              { key: "department", header: "Department", format: (s: any) => s.departments?.name ?? "" },
+              { key: "category", header: "Category", format: (s: any) => s.categories?.name ?? "" },
+              { key: "priority", header: "Priority", format: (s: any) => PRIORITY_LABEL[s.priority as keyof typeof PRIORITY_LABEL] ?? s.priority },
+              { key: "status", header: "Status", format: (s: any) => STATUS_LABEL[s.status as keyof typeof STATUS_LABEL] ?? s.status },
+              { key: "expected_saving", header: "Expected saving", format: (s: any) => Number(s.expected_saving ?? 0) },
+              { key: "actual_cost", header: "Actual cost", format: (s: any) => Number(s.actual_cost ?? 0) },
+              { key: "created_at", header: "Created", format: (s: any) => new Date(s.created_at).toLocaleDateString() },
+              { key: "completed_at", header: "Completed", format: (s: any) => (s.completed_at ? new Date(s.completed_at).toLocaleDateString() : "") },
+            ]}
+            filename="suggestions"
+            title="Suggestions Register"
+            subtitle={status ? `Filtered by status: ${status === "under_review" ? "Under Review" : STATUS_LABEL[status as keyof typeof STATUS_LABEL]}` : "All statuses"}
+          />
+        }
+      />
+      <div className="flex gap-2 mb-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
+          <Input placeholder="Search by code, title, or employee" className="pl-8" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
+        <select className="border border-input bg-background rounded-md px-3 text-sm" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="">All statuses</option>
+          <option value="under_review">Under Review</option>
+          <option value="approved">{STATUS_LABEL.approved}</option>
+          <option value="implemented">{STATUS_LABEL.implemented}</option>
+          <option value="rejected">{STATUS_LABEL.rejected}</option>
+        </select>
+      </div>
+
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50 border-b border-border">
+            <tr className="text-left">
+              {["Code","Title","Employee","Department","Priority","Status","Created"].map((h) => (
+                <th key={h} className="px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {filtered.length === 0 ? (
+              <tr><td colSpan={7} className="text-center py-12 text-sm text-muted-foreground">No suggestions match your filters.</td></tr>
+            ) : filtered.map((s: any) => (
+              <tr
+                key={s.id}
+                className="hover:bg-muted/30 cursor-pointer"
+                onClick={() => setPreviewId(s.id)}
+              >
+                <td className="px-4 py-2.5 font-mono text-xs text-primary">{s.code}</td>
+                <td className="px-4 py-2.5 max-w-xs truncate">{s.title}</td>
+                <td className="px-4 py-2.5 text-xs">{s.employees?.name} <span className="text-muted-foreground">({s.employees?.employee_code})</span></td>
+                <td className="px-4 py-2.5 text-xs">{s.departments?.name}</td>
+                <td className="px-4 py-2.5"><PriorityBadge priority={s.priority} /></td>
+                <td className="px-4 py-2.5"><StatusBadge status={s.status} /></td>
+                <td className="px-4 py-2.5 text-muted-foreground text-xs">{new Date(s.created_at).toLocaleDateString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <SuggestionPreviewDialog id={previewId} onClose={() => setPreviewId(null)} />
+    </AppShell>
+  );
+}
+
+function SuggestionPreviewDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
+  const [navigating, setNavigating] = useState(false);
+  const open = !!id;
+  const { data: sug, isLoading } = useQuery({
+    enabled: open,
+    queryKey: ["suggestion-preview", id],
+    queryFn: async () =>
+      (
+        await supabase
+          .from("suggestions")
+          .select(
+            "*, employees(name, employee_code, email), categories(name), departments!suggestions_department_id_fkey(name), plants(name), locations(location)",
+          )
+          .eq("id", id!)
+          .maybeSingle()
+      ).data,
+  });
+  const { data: history = [] } = useQuery({
+    enabled: open,
+    queryKey: ["suggestion-preview-history", id],
+    queryFn: async () =>
+      (await supabase.from("suggestion_history").select("*").eq("suggestion_id", id!).order("created_at")).data ?? [],
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
+            {sug?.title ?? (isLoading ? "Loading…" : "Suggestion")}
+            {sug && (
+              <>
+                <StatusBadge status={sug.status} />
+                <PriorityBadge priority={sug.priority} />
+              </>
+            )}
+          </DialogTitle>
+          <DialogDescription className="font-mono text-xs">
+            {sug?.code ?? ""}
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="py-6 text-sm text-muted-foreground text-center">Loading suggestion…</div>
+        ) : !sug ? (
+          <div className="py-6 text-sm text-muted-foreground text-center">Not found.</div>
+        ) : (
+          <div className="space-y-4 py-2">
+            <div className="grid sm:grid-cols-3 gap-3 text-sm">
+              <Meta label="Employee" value={sug.employees ? `${sug.employees.name} (${sug.employees.employee_code})` : "—"} />
+              <Meta label="Category" value={sug.categories?.name} />
+              <Meta label="Owner department" value={sug.departments?.name} />
+              <Meta label="Plant" value={sug.plants?.name} />
+              <Meta label="Location" value={sug.locations?.location} />
+              <Meta
+                label="Expected saving"
+                value={sug.expected_saving ? `₹ ${Number(sug.expected_saving).toLocaleString()}` : "—"}
+              />
+            </div>
+
+            <Section title="Problem">{sug.problem}</Section>
+            <Section title="Current method">{sug.current_method}</Section>
+            <Section title="Suggested method">{sug.suggested_method}</Section>
+            <Section title="Expected benefits">{sug.expected_benefits}</Section>
+
+            <div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Timeline</div>
+              <ol className="space-y-3">
+                {history.length === 0 ? (
+                  <li className="text-xs text-muted-foreground">No activity yet.</li>
+                ) : (
+                  history.map((h: any) => (
+                    <li key={h.id} className="relative pl-4 border-l-2 border-border">
+                      <div className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString()}</div>
+                      <div className="text-sm font-medium">
+                        {STATUS_LABEL[h.to_status as keyof typeof STATUS_LABEL] ?? h.to_status}
+                      </div>
+                      {h.remarks && <div className="text-xs text-muted-foreground mt-0.5">{h.remarks}</div>}
+                    </li>
+                  ))
+                )}
+              </ol>
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={navigating}>Close</Button>
+          {sug && (
+            <Button asChild aria-disabled={navigating}>
+              <Link
+                to="/admin"
+                search={{ section: "suggestion", id: sug.id } as any}
+                onClick={(e) => {
+                  if (navigating) {
+                    e.preventDefault();
+                    return;
+                  }
+                  setNavigating(true);
+                  onClose();
+                }}
+                style={navigating ? { pointerEvents: "none", opacity: 0.7 } : undefined}
+              >
+                {navigating ? (
+                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                ) : (
+                  <ExternalLink className="w-4 h-4 mr-1.5" />
+                )}
+                {navigating ? "Opening…" : "Open full workflow"}
+              </Link>
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  if (!children) return null;
+  return (
+    <div className="rounded-md border border-border bg-muted/30 p-3">
+      <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{title}</div>
+      <div className="text-sm whitespace-pre-wrap">{children}</div>
+    </div>
+  );
+}
+
+function Meta({ label, value }: { label: string; value: any }) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-0.5 font-medium text-sm">{value || "—"}</div>
+    </div>
+  );
+}

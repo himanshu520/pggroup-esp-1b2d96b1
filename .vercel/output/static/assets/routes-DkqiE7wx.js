@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-By8HlURe.js";var t=e(),n=()=>(0,t.jsx)(`div`,{style:{display:`grid`,placeItems:`center`,minHeight:`100vh`,fontFamily:`Inter, system-ui, sans-serif`,color:`#64748b`},children:`Loading ESP…`});export{n as component};
