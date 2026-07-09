@@ -32,11 +32,11 @@ const T = {
     yes: "Yes, continue",
     switch: "हिन्दी में देखें",
     enterId: "Enter your Employee ID",
-    idHint: "We'll verify your access and send a login OTP code on WhatsApp.",
+    idHint: "We'll verify your access and send a login OTP code.",
     empId: "Employee ID",
     sendOtp: "Send OTP",
     verify: "Verify OTP",
-    verifyHint: "Enter the 6-digit code sent to WhatsApp number:",
+    verifyHint: "Enter the 6-digit code sent to:",
     resendIn: "Resend code in",
     resend: "Resend OTP",
     resending: "Resending…",
@@ -44,6 +44,7 @@ const T = {
     verifyBtn: "Verify & sign in",
     admin: "Admin?",
     signInHere: "Sign in here",
+    sendWhatsapp: "Send OTP on WhatsApp",
   },
   hi: {
     welcome: "स्वागत है",
@@ -53,11 +54,11 @@ const T = {
     yes: "हाँ, जारी रखें",
     switch: "View in English",
     enterId: "अपना कर्मचारी आईडी दर्ज करें",
-    idHint: "हम आपकी पहचान सत्यापित करेंगे और WhatsApp पर लॉगिन ओटीपी भेजेंगे।",
+    idHint: "हम आपकी पहचान सत्यापित करेंगे और लॉगिन ओटीपी भेजेंगे।",
     empId: "कर्मचारी आईडी",
     sendOtp: "ओटीपी भेजें",
     verify: "ओटीपी सत्यापित करें",
-    verifyHint: "आपके WhatsApp नंबर पर भेजा गया 6-अंकीय कोड दर्ज करें:",
+    verifyHint: "सत्यापन कोड दर्ज करें जो इस पर भेजा गया है:",
     resendIn: "पुनः भेजें",
     resend: "ओटीपी पुनः भेजें",
     resending: "भेज रहे हैं…",
@@ -65,6 +66,7 @@ const T = {
     verifyBtn: "सत्यापित करें और साइन इन करें",
     admin: "एडमिन?",
     signInHere: "यहाँ साइन इन करें",
+    sendWhatsapp: "WhatsApp पर ओटीपी भेजें",
   },
 } as const;
 
@@ -85,7 +87,7 @@ function EmployeeLogin() {
           Share your ideas. Improve your workplace.
         </p>
 
-        <EmployeeFlow t={t} stage={stage} setStage={setStage} />
+        <EmployeeFlow t={t} stage={stage} setStage={setStage} lang={lang} />
 
       </div>
     </div>
@@ -124,12 +126,15 @@ function EmployeeFlow({
   t,
   stage,
   setStage,
+  lang,
 }: {
   t: (typeof T)[Lang];
   stage: "id" | "otp";
   setStage: (s: "id" | "otp") => void;
+  lang: Lang;
 }) {
   const [empCode, setEmpCode] = useState("");
+  const [sendViaWhatsApp, setSendViaWhatsApp] = useState(false);
   const [maskedPhone, setMaskedPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
@@ -140,11 +145,16 @@ function EmployeeFlow({
 
   const sendOtp = useCallback(
     async (code: string) => {
-      const res = await start({ data: { employee_code: code } });
-      setMaskedPhone(res.maskedPhone);
-      return res.maskedPhone;
+      const res = await start({
+        data: {
+          employee_code: code,
+          send_via: sendViaWhatsApp ? "whatsapp" : "email",
+        },
+      });
+      setMaskedPhone(res.maskedContact);
+      return res.maskedContact;
     },
-    [start],
+    [start, sendViaWhatsApp],
   );
 
   async function requestOtp() {
@@ -208,6 +218,20 @@ function EmployeeFlow({
           autoFocus
         />
       </div>
+
+      <div className="flex items-center space-x-2 py-1">
+        <input
+          type="checkbox"
+          id="sendWhatsapp"
+          checked={sendViaWhatsApp}
+          onChange={(e) => setSendViaWhatsApp(e.target.checked)}
+          className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary cursor-pointer"
+        />
+        <label htmlFor="sendWhatsapp" className="text-xs sm:text-sm text-foreground/80 font-medium cursor-pointer select-none">
+          {t.sendWhatsapp}
+        </label>
+      </div>
+
       <Button
         className="w-full h-12 text-base bg-primary hover:bg-primary/90"
         disabled={loading || !empCode.trim()}

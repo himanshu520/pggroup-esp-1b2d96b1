@@ -98,8 +98,11 @@ export const sendCustomOtp = createServerFn({ method: "POST" })
  * number and email server-side and sends the OTP via WhatsApp.
  */
 export const startEmployeeOtp = createServerFn({ method: "POST" })
-  .inputValidator((d: { employee_code: string }) =>
-    z.object({ employee_code: z.string().trim().min(1).max(64) }).parse(d),
+  .inputValidator((d: { employee_code: string; send_via?: "email" | "whatsapp" }) =>
+    z.object({
+      employee_code: z.string().trim().min(1).max(64),
+      send_via: z.enum(["email", "whatsapp"]).default("email"),
+    }).parse(d),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -111,17 +114,11 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
     if (!emp || !emp.active || !emp.email) {
       throw new Error("Employee ID not found or inactive");
     }
-    if (!emp.mobile) {
-      throw new Error("WhatsApp mobile number not registered for this Employee ID");
-    }
 
     // Ensure the auth user exists
     await supabaseAdmin.auth.admin
       .createUser({ email: emp.email, email_confirm: true })
       .catch(() => {});
-
-    // Generate a 6-digit custom OTP code
-    const customOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Generate native OTP via Supabase
     const { data: link, error } = await supabaseAdmin.auth.admin.generateLink({
@@ -132,26 +129,23 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
     const supabaseOtp = link.properties?.email_otp;
     if (!supabaseOtp) throw new Error("Failed to generate OTP");
 
-    // Store mapping in reporting_manager column
-    const mapping = JSON.stringify({
-      custom_otp: customOtp,
-      supabase_otp: supabaseOtp,
-      expires_at: Date.now() + 10 * 60 * 1000 // 10 minutes
-    });
-
-    await supabaseAdmin
-      .from("employees")
-      .update({ reporting_manager: mapping })
-      .eq("id", emp.id);
-
-    // Send the 6-digit custom OTP via WhatsApp
-    const { sendOtpWhatsApp } = await import("./whatsapp.server");
-    const success = await sendOtpWhatsApp(emp.mobile, customOtp, emp.name);
-    if (!success) {
-      throw new Error("Failed to send WhatsApp OTP. Please contact admin.");
+    if (data.send_via === "whatsapp") {
+      if (!emp.mobile) {
+        throw new Error("WhatsApp mobile number not registered for this Employee ID");
+      }
+      // Send the OTP via WhatsApp
+      const { sendOtpWhatsApp } = await import("./whatsapp.server");
+      const success = await sendOtpWhatsApp(emp.mobile, supabaseOtp, emp.name);
+      if (!success) {
+        throw new Error("Failed to send WhatsApp OTP. Please contact admin.");
+      }
+      return { send_via: "whatsapp", maskedContact: maskPhone(emp.mobile) };
+    } else {
+      // Default: Send the OTP via Email
+      const { sendOtpEmail } = await import("./otp.server");
+      await sendOtpEmail(emp.email, supabaseOtp, emp.name ?? undefined);
+      return { send_via: "email", maskedContact: maskEmail(emp.email) };
     }
-
-    return { maskedPhone: maskPhone(emp.mobile) };
   });
 
 /**
@@ -172,31 +166,12 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: emp } = await supabaseAdmin
       .from("employees")
-      .select("id, email, active, reporting_manager")
+      .select("id, email, active")
       .ilike("employee_code", data.employee_code)
       .maybeSingle();
-    if (!emp || !emp.active || !emp.email || !emp.reporting_manager) {
+    if (!emp || !emp.active || !emp.email) {
       throw new Error("Invalid or expired OTP");
     }
-
-    let mapping;
-    try {
-      mapping = JSON.parse(emp.reporting_manager);
-    } catch {
-      throw new Error("Invalid or expired OTP");
-    }
-
-    if (mapping.custom_otp !== data.token || mapping.expires_at < Date.now()) {
-      throw new Error("Invalid or expired OTP");
-    }
-
-    const supabaseOtp = mapping.supabase_otp;
-
-    // Clear mapping from employee table
-    await supabaseAdmin
-      .from("employees")
-      .update({ reporting_manager: null })
-      .eq("id", emp.id);
 
     // Use a fresh publishable client so verifyOtp does not persist the session
     // in the server runtime.
@@ -208,7 +183,7 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
     );
     const { data: verified, error } = await anon.auth.verifyOtp({
       email: emp.email,
-      token: supabaseOtp,
+      token: data.token,
       type: "email",
     });
     if (error || !verified.session) {

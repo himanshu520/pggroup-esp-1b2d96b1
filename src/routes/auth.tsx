@@ -132,12 +132,12 @@ function OtpStage({ email, otp, setOtp, onBack, onVerify, onResend, loading }: {
     <div className="space-y-5">
       <div>
         <h2 className="text-xl font-bold text-[color:oklch(0.18_0.05_260)]">Verify OTP</h2>
-        <p className="text-sm text-muted-foreground mt-1">Enter the 8-digit code sent to <span className="font-medium text-foreground">{maskEmail(email)}</span></p>
+        <p className="text-sm text-muted-foreground mt-1">Enter the 6-digit code sent to <span className="font-medium text-foreground">{maskEmail(email)}</span></p>
       </div>
       <div className="flex justify-center">
-        <InputOTP maxLength={8} value={otp} onChange={setOtp}>
+        <InputOTP maxLength={6} value={otp} onChange={setOtp}>
           <InputOTPGroup>
-            {[0,1,2,3,4,5,6,7].map((i) => <InputOTPSlot key={i} index={i} />)}
+            {[0,1,2,3,4,5].map((i) => <InputOTPSlot key={i} index={i} />)}
           </InputOTPGroup>
         </InputOTP>
       </div>
@@ -152,7 +152,7 @@ function OtpStage({ email, otp, setOtp, onBack, onVerify, onResend, loading }: {
       </div>
       <div className="flex gap-2">
         <Button variant="outline" className="h-12" onClick={onBack}>Back</Button>
-        <Button className="flex-1 h-12 text-base bg-primary hover:bg-primary/90" onClick={onVerify} disabled={loading || otp.length !== 8}>Verify &amp; sign in</Button>
+        <Button className="flex-1 h-12 text-base bg-primary hover:bg-primary/90" onClick={onVerify} disabled={loading || otp.length !== 6}>Verify &amp; sign in</Button>
       </div>
     </div>
   );
