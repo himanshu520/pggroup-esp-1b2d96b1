@@ -1,1 +1,0 @@
-import{t as e}from"./notifications-page-DeZmjviw.js";var t=e;export{t as component};
