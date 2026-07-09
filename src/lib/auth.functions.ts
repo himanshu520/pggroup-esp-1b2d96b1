@@ -53,11 +53,18 @@ async function generateAndSendOtp(email: string, name?: string | null) {
   const { sendOtpEmail } = await import("./otp.server");
 
   // Ensure the auth user exists
-  const { data: user } = await supabaseAdmin.auth.admin
-    .createUser({ email, email_confirm: true })
-    .catch(async () => {
-      return await supabaseAdmin.auth.admin.getUserByEmail(email);
-    });
+  let { data: user, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    email_confirm: true,
+  });
+
+  if (createError) {
+    const { data: existing, error: getError } = await supabaseAdmin.auth.admin.getUserByEmail(email);
+    if (getError || !existing?.user) {
+      throw new Error(getError?.message || "Failed to resolve user");
+    }
+    user = existing;
+  }
 
   const userId = user?.user?.id;
   if (!userId) throw new Error("Failed to resolve user");
