@@ -22,6 +22,37 @@ export async function sendOtpWhatsApp(mobile: string, otp: string, name?: string
   console.log(`[WhatsApp OTP] Preparing to send message to ${cleanMobile} via ${provider}...`);
 
   try {
+    if (provider === "wasender") {
+      if (!apiKey) {
+        throw new Error("Missing WASender API token in environment (WHATSAPP_API_KEY)");
+      }
+      
+      const wasenderUrl = "https://wasenderapi.com/api/send-message";
+      const recipient = `+${cleanMobile}`;
+      
+      const payload = {
+        to: recipient,
+        text: text
+      };
+
+      const res = await fetch(wasenderUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`WASender API responded with status ${res.status}: ${errorText}`);
+      }
+
+      console.log(`[WhatsApp OTP] Successfully sent message via WASender.`);
+      return true;
+    }
+
     if (provider === "twilio") {
       if (!accountSid || !apiKey || !senderNumber) {
         throw new Error("Missing Twilio credentials in environment (WHATSAPP_ACCOUNT_SID, WHATSAPP_AUTH_TOKEN, WHATSAPP_SENDER_NUMBER)");
