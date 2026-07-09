@@ -15,6 +15,7 @@ export default defineConfig({
   vite: {
     ssr: {
       noExternal: true,
+      external: ["tslib"],
     },
   },
 });
