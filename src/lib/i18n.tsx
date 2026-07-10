@@ -149,6 +149,9 @@ const DICT: Dict = {
   status_implemented: { en: "Implemented", hi: "लागू किया गया" },
   status_rejected: { en: "Rejected", hi: "अस्वीकृत" },
   status_fake_closure: { en: "Fake Closure", hi: "फर्जी बंद (Fake Closure)" },
+
+  // General text
+  words: { en: "words", hi: "शब्द" },
 };
 
 type Ctx = {

@@ -18,6 +18,29 @@ import { useT } from "@/lib/i18n";
 
 type Priority = Database["public"]["Enums"]["priority_level"];
 
+function getWordCount(val: string) {
+  return val.trim() ? val.trim().split(/\s+/).length : 0;
+}
+
+function enforceWordLimit(val: string, maxWords: number) {
+  let wordCount = 0;
+  let inWord = false;
+  for (let i = 0; i < val.length; i++) {
+    if (/\s/.test(val[i])) {
+      inWord = false;
+    } else {
+      if (!inWord) {
+        wordCount++;
+        if (wordCount > maxWords) {
+          return val.slice(0, i);
+        }
+      }
+      inWord = true;
+    }
+  }
+  return val;
+}
+
 export const Route = createFileRoute("/employee/submit")({
   beforeLoad: () => { throw redirect({ to: "/employee", search: { section: "submit" } as any }); },
   component: () => null,
@@ -396,9 +419,12 @@ export function SubmitForm() {
                 placeholder={t("ph_suggestion_title")}
                 value={form.title}
                 maxLength={200}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                onChange={(e) => setForm({ ...form, title: enforceWordLimit(e.target.value, 50) })}
                 className="h-11"
               />
+              <div className="text-[10px] text-right text-muted-foreground">
+                {getWordCount(form.title)} / 50 {t("words") || "words"}
+              </div>
             </div>
 
             <AccentField
@@ -412,8 +438,11 @@ export function SubmitForm() {
                 rows={3}
                 placeholder={t("ph_problem")}
                 value={form.problem}
-                onChange={(e) => setForm({ ...form, problem: e.target.value })}
+                onChange={(e) => setForm({ ...form, problem: enforceWordLimit(e.target.value, 100) })}
               />
+              <div className="text-[10px] text-right text-muted-foreground mt-1">
+                {getWordCount(form.problem)} / 100 {t("words") || "words"}
+              </div>
             </AccentField>
 
             <AccentField
@@ -427,8 +456,11 @@ export function SubmitForm() {
                 rows={3}
                 placeholder={t("ph_solution")}
                 value={form.suggested_method}
-                onChange={(e) => setForm({ ...form, suggested_method: e.target.value })}
+                onChange={(e) => setForm({ ...form, suggested_method: enforceWordLimit(e.target.value, 100) })}
               />
+              <div className="text-[10px] text-right text-muted-foreground mt-1">
+                {getWordCount(form.suggested_method)} / 100 {t("words") || "words"}
+              </div>
             </AccentField>
 
             <AccentField
@@ -442,8 +474,11 @@ export function SubmitForm() {
                 rows={3}
                 placeholder={t("ph_benefits")}
                 value={form.expected_benefits}
-                onChange={(e) => setForm({ ...form, expected_benefits: e.target.value })}
+                onChange={(e) => setForm({ ...form, expected_benefits: enforceWordLimit(e.target.value, 100) })}
               />
+              <div className="text-[10px] text-right text-muted-foreground mt-1">
+                {getWordCount(form.expected_benefits)} / 100 {t("words") || "words"}
+              </div>
             </AccentField>
 
           </div>
