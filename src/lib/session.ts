@@ -60,3 +60,41 @@ export function useCanManage(): boolean {
   const roles = data?.roles ?? [];
   return roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin");
 }
+
+export function isLocationAccessible(locationId: string | null, roles: SessionProfile["roles"] | undefined): boolean {
+  if (!roles) return false;
+  if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin")) return true;
+  return roles.some((r) => r.location_id === locationId);
+}
+
+export function isPlantAccessible(plantId: string | null, locationId: string | null, roles: SessionProfile["roles"] | undefined): boolean {
+  if (!roles) return false;
+  if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin")) return true;
+  return roles.some((r) => {
+    if (r.role === "location_admin") return r.location_id === locationId;
+    return r.plant_id === plantId;
+  });
+}
+
+export function isDeptAccessible(deptId: string | null, plantId: string | null, locationId: string | null, roles: SessionProfile["roles"] | undefined): boolean {
+  if (!roles) return false;
+  if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin")) return true;
+  return roles.some((r) => {
+    if (r.role === "location_admin") return r.location_id === locationId;
+    if (r.role === "plant_admin" || r.role === "pe_user" || r.role === "mgmt_viewer") return r.plant_id === plantId;
+    return r.department_id === deptId;
+  });
+}
+
+export function isSuggestionAccessible(sug: { location_id: string | null; plant_id: string | null; department_id: string | null } | null, roles: SessionProfile["roles"] | undefined): boolean {
+  if (!sug || !roles) return false;
+  if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin")) return true;
+  return roles.some((r) => {
+    if (r.role === "location_admin") return r.location_id === sug.location_id;
+    if (r.role === "plant_admin" || r.role === "pe_user" || r.role === "mgmt_viewer") {
+      return r.location_id === sug.location_id && r.plant_id === sug.plant_id;
+    }
+    return r.location_id === sug.location_id && r.plant_id === sug.plant_id && r.department_id === sug.department_id;
+  });
+}
+

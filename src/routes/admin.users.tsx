@@ -485,8 +485,8 @@ function ScopePicker({
   value: { location_id: string | null; plant_id: string | null; department_id: string | null };
   onChange: (v: { location_id: string | null; plant_id: string | null; department_id: string | null }) => void;
 }) {
-  const needsLoc = role === "location_admin" || role === "plant_admin" || role === "department_admin" || role === "dept_user";
-  const needsPlant = role === "plant_admin" || role === "department_admin" || role === "dept_user";
+  const needsLoc = role === "location_admin" || role === "plant_admin" || role === "department_admin" || role === "dept_user" || role === "pe_user" || role === "mgmt_viewer";
+  const needsPlant = role === "plant_admin" || role === "department_admin" || role === "dept_user" || role === "pe_user" || role === "mgmt_viewer";
   const needsDept = role === "department_admin" || role === "dept_user";
 
   const filteredPlants = value.location_id ? plants.filter((p) => p.location_id === value.location_id) : plants;

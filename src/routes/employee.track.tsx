@@ -65,7 +65,6 @@ export function TrackPage({ initialCode }: { initialCode?: string }) {
               <Meta label="Department" value={result.departments?.name ?? "—"} />
               <Meta label="Plant" value={result.plants?.name ?? "—"} />
               <Meta label="Location" value={result.locations?.location ?? "—"} />
-              <Meta label="Expected saving" value={result.expected_saving ? `₹ ${Number(result.expected_saving).toLocaleString()}` : "—"} />
             </div>
             <div className="border-t border-border pt-3 space-y-3">
               <Section title="Problem" body={result.problem} />

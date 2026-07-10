@@ -308,6 +308,24 @@ export const updateEmployee = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const supabaseAdmin = await requireAdmin(context.userId);
     const { id, ...rest } = data;
+
+    // Fetch the current record to check for email updates and linked user_id
+    const { data: before } = await supabaseAdmin
+      .from("employees")
+      .select("email, user_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (before && before.user_id && before.email.toLowerCase() !== rest.email.toLowerCase()) {
+      const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(before.user_id, {
+        email: rest.email,
+        email_confirm: true,
+      });
+      if (authError) {
+        throw new Error(`Failed to update auth user email: ${authError.message}`);
+      }
+    }
+
     const { error } = await supabaseAdmin
       .from("employees")
       .update({

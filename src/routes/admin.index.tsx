@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ClipboardList, Search, CheckCircle2, Rocket, XCircle, TrendingUp, RotateCcw } from "lucide-react";
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend } from "recharts";
-import { useSession } from "@/lib/session";
+import { useSession, isLocationAccessible, isPlantAccessible, isSuggestionAccessible } from "@/lib/session";
 
 // Consolidated admin section components (each sub-route file redirects here and exports its component).
 import { AnalyticsPage } from "./admin.analytics";
@@ -88,15 +88,7 @@ function AdminHome() {
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 function OverviewPage() {
-  const [locationId, setLocationId] = useState<string>("all");
-  const [plantId, setPlantId] = useState<string>("all");
-  const [trendMode, setTrendMode] = useState<"half" | "custom">("half");
-  // `nowTick` refreshes every hour so the half-year window auto-updates at month/year rollover
-  const [nowTick, setNowTick] = useState<number>(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNowTick(Date.now()), 60 * 60 * 1000);
-    return () => clearInterval(id);
-  }, []);
+  const { data: sess } = useSession();
 
   const { data: sugs = [] } = useQuery({
     queryKey: ["admin-suggestions-all"],
@@ -106,10 +98,43 @@ function OverviewPage() {
   const { data: plants = [] } = useQuery({ queryKey: ["plants"], queryFn: async () => (await supabase.from("plants").select("id,name,location_id")).data ?? [] });
   const { data: categories = [] } = useQuery({ queryKey: ["cats"], queryFn: async () => (await supabase.from("categories").select("id,name")).data ?? [] });
 
-  const filtered = useMemo(() => sugs.filter((s: any) =>
+  const isGlobal = useMemo(() => {
+    if (!sess?.roles) return true;
+    return sess.roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin");
+  }, [sess?.roles]);
+
+  const allowedLocations = useMemo(() => {
+    if (!sess?.roles) return [];
+    return locations.filter((l: any) => isLocationAccessible(l.id, sess.roles));
+  }, [locations, sess?.roles]);
+
+  const [locationId, setLocationId] = useState<string>("all");
+  const [plantId, setPlantId] = useState<string>("all");
+  const [trendMode, setTrendMode] = useState<"half" | "custom">("half");
+
+  // Sync default location on load
+  useEffect(() => {
+    if (sess?.roles && !isGlobal && allowedLocations.length > 0 && locationId === "all") {
+      setLocationId(allowedLocations[0].id);
+    }
+  }, [sess?.roles, isGlobal, allowedLocations, locationId]);
+
+  // `nowTick` refreshes every hour so the half-year window auto-updates at month/year rollover
+  const [nowTick, setNowTick] = useState<number>(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 60 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const accessibleSugs = useMemo(() => {
+    if (!sess?.roles) return [];
+    return sugs.filter((s: any) => isSuggestionAccessible(s, sess.roles));
+  }, [sugs, sess?.roles]);
+
+  const filtered = useMemo(() => accessibleSugs.filter((s: any) =>
     (locationId === "all" || s.location_id === locationId) &&
     (plantId === "all" || s.plant_id === plantId),
-  ), [sugs, locationId, plantId]);
+  ), [accessibleSugs, locationId, plantId]);
 
   const by = (st: SuggestionStatus[]) => filtered.filter((s: any) => st.includes(s.status)).length;
   const implemented = by(["implemented", "closed"]);
@@ -196,9 +221,20 @@ function OverviewPage() {
     count: filtered.filter((s: any) => s.status === st).length,
   }));
 
-  function reset() { setLocationId("all"); setPlantId("all"); }
+  function reset() {
+    if (isGlobal) {
+      setLocationId("all");
+    } else if (allowedLocations.length > 0) {
+      setLocationId(allowedLocations[0].id);
+    }
+    setPlantId("all");
+  }
 
   const availablePlants = plants.filter((p: any) => locationId === "all" || p.location_id === locationId);
+  const allowedPlants = useMemo(() => {
+    if (!sess?.roles) return [];
+    return availablePlants.filter((p: any) => isPlantAccessible(p.id, p.location_id, sess.roles));
+  }, [availablePlants, sess?.roles]);
 
   return (
     <AppShell navGroups={ADMIN_NAV} title="Enterprise Portal">
@@ -208,17 +244,17 @@ function OverviewPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-muted-foreground uppercase mr-1">Filter:</span>
             <Select value={locationId} onValueChange={(v) => { setLocationId(v); setPlantId("all"); }}>
-              <SelectTrigger className="w-40 h-9"><SelectValue placeholder="All Locations" /></SelectTrigger>
+              <SelectTrigger className="w-40 h-9"><SelectValue placeholder="Select Location" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Locations</SelectItem>
-                {locations.map((l: any) => <SelectItem key={l.id} value={l.id}>{l.location}</SelectItem>)}
+                {isGlobal && <SelectItem value="all">All Locations</SelectItem>}
+                {allowedLocations.map((l: any) => <SelectItem key={l.id} value={l.id}>{l.location}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={plantId} onValueChange={setPlantId}>
-              <SelectTrigger className="w-40 h-9"><SelectValue placeholder="All Units" /></SelectTrigger>
+              <SelectTrigger className="w-40 h-9"><SelectValue placeholder="Select Unit" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Units</SelectItem>
-                {availablePlants.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                {allowedPlants.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Button variant="outline" size="sm" className="h-9" onClick={reset}>

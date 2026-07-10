@@ -340,8 +340,12 @@ export const linkAuthUserToEmployee = createServerFn({ method: "POST" })
       .select("id,user_id")
       .ilike("email", email)
       .maybeSingle();
-    if (emp && !emp.user_id) {
+    if (emp && emp.user_id !== context.userId) {
+      const oldUserId = emp.user_id;
       await supabaseAdmin.from("employees").update({ user_id: context.userId }).eq("id", emp.id);
+      if (oldUserId) {
+        await supabaseAdmin.from("user_roles").update({ user_id: context.userId }).eq("user_id", oldUserId);
+      }
     }
     return { linked: true };
   });

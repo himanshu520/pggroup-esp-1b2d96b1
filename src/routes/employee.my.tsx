@@ -156,10 +156,6 @@ function SuggestionDetailsDialog({
               <Meta label="Department" value={s.departments?.name ?? "—"} />
               <Meta label="Plant" value={s.plants?.name ?? "—"} />
               <Meta label="Location" value={s.locations?.location ?? "—"} />
-              <Meta
-                label={t("expected_saving")}
-                value={s.expected_saving ? `₹ ${Number(s.expected_saving).toLocaleString()}` : "—"}
-              />
             </div>
 
             <div className="border-t border-border pt-3 space-y-3">

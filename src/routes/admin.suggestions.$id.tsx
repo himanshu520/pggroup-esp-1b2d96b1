@@ -222,6 +222,17 @@ export function SuggestionDetail({ id }: { id: string }) {
     );
   }
 
+  if (session?.roles && !isSuggestionAccessible(sug, session.roles)) {
+    return (
+      <AppShell navGroups={ADMIN_NAV} title="Admin Console">
+        <div className="rounded-lg border border-border bg-card p-6 text-sm">
+          <div className="font-medium mb-1">Access Denied</div>
+          <div className="text-muted-foreground">You do not have access to view this suggestion.</div>
+        </div>
+      </AppShell>
+    );
+  }
+
   const isPE = session?.isPE || session?.primaryRole === "super_admin" || session?.primaryRole === "corporate_admin";
   const status = sug.status;
 
@@ -242,7 +253,6 @@ export function SuggestionDetail({ id }: { id: string }) {
               <Meta label="Owner department" value={sug.departments?.name} />
               <Meta label="Plant" value={sug.plants?.name} />
               <Meta label="Location" value={sug.locations?.location} />
-              <Meta label="Expected saving" value={sug.expected_saving ? `₹ ${Number(sug.expected_saving).toLocaleString()}` : "—"} />
             </div>
           </Card>
 

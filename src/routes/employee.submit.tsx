@@ -67,13 +67,14 @@ export function SubmitForm() {
   });
   const [files, setFiles] = useState<File[]>([]);
 
-  // Auto-populate hierarchy + gender from employee record once loaded
+  // Auto-populate hierarchy + gender + mobile from employee record once loaded
   if (emp && !form.location_id && emp.location_id) {
     setForm((f) => ({
       ...f,
       location_id: emp.location_id ?? "",
       plant_id: emp.plant_id ?? "",
       department_id: emp.department_id ?? "",
+      mobile: f.mobile || (emp.mobile ?? ""),
       gender: f.gender || (emp.gender === "male" || emp.gender === "female" || emp.gender === "other" ? emp.gender : ""),
     }));
   }
@@ -179,10 +180,10 @@ export function SubmitForm() {
               <Input
                 type="tel"
                 inputMode="tel"
-                placeholder="Enter mobile number"
+                placeholder="—"
                 value={form.mobile}
-                onChange={(e) => setForm({ ...form, mobile: e.target.value.replace(/[^0-9+ -]/g, "") })}
-                className="h-11 bg-accent/40 border-accent"
+                disabled
+                className="h-11 bg-accent/40 border-accent cursor-not-allowed"
               />
             </RefField>
             <div className="sm:col-span-2 space-y-1.5">
@@ -197,12 +198,12 @@ export function SubmitForm() {
                     <button
                       key={g}
                       type="button"
-                      onClick={() => setForm({ ...form, gender: g })}
+                      disabled
                       className={cn(
-                        "flex items-center justify-center gap-2 rounded-lg border h-11 px-2 sm:px-3 text-sm font-medium capitalize transition-all",
+                        "flex items-center justify-center gap-2 rounded-lg border h-11 px-2 sm:px-3 text-sm font-medium capitalize transition-all cursor-not-allowed opacity-60",
                         active
-                          ? "border-primary bg-primary/5 ring-1 ring-primary text-primary"
-                          : "border-accent bg-accent/40 text-foreground hover:border-primary/40",
+                          ? "border-primary bg-primary/5 ring-1 ring-primary text-primary opacity-100 font-bold"
+                          : "border-accent bg-accent/40 text-foreground",
                       )}
                     >
                       <span className={cn(
@@ -420,7 +421,7 @@ export function SubmitForm() {
                   plant_id: emp?.plant_id ?? "",
                   department_id: emp?.department_id ?? "",
                   mobile: emp?.mobile ?? "",
-                  gender: "",
+                  gender: (emp?.gender === "male" || emp?.gender === "female" || emp?.gender === "other" ? emp.gender : "") as any,
                 });
                 setFiles([]);
               }}

@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { StatusBadge, PriorityBadge } from "@/components/status-badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useSession, isSuggestionAccessible } from "@/lib/session";
+import { useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +27,7 @@ export const Route = createFileRoute("/admin/suggestions/")({
 });
 
 export function SuggestionsList() {
+  const { data: sess } = useSession();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -43,7 +46,16 @@ export function SuggestionsList() {
     },
   });
 
-  const filtered = q ? data.filter((s: any) => `${s.code} ${s.title} ${s.employees?.name}`.toLowerCase().includes(q.toLowerCase())) : data;
+  const accessibleSugs = useMemo(() => {
+    if (!sess?.roles) return [];
+    return data.filter((s: any) => isSuggestionAccessible(s, sess.roles));
+  }, [data, sess?.roles]);
+
+  const filtered = useMemo(() => {
+    const list = accessibleSugs;
+    if (!q) return list;
+    return list.filter((s: any) => `${s.code} ${s.title} ${s.employees?.name}`.toLowerCase().includes(q.toLowerCase()));
+  }, [accessibleSugs, q]);
 
   return (
     <AppShell navGroups={ADMIN_NAV} title="Admin Console">
@@ -63,7 +75,6 @@ export function SuggestionsList() {
               { key: "category", header: "Category", format: (s: any) => s.categories?.name ?? "" },
               { key: "priority", header: "Priority", format: (s: any) => PRIORITY_LABEL[s.priority as keyof typeof PRIORITY_LABEL] ?? s.priority },
               { key: "status", header: "Status", format: (s: any) => STATUS_LABEL[s.status as keyof typeof STATUS_LABEL] ?? s.status },
-              { key: "expected_saving", header: "Expected saving", format: (s: any) => Number(s.expected_saving ?? 0) },
               { key: "actual_cost", header: "Actual cost", format: (s: any) => Number(s.actual_cost ?? 0) },
               { key: "created_at", header: "Created", format: (s: any) => new Date(s.created_at).toLocaleDateString() },
               { key: "completed_at", header: "Completed", format: (s: any) => (s.completed_at ? new Date(s.completed_at).toLocaleDateString() : "") },
@@ -135,7 +146,7 @@ function SuggestionPreviewDialog({ id, onClose }: { id: string | null; onClose: 
         await supabase
           .from("suggestions")
           .select(
-            "*, employees(name, employee_code, email), categories(name), departments!suggestions_department_id_fkey(name), plants(name), locations(location)",
+            "*, employees(id, name, employee_code, email, mobile, gender, designation, department_id, plant_id, location_id, departments(name), plants(name), locations(location)), categories(name), departments!suggestions_department_id_fkey(name), plants(name), locations(location)",
           )
           .eq("id", id!)
           .maybeSingle()
@@ -172,16 +183,25 @@ function SuggestionPreviewDialog({ id, onClose }: { id: string | null; onClose: 
           <div className="py-6 text-sm text-muted-foreground text-center">Not found.</div>
         ) : (
           <div className="space-y-4 py-2">
-            <div className="grid sm:grid-cols-3 gap-3 text-sm">
-              <Meta label="Employee" value={sug.employees ? `${sug.employees.name} (${sug.employees.employee_code})` : "—"} />
+            <div className="rounded-lg border border-border bg-muted/20 p-4">
+              <div className="text-xs uppercase font-bold text-muted-foreground mb-3">Employee Information</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                <Meta label="Name" value={sug.employees?.name ?? "—"} />
+                <Meta label="Employee ID" value={sug.employees?.employee_code ?? "—"} />
+                <Meta label="Email" value={sug.employees?.email ?? "—"} />
+                <Meta label="Mobile" value={sug.employees?.mobile ?? "—"} />
+                <Meta label="Gender" value={sug.employees?.gender ? (sug.employees.gender.charAt(0).toUpperCase() + sug.employees.gender.slice(1).replace(/_/g, " ")) : "—"} />
+                <Meta label="Designation" value={sug.employees?.designation ?? "—"} />
+                <Meta label="Base Department" value={sug.employees?.departments?.name ?? "—"} />
+                <Meta label="Base Plant" value={sug.employees?.plants?.name ?? "—"} />
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-4 gap-3 text-sm border-t border-border pt-3">
               <Meta label="Category" value={sug.categories?.name} />
               <Meta label="Owner department" value={sug.departments?.name} />
               <Meta label="Plant" value={sug.plants?.name} />
               <Meta label="Location" value={sug.locations?.location} />
-              <Meta
-                label="Expected saving"
-                value={sug.expected_saving ? `₹ ${Number(sug.expected_saving).toLocaleString()}` : "—"}
-              />
             </div>
 
             <Section title="Problem">{sug.problem}</Section>

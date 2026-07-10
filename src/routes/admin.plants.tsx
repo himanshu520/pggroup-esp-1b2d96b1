@@ -4,6 +4,8 @@ import { ADMIN_NAV } from "@/lib/admin-nav";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ExportMenu } from "@/components/export-menu";
+import { useSession, isPlantAccessible } from "@/lib/session";
+import { useMemo } from "react";
 
 export const Route = createFileRoute("/admin/plants")({
   beforeLoad: () => { throw redirect({ to: "/admin", search: { section: "plants" } as any }); },
@@ -11,6 +13,7 @@ export const Route = createFileRoute("/admin/plants")({
 });
 
 export function PlantPerf() {
+  const { data: sess } = useSession();
   const { data: plants = [] } = useQuery({
     queryKey: ["plants-perf"],
     queryFn: async () =>
@@ -25,38 +28,45 @@ export function PlantPerf() {
         .limit(10000)).data ?? [],
   });
 
-  const rows = plants
-    .map((p: any) => {
-      const all = sugs.filter((s: any) => s.plant_id === p.id);
-      const impl = all.filter((s: any) => s.status === "implemented" || s.status === "closed").length;
-      const fake = all.filter((s: any) => s.status === "fake_closure").length;
-      const pending = all.filter((s: any) => !["implemented", "closed", "rejected"].includes(s.status)).length;
-      const savings = all.reduce((s: number, x: any) => s + Number(x.expected_saving ?? 0), 0);
-      const spend = all.reduce((s: number, x: any) => s + Number(x.actual_cost ?? 0), 0);
-      const avgDays = (() => {
-        const done = all.filter((s: any) => s.completed_at);
-        if (!done.length) return 0;
-        return Math.round(
-          done.reduce((sum: number, s: any) =>
-            sum + (new Date(s.completed_at).getTime() - new Date(s.created_at).getTime()), 0) /
-          (done.length * 86400000),
-        );
-      })();
-      return {
-        code: p.code,
-        name: p.name,
-        location: p.locations?.location ?? "",
-        total: all.length,
-        implemented: impl,
-        pending,
-        fake,
-        implPct: all.length ? Math.round((impl / all.length) * 100) : 0,
-        expected_savings: Math.round(savings),
-        actual_spend: Math.round(spend),
-        avg_days: avgDays,
-      };
-    })
-    .sort((a, b) => b.total - a.total);
+  const filteredPlants = useMemo(() => {
+    if (!sess?.roles) return [];
+    return plants.filter((p: any) => isPlantAccessible(p.id, p.location_id, sess.roles));
+  }, [plants, sess?.roles]);
+
+  const rows = useMemo(() => {
+    return filteredPlants
+      .map((p: any) => {
+        const all = sugs.filter((s: any) => s.plant_id === p.id);
+        const impl = all.filter((s: any) => s.status === "implemented" || s.status === "closed").length;
+        const fake = all.filter((s: any) => s.status === "fake_closure").length;
+        const pending = all.filter((s: any) => !["implemented", "closed", "rejected"].includes(s.status)).length;
+        const savings = all.reduce((s: number, x: any) => s + Number(x.expected_saving ?? 0), 0);
+        const spend = all.reduce((s: number, x: any) => s + Number(x.actual_cost ?? 0), 0);
+        const avgDays = (() => {
+          const done = all.filter((s: any) => s.completed_at);
+          if (!done.length) return 0;
+          return Math.round(
+            done.reduce((sum: number, s: any) =>
+              sum + (new Date(s.completed_at).getTime() - new Date(s.created_at).getTime()), 0) /
+            (done.length * 86400000),
+          );
+        })();
+        return {
+          code: p.code,
+          name: p.name,
+          location: p.locations?.location ?? "",
+          total: all.length,
+          implemented: impl,
+          pending,
+          fake,
+          implPct: all.length ? Math.round((impl / all.length) * 100) : 0,
+          expected_savings: Math.round(savings),
+          actual_spend: Math.round(spend),
+          avg_days: avgDays,
+        };
+      })
+      .sort((a, b) => b.total - a.total);
+  }, [filteredPlants, sugs]);
 
   return (
     <AppShell navGroups={ADMIN_NAV} title="Admin Console">
@@ -88,7 +98,7 @@ export function PlantPerf() {
         <table className="w-full text-sm">
           <thead className="bg-muted/50 border-b border-border">
             <tr>
-              {["#", "Plant", "Location", "Total", "Implemented", "Pending", "Fake", "Impl %", "Expected savings", "Avg days"].map((h) => (
+              {["Sr number", "Plant", "Location", "Total", "Implemented", "Pending", "Fake", "Impl %", "Expected savings", "Avg days"].map((h) => (
                 <th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {h}
                 </th>
@@ -128,3 +138,4 @@ export function PlantPerf() {
     </AppShell>
   );
 }
+

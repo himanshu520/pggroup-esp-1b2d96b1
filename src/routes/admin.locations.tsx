@@ -4,6 +4,8 @@ import { ADMIN_NAV } from "@/lib/admin-nav";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ExportMenu } from "@/components/export-menu";
+import { useSession, isLocationAccessible } from "@/lib/session";
+import { useMemo } from "react";
 
 export const Route = createFileRoute("/admin/locations")({
   beforeLoad: () => { throw redirect({ to: "/admin", search: { section: "locations" } as any }); },
@@ -11,6 +13,7 @@ export const Route = createFileRoute("/admin/locations")({
 });
 
 export function LocationPerf() {
+  const { data: sess } = useSession();
   const { data: locations = [] } = useQuery({
     queryKey: ["locs-perf"],
     queryFn: async () => (await supabase.from("locations").select("id,location,state")).data ?? [],
@@ -28,27 +31,34 @@ export function LocationPerf() {
         .limit(10000)).data ?? [],
   });
 
-  const rows = locations
-    .map((l: any) => {
-      const all = sugs.filter((s: any) => s.location_id === l.id);
-      const impl = all.filter((s: any) => s.status === "implemented" || s.status === "closed").length;
-      const fake = all.filter((s: any) => s.status === "fake_closure").length;
-      const pending = all.filter((s: any) => !["implemented", "closed", "rejected"].includes(s.status)).length;
-      const savings = all.reduce((s: number, x: any) => s + Number(x.expected_saving ?? 0), 0);
-      const plantCount = plants.filter((p: any) => p.location_id === l.id).length;
-      return {
-        state: l.state,
-        location: l.location,
-        plants: plantCount,
-        total: all.length,
-        implemented: impl,
-        pending,
-        fake,
-        implPct: all.length ? Math.round((impl / all.length) * 100) : 0,
-        expected_savings: Math.round(savings),
-      };
-    })
-    .sort((a, b) => b.total - a.total);
+  const filteredLocations = useMemo(() => {
+    if (!sess?.roles) return [];
+    return locations.filter((l: any) => isLocationAccessible(l.id, sess.roles));
+  }, [locations, sess?.roles]);
+
+  const rows = useMemo(() => {
+    return filteredLocations
+      .map((l: any) => {
+        const all = sugs.filter((s: any) => s.location_id === l.id);
+        const impl = all.filter((s: any) => s.status === "implemented" || s.status === "closed").length;
+        const fake = all.filter((s: any) => s.status === "fake_closure").length;
+        const pending = all.filter((s: any) => !["implemented", "closed", "rejected"].includes(s.status)).length;
+        const savings = all.reduce((s: number, x: any) => s + Number(x.expected_saving ?? 0), 0);
+        const plantCount = plants.filter((p: any) => p.location_id === l.id).length;
+        return {
+          state: l.state,
+          location: l.location,
+          plants: plantCount,
+          total: all.length,
+          implemented: impl,
+          pending,
+          fake,
+          implPct: all.length ? Math.round((impl / all.length) * 100) : 0,
+          expected_savings: Math.round(savings),
+        };
+      })
+      .sort((a, b) => b.total - a.total);
+  }, [filteredLocations, sugs, plants]);
 
   return (
     <AppShell navGroups={ADMIN_NAV} title="Admin Console">
@@ -78,7 +88,7 @@ export function LocationPerf() {
         <table className="w-full text-sm">
           <thead className="bg-muted/50 border-b border-border">
             <tr>
-              {["#", "Location", "Plants", "Total", "Implemented", "Pending", "Fake", "Impl %", "Expected savings"].map((h) => (
+              {["Sr number", "Location", "Plants", "Total", "Implemented", "Pending", "Fake", "Impl %", "Expected savings"].map((h) => (
                 <th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {h}
                 </th>
@@ -115,3 +125,4 @@ export function LocationPerf() {
     </AppShell>
   );
 }
+
