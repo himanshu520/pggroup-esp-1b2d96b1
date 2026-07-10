@@ -178,6 +178,23 @@ export const verifyAdminOtp = createServerFn({ method: "POST" })
     if (error || !verified.session) {
       throw new Error("Invalid or expired OTP");
     }
+
+    // Link the admin/employee directly on the server
+    const newUserId = verified.session.user.id;
+    const { data: emp } = await supabaseAdmin
+      .from("employees")
+      .select("id, user_id")
+      .ilike("email", data.email)
+      .maybeSingle();
+
+    if (emp && emp.user_id !== newUserId) {
+      const oldUserId = emp.user_id;
+      await supabaseAdmin.from("employees").update({ user_id: newUserId }).eq("id", emp.id);
+      if (oldUserId) {
+        await supabaseAdmin.from("user_roles").update({ user_id: newUserId }).eq("user_id", oldUserId);
+      }
+    }
+
     return {
       access_token: verified.session.access_token,
       refresh_token: verified.session.refresh_token,
@@ -276,7 +293,7 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: emp } = await supabaseAdmin
       .from("employees")
-      .select("id, email, active, reporting_manager")
+      .select("id, email, active, user_id, reporting_manager")
       .ilike("employee_code", data.employee_code)
       .maybeSingle();
     if (!emp || !emp.active || !emp.email || !emp.reporting_manager) {
@@ -318,6 +335,17 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
     if (error || !verified.session) {
       throw new Error("Invalid or expired OTP");
     }
+
+    // Link the employee directly on the server
+    const newUserId = verified.session.user.id;
+    if (emp.user_id !== newUserId) {
+      const oldUserId = emp.user_id;
+      await supabaseAdmin.from("employees").update({ user_id: newUserId }).eq("id", emp.id);
+      if (oldUserId) {
+        await supabaseAdmin.from("user_roles").update({ user_id: newUserId }).eq("user_id", oldUserId);
+      }
+    }
+
     return {
       access_token: verified.session.access_token,
       refresh_token: verified.session.refresh_token,
