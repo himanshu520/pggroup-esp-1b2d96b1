@@ -67,6 +67,55 @@ export function SubmitForm() {
   });
   const [files, setFiles] = useState<File[]>([]);
 
+  const allowedLocationIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (emp?.location_id) ids.add(emp.location_id);
+    for (const r of session?.roles ?? []) {
+      if (r.location_id) ids.add(r.location_id);
+    }
+    return Array.from(ids);
+  }, [emp?.location_id, session?.roles]);
+
+  const allowedPlantIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (emp?.plant_id) ids.add(emp.plant_id);
+    for (const r of session?.roles ?? []) {
+      if (r.plant_id) ids.add(r.plant_id);
+    }
+    return Array.from(ids);
+  }, [emp?.plant_id, session?.roles]);
+
+  const allowedDepartmentIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (emp?.department_id) ids.add(emp.department_id);
+    for (const r of session?.roles ?? []) {
+      if (r.department_id) ids.add(r.department_id);
+    }
+    return Array.from(ids);
+  }, [emp?.department_id, session?.roles]);
+
+  const hasMultiplePlants = allowedPlantIds.length > 1;
+
+  const visibleLocations = useMemo(() => {
+    return locations.filter((l) => allowedLocationIds.includes(l.id));
+  }, [locations, allowedLocationIds]);
+
+  const visiblePlants = useMemo(() => {
+    let list = plants.filter((p) => allowedPlantIds.includes(p.id));
+    if (form.location_id) {
+      list = list.filter((p) => p.location_id === form.location_id);
+    }
+    return list;
+  }, [plants, allowedPlantIds, form.location_id]);
+
+  const visibleDepartments = useMemo(() => {
+    let list = departments.filter((d) => allowedDepartmentIds.includes(d.id));
+    if (form.plant_id) {
+      list = list.filter((d) => d.plant_id === form.plant_id);
+    }
+    return list;
+  }, [departments, allowedDepartmentIds, form.plant_id]);
+
   // Auto-populate hierarchy + gender + mobile from employee record once loaded
   if (emp && !form.location_id && emp.location_id) {
     setForm((f) => ({
@@ -219,21 +268,37 @@ export function SubmitForm() {
               </div>
             </div>
             <RefField label="State / Location" required>
-              <Select value={form.location_id} disabled>
-                <SelectTrigger className="h-11 bg-accent/40 border-accent"><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>{locations.map((l) => <SelectItem key={l.id} value={l.id}>{l.location}</SelectItem>)}</SelectContent>
+              <Select
+                value={form.location_id}
+                disabled={!hasMultiplePlants}
+                onValueChange={(v) => {
+                  setForm((f) => ({ ...f, location_id: v, plant_id: "", department_id: "" }));
+                }}
+              >
+                <SelectTrigger className={cn("h-11 border-accent", !hasMultiplePlants && "bg-accent/40 cursor-not-allowed")}><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>{visibleLocations.map((l) => <SelectItem key={l.id} value={l.id}>{l.location}</SelectItem>)}</SelectContent>
               </Select>
             </RefField>
             <RefField label="Unit / Plant" required>
-              <Select value={form.plant_id} disabled>
-                <SelectTrigger className="h-11 bg-accent/40 border-accent"><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>{plants.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+              <Select
+                value={form.plant_id}
+                disabled={!hasMultiplePlants || !form.location_id}
+                onValueChange={(v) => {
+                  setForm((f) => ({ ...f, plant_id: v, department_id: "" }));
+                }}
+              >
+                <SelectTrigger className={cn("h-11 border-accent", (!hasMultiplePlants || !form.location_id) && "bg-accent/40 cursor-not-allowed")}><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>{visiblePlants.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
               </Select>
             </RefField>
             <RefField label="Department" required>
-              <Select value={form.department_id} disabled>
-                <SelectTrigger className="h-11 bg-accent/40 border-accent"><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>{departments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+              <Select
+                value={form.department_id}
+                disabled={!hasMultiplePlants || !form.plant_id}
+                onValueChange={(v) => setForm((f) => ({ ...f, department_id: v }))}
+              >
+                <SelectTrigger className={cn("h-11 border-accent", (!hasMultiplePlants || !form.plant_id) && "bg-accent/40 cursor-not-allowed")}><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>{visibleDepartments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
               </Select>
             </RefField>
           </div>

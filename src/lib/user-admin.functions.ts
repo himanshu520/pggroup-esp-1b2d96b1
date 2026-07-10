@@ -64,6 +64,7 @@ export const inviteUser = createServerFn({ method: "POST" })
               role: ROLE,
               location_id: z.string().uuid().nullable().optional(),
               plant_id: z.string().uuid().nullable().optional(),
+              plant_ids: z.array(z.string().uuid()).nullable().optional(),
               department_id: z.string().uuid().nullable().optional(),
             }),
           )
@@ -90,13 +91,16 @@ export const inviteUser = createServerFn({ method: "POST" })
     if (!uid) throw new Error("Failed to create user.");
 
     if (data.roles.length) {
-      const rows = data.roles.map((r) => ({
-        user_id: uid!,
-        role: r.role,
-        location_id: r.location_id ?? null,
-        plant_id: r.plant_id ?? null,
-        department_id: r.department_id ?? null,
-      }));
+      const rows = data.roles.flatMap((r) => {
+        const pids = r.plant_ids && r.plant_ids.length ? r.plant_ids : [r.plant_id ?? null];
+        return pids.map((pid) => ({
+          user_id: uid!,
+          role: r.role,
+          location_id: r.location_id ?? null,
+          plant_id: pid,
+          department_id: r.department_id ?? null,
+        }));
+      });
       const { error } = await supabaseAdmin.from("user_roles").upsert(rows, {
         onConflict: "user_id,role,location_id,plant_id,department_id",
         ignoreDuplicates: true,
@@ -115,20 +119,23 @@ export const addRole = createServerFn({ method: "POST" })
         role: ROLE,
         location_id: z.string().uuid().nullable().optional(),
         plant_id: z.string().uuid().nullable().optional(),
+        plant_ids: z.array(z.string().uuid()).nullable().optional(),
         department_id: z.string().uuid().nullable().optional(),
       })
       .parse(d),
   )
   .handler(async ({ context, data }) => {
     const supabaseAdmin = await requireAdmin(context.userId);
+    const pids = data.plant_ids && data.plant_ids.length ? data.plant_ids : [data.plant_id ?? null];
+    const rows = pids.map((pid) => ({
+      user_id: data.user_id,
+      role: data.role,
+      location_id: data.location_id ?? null,
+      plant_id: pid,
+      department_id: data.department_id ?? null,
+    }));
     const { error } = await supabaseAdmin.from("user_roles").upsert(
-      {
-        user_id: data.user_id,
-        role: data.role,
-        location_id: data.location_id ?? null,
-        plant_id: data.plant_id ?? null,
-        department_id: data.department_id ?? null,
-      },
+      rows,
       {
         onConflict: "user_id,role,location_id,plant_id,department_id",
         ignoreDuplicates: true,

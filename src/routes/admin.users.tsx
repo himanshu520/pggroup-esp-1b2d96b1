@@ -482,11 +482,11 @@ function ScopePicker({
   locations: Loc[];
   plants: Plt[];
   departments: Dept[];
-  value: { location_id: string | null; plant_id: string | null; department_id: string | null };
-  onChange: (v: { location_id: string | null; plant_id: string | null; department_id: string | null }) => void;
+  value: { location_id: string | null; plant_id: string | null; plant_ids?: string[] | null; department_id: string | null };
+  onChange: (v: { location_id: string | null; plant_id: string | null; plant_ids?: string[] | null; department_id: string | null }) => void;
 }) {
-  const needsLoc = role === "location_admin" || role === "plant_admin" || role === "department_admin" || role === "dept_user" || role === "pe_user" || role === "mgmt_viewer";
-  const needsPlant = role === "plant_admin" || role === "department_admin" || role === "dept_user" || role === "pe_user" || role === "mgmt_viewer";
+  const needsLoc = role === "location_admin" || role === "plant_admin" || role === "department_admin" || role === "dept_user" || role === "pe_user" || role === "mgmt_viewer" || role === "employee";
+  const needsPlant = role === "plant_admin" || role === "department_admin" || role === "dept_user" || role === "pe_user" || role === "mgmt_viewer" || role === "employee";
   const needsDept = role === "department_admin" || role === "dept_user";
 
   const filteredPlants = value.location_id ? plants.filter((p) => p.location_id === value.location_id) : plants;
@@ -507,7 +507,7 @@ function ScopePicker({
           <Label className="text-xs">Location</Label>
           <Select
             value={value.location_id ?? ""}
-            onValueChange={(v) => onChange({ location_id: v || null, plant_id: null, department_id: null })}
+            onValueChange={(v) => onChange({ location_id: v || null, plant_id: null, plant_ids: [], department_id: null })}
           >
             <SelectTrigger className="h-9">
               <SelectValue placeholder="Select location" />
@@ -523,23 +523,40 @@ function ScopePicker({
         </div>
       )}
       {needsPlant && (
-        <div>
-          <Label className="text-xs">Plant</Label>
-          <Select
-            value={value.plant_id ?? ""}
-            onValueChange={(v) => onChange({ ...value, plant_id: v || null, department_id: null })}
-          >
-            <SelectTrigger className="h-9">
-              <SelectValue placeholder="Select plant" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredPlants.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Plants (Select one or more)</Label>
+          <div className="grid grid-cols-2 gap-2 border border-border bg-background rounded-md p-3 max-h-48 overflow-y-auto">
+            {filteredPlants.length === 0 ? (
+              <div className="text-xs text-muted-foreground col-span-2 text-center py-2">Select a location first</div>
+            ) : (
+              filteredPlants.map((p) => {
+                const selected = value.plant_ids?.includes(p.id) ?? false;
+                return (
+                  <label
+                    key={p.id}
+                    className={cn(
+                      "flex items-center gap-2 rounded border p-2 text-xs font-medium cursor-pointer transition-all hover:bg-muted/40",
+                      selected ? "border-primary bg-primary/5 text-primary font-bold" : "border-border bg-background"
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                      checked={selected}
+                      onChange={(e) => {
+                        const current = value.plant_ids || [];
+                        const next = e.target.checked
+                          ? [...current, p.id]
+                          : current.filter((id) => id !== p.id);
+                        onChange({ ...value, plant_ids: next, plant_id: next[0] || null, department_id: null });
+                      }}
+                    />
+                    <span className="truncate">{p.name}</span>
+                  </label>
+                );
+              })
+            )}
+          </div>
         </div>
       )}
       {needsDept && (
@@ -582,9 +599,10 @@ function InviteDialog({
   const inviteFn = useServerFn(inviteUser);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<AppRole>("employee");
-  const [scope, setScope] = useState<{ location_id: string | null; plant_id: string | null; department_id: string | null }>({
+  const [scope, setScope] = useState<{ location_id: string | null; plant_id: string | null; plant_ids?: string[] | null; department_id: string | null }>({
     location_id: null,
     plant_id: null,
+    plant_ids: [],
     department_id: null,
   });
   const [busy, setBusy] = useState(false);
@@ -600,7 +618,7 @@ function InviteDialog({
             {
               role,
               location_id: scope.location_id,
-              plant_id: scope.plant_id,
+              plant_ids: scope.plant_ids,
               department_id: scope.department_id,
             },
           ],
@@ -635,7 +653,7 @@ function InviteDialog({
         </div>
         <div>
           <Label className="text-xs">Initial role</Label>
-          <Select value={role} onValueChange={(v) => { setRole(v as AppRole); setScope({ location_id: null, plant_id: null, department_id: null }); }}>
+          <Select value={role} onValueChange={(v) => { setRole(v as AppRole); setScope({ location_id: null, plant_id: null, plant_ids: [], department_id: null }); }}>
             <SelectTrigger className="h-9">
               <SelectValue />
             </SelectTrigger>
@@ -688,9 +706,10 @@ function AddRoleDialog({
 }) {
   const addRoleFn = useServerFn(addRole);
   const [role, setRole] = useState<AppRole>("dept_user");
-  const [scope, setScope] = useState<{ location_id: string | null; plant_id: string | null; department_id: string | null }>({
+  const [scope, setScope] = useState<{ location_id: string | null; plant_id: string | null; plant_ids?: string[] | null; department_id: string | null }>({
     location_id: null,
     plant_id: null,
+    plant_ids: [],
     department_id: null,
   });
   const [busy, setBusy] = useState(false);
@@ -703,7 +722,7 @@ function AddRoleDialog({
           user_id: user.user_id,
           role,
           location_id: scope.location_id,
-          plant_id: scope.plant_id,
+          plant_ids: scope.plant_ids,
           department_id: scope.department_id,
         },
       });
@@ -726,7 +745,7 @@ function AddRoleDialog({
         <div className="grid gap-3 py-2">
           <div>
             <Label className="text-xs">Role</Label>
-            <Select value={role} onValueChange={(v) => { setRole(v as AppRole); setScope({ location_id: null, plant_id: null, department_id: null }); }}>
+            <Select value={role} onValueChange={(v) => { setRole(v as AppRole); setScope({ location_id: null, plant_id: null, plant_ids: [], department_id: null }); }}>
               <SelectTrigger className="h-9">
                 <SelectValue />
               </SelectTrigger>
