@@ -31,7 +31,7 @@ export function AnalyticsPage() {
     queryFn: async () =>
       (await supabase
         .from("suggestions")
-        .select("id,status,priority,category_id,created_at,expected_saving,actual_cost,department_id,current_department_id,departments(name),location_id,plant_id")
+        .select("id,status,priority,category_id,created_at,expected_saving,actual_cost,department_id,current_department_id,departments!suggestions_department_id_fkey(name),current_departments:departments!suggestions_current_department_id_fkey(name),location_id,plant_id")
         .limit(10000)).data ?? [],
   });
   const { data: categories = [] } = useQuery({
@@ -48,7 +48,7 @@ export function AnalyticsPage() {
   const deptImplRows = useMemo(() => {
     const statsMap = new Map<string, { total: number; implemented: number }>();
     for (const s of accessibleSugs as any[]) {
-      const deptName = s.departments?.name || "Unknown";
+      const deptName = s.current_departments?.name || s.departments?.name || "Unknown";
       const current = statsMap.get(deptName) || { total: 0, implemented: 0 };
       current.total++;
       if (s.status === "implemented" || s.status === "closed") {
@@ -72,7 +72,7 @@ export function AnalyticsPage() {
     const statsMap = new Map<string, number>();
     for (const s of accessibleSugs as any[]) {
       if (s.status === "fake_closure") {
-        const deptName = s.departments?.name || "Unknown";
+        const deptName = s.current_departments?.name || s.departments?.name || "Unknown";
         statsMap.set(deptName, (statsMap.get(deptName) || 0) + 1);
       }
     }
@@ -107,7 +107,7 @@ export function AnalyticsPage() {
       const created = new Date(s.created_at);
       const week = weeks.find((w) => created >= w.start && created <= w.end);
       if (week) {
-        const deptName = s.departments?.name || "Unknown";
+        const deptName = s.current_departments?.name || s.departments?.name || "Unknown";
         week.departments[deptName] = (week.departments[deptName] || 0) + 1;
         week.total++;
         deptCounts.set(deptName, (deptCounts.get(deptName) || 0) + 1);

@@ -40,7 +40,7 @@ export function SuggestionsList() {
   const { data = [] } = useQuery({
     queryKey: ["admin-suggestions", status],
     queryFn: async () => {
-      let query = supabase.from("suggestions").select("*, employees(name, employee_code), categories(name), departments!suggestions_department_id_fkey(name), plants(name)").order("created_at", { ascending: false }).limit(500);
+      let query = supabase.from("suggestions").select("*, employees(name, employee_code), categories(name), departments!suggestions_department_id_fkey(name), current_departments:departments!suggestions_current_department_id_fkey(name), plants(name)").order("created_at", { ascending: false }).limit(500);
       if (status === "under_review") {
         query = query.not("status", "in", "(approved,implemented,rejected,closed,fake_closure)");
       } else if (status) {
@@ -76,7 +76,7 @@ export function SuggestionsList() {
               { key: "employee", header: "Employee", format: (s: any) => isPEOrAdmin ? (s.employees?.name ?? "") : "—" },
               { key: "employee_code", header: "Employee ID", format: (s: any) => isPEOrAdmin ? (s.employees?.employee_code ?? "") : "—" },
               { key: "plant", header: "Plant", format: (s: any) => s.plants?.name ?? "" },
-              { key: "department", header: "Department", format: (s: any) => s.departments?.name ?? "" },
+              { key: "department", header: "Department", format: (s: any) => s.current_departments?.name || s.departments?.name || "" },
               { key: "category", header: "Category", format: (s: any) => s.categories?.name ?? "" },
               { key: "priority", header: "Priority", format: (s: any) => PRIORITY_LABEL[s.priority as keyof typeof PRIORITY_LABEL] ?? s.priority },
               { key: "status", header: "Status", format: (s: any) => STATUS_LABEL[s.status as keyof typeof STATUS_LABEL] ?? s.status },
@@ -133,7 +133,7 @@ export function SuggestionsList() {
                     "—"
                   )}
                 </td>
-                <td className="px-4 py-2.5 text-xs">{s.departments?.name}</td>
+                <td className="px-4 py-2.5 text-xs">{s.current_departments?.name || s.departments?.name}</td>
                 <td className="px-4 py-2.5"><PriorityBadge priority={s.priority} /></td>
                 <td className="px-4 py-2.5"><StatusBadge status={s.status} /></td>
                 <td className="px-4 py-2.5 text-muted-foreground text-xs">{new Date(s.created_at).toLocaleDateString()}</td>
@@ -165,7 +165,7 @@ function SuggestionPreviewDialog({ id, onClose }: { id: string | null; onClose: 
         await supabase
           .from("suggestions")
           .select(
-            "*, employees(id, name, employee_code, email, mobile, gender, designation, department_id, plant_id, location_id, departments(name), plants(name), locations(location)), categories(name), departments!suggestions_department_id_fkey(name), plants(name), locations(location)",
+            "*, employees(id, name, employee_code, email, mobile, gender, designation, department_id, plant_id, location_id, departments(name), plants(name), locations(location)), categories(name), departments!suggestions_department_id_fkey(name), current_departments:departments!suggestions_current_department_id_fkey(name), plants(name), locations(location)",
           )
           .eq("id", id!)
           .maybeSingle()
@@ -220,7 +220,7 @@ function SuggestionPreviewDialog({ id, onClose }: { id: string | null; onClose: 
 
             <div className="grid sm:grid-cols-4 gap-3 text-sm border-t border-border pt-3">
               <Meta label="Category" value={sug.categories?.name} />
-              <Meta label="Owner department" value={sug.departments?.name} />
+              <Meta label="Owner department" value={sug.current_departments?.name || sug.departments?.name} />
               <Meta label="Plant" value={sug.plants?.name} />
               <Meta label="Location" value={sug.locations?.location} />
             </div>

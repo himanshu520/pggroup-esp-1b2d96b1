@@ -39,7 +39,7 @@ export function SuggestionDetail({ id }: { id: string }) {
     enabled: validId,
     queryKey: ["suggestion", id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("suggestions").select("*, employees(name, employee_code, email), categories(name), departments!suggestions_department_id_fkey(name), plants(name), locations(location)").eq("id", id).maybeSingle();
+      const { data, error } = await supabase.from("suggestions").select("*, employees(name, employee_code, email), categories(name), departments!suggestions_department_id_fkey(name), current_departments:departments!suggestions_current_department_id_fkey(name), plants(name), locations(location)").eq("id", id).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -250,7 +250,7 @@ export function SuggestionDetail({ id }: { id: string }) {
             <div className="grid sm:grid-cols-3 gap-3 text-sm">
               {isPE && <Meta label="Employee" value={`${sug.employees?.name} (${sug.employees?.employee_code})`} />}
               <Meta label="Category" value={sug.categories?.name} />
-              <Meta label="Owner department" value={sug.departments?.name} />
+              <Meta label="Owner department" value={sug.current_departments?.name || sug.departments?.name} />
               <Meta label="Plant" value={sug.plants?.name} />
               <Meta label="Location" value={sug.locations?.location} />
             </div>
