@@ -85,7 +85,6 @@ export function PlantPerf() {
               { key: "pending", header: "Pending" },
               { key: "fake", header: "Fake closure" },
               { key: "implPct", header: "Impl %" },
-              { key: "expected_savings", header: "Expected savings" },
               { key: "actual_spend", header: "Actual spend" },
               { key: "avg_days", header: "Avg days to close" },
             ]}
@@ -98,7 +97,7 @@ export function PlantPerf() {
         <table className="w-full text-sm">
           <thead className="bg-muted/50 border-b border-border">
             <tr>
-              {["Sr number", "Plant", "Location", "Total", "Implemented", "Pending", "Fake", "Impl %", "Expected savings", "Avg days"].map((h) => (
+              {["Sr number", "Plant", "Location", "Total", "Implemented", "Pending", "Fake", "Impl %", "Avg days"].map((h) => (
                 <th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {h}
                 </th>
@@ -108,7 +107,7 @@ export function PlantPerf() {
           <tbody className="divide-y divide-border">
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={10} className="text-center py-12 text-sm text-muted-foreground">
+                <td colSpan={9} className="text-center py-12 text-sm text-muted-foreground">
                   No plants registered.
                 </td>
               </tr>
@@ -123,9 +122,6 @@ export function PlantPerf() {
                   <td className="px-4 py-2 text-warning">{r.pending}</td>
                   <td className="px-4 py-2 text-destructive">{r.fake}</td>
                   <td className="px-4 py-2">{r.implPct}%</td>
-                  <td className="px-4 py-2 font-mono text-xs">
-                    {r.expected_savings.toLocaleString()}
-                  </td>
                   <td className="px-4 py-2 text-muted-foreground">
                     {r.avg_days ? `${r.avg_days}d` : "—"}
                   </td>
