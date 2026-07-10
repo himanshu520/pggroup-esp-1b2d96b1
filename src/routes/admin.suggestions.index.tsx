@@ -297,7 +297,7 @@ function Meta({ label, value }: { label: string; value: any }) {
   return (
     <div>
       <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="mt-0.5 font-medium text-sm">{value || "—"}</div>
+      <div className="mt-0.5 font-medium text-sm break-all">{value || "—"}</div>
     </div>
   );
 }

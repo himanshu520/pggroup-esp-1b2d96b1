@@ -96,7 +96,7 @@ export function TrackPage({ initialCode }: { initialCode?: string }) {
 }
 
 function Meta({ label, value }: { label: string; value: string }) {
-  return (<div><div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div><div className="mt-0.5">{value}</div></div>);
+  return (<div><div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div><div className="mt-0.5 break-all">{value}</div></div>);
 }
 function Section({ title, body }: { title: string; body: string | null }) {
   if (!body) return null;

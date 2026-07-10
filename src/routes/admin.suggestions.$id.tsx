@@ -447,5 +447,5 @@ function Card({ title, children }: { title?: string; children: React.ReactNode }
   );
 }
 function Meta({ label, value }: { label: string; value: any }) {
-  return (<div><div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div><div className="mt-0.5 font-medium">{value || "—"}</div></div>);
+  return (<div><div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div><div className="mt-0.5 font-medium break-all">{value || "—"}</div></div>);
 }
