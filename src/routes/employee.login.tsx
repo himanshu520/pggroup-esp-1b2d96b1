@@ -2,13 +2,17 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { startEmployeeOtp, verifyEmployeeOtp, linkAuthUserToEmployee } from "@/lib/auth.functions";
+import { startEmployeeOtp, verifyEmployeeOtp, linkAuthUserToEmployee, anonymousTrackSuggestion } from "@/lib/auth.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { KeyRound, ArrowRight, Languages } from "lucide-react";
+import { KeyRound, ArrowRight, Languages, Search, ArrowLeft, Globe, Loader2 } from "lucide-react";
 import { BrandLogos } from "@/components/brand-logos";
+import { useLang } from "@/lib/i18n";
+import { StatusBadge, PriorityBadge } from "@/components/status-badge";
+import { STATUS_LABEL } from "@/lib/statuses";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/employee/login")({
   ssr: false,
@@ -45,6 +49,26 @@ const T = {
     admin: "Admin?",
     signInHere: "Sign in here",
     sendWhatsapp: "Send OTP on WhatsApp",
+    
+    // Suggestion Tracking Translation keys
+    trackBtn: "Track Suggestion (No Login)",
+    trackTitle: "Track Suggestion",
+    trackDesc: "Enter Suggestion ID to track progress without login.",
+    trackPlaceholder: "E.g. SUG-P01-2026-000001",
+    trackNow: "Track",
+    backToLogin: "Back to Employee Login",
+    searching: "Searching…",
+    noSugFound: "No suggestion found with that ID.",
+    metaEmp: "Submitted By",
+    metaCategory: "Category",
+    metaDept: "Department",
+    metaPlant: "Plant",
+    metaLoc: "Location",
+    metaProblem: "Problem",
+    metaSolution: "Suggested Solution",
+    metaBenefits: "Expected Benefits",
+    timeline: "Timeline",
+    subDate: "Submitted on",
   },
   hi: {
     welcome: "स्वागत है",
@@ -67,27 +91,66 @@ const T = {
     admin: "एडमिन?",
     signInHere: "यहाँ साइन इन करें",
     sendWhatsapp: "WhatsApp पर ओटीपी भेजें",
+
+    // Suggestion Tracking Translation keys
+    trackBtn: "सुझाव ट्रैक करें (बिना लॉगिन)",
+    trackTitle: "सुझाव ट्रैक करें",
+    trackDesc: "बिना लॉगिन किए प्रगति ट्रैक करने के लिए सुझाव आईडी दर्ज करें।",
+    trackPlaceholder: "उदा. SUG-P01-2026-000001",
+    trackNow: "ट्रैक करें",
+    backToLogin: "कर्मचारी लॉगिन पर वापस जाएं",
+    searching: "खोज रहे हैं…",
+    noSugFound: "इस आईडी के साथ कोई सुझाव नहीं मिला।",
+    metaEmp: "प्रस्तुतकर्ता",
+    metaCategory: "श्रेणी",
+    metaDept: "विभाग",
+    metaPlant: "प्लांट",
+    metaLoc: "स्थान",
+    metaProblem: "समस्या",
+    metaSolution: "सुझाया गया समाधान",
+    metaBenefits: "अपेक्षित लाभ",
+    timeline: "समयरेखा",
+    subDate: "प्रस्तुत करने की तिथि",
   },
 } as const;
 
 function EmployeeLogin() {
-  const [lang] = useState<Lang>("en");
-  const [stage, setStage] = useState<"id" | "otp">("id");
+  const { lang, setLang } = useLang();
+  const [stage, setStage] = useState<"id" | "otp" | "track">("id");
   const t = T[lang];
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-[color:oklch(0.18_0.05_260)]">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-6 sm:p-10">
-        <BrandLogos className="justify-center mb-4" imgClassName="h-14 sm:h-16" />
+      <div className={cn("w-full transition-all duration-300 rounded-2xl bg-white shadow-2xl p-6 sm:p-10", stage === "track" ? "max-w-4xl" : "max-w-md")}>
+        <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
+          <BrandLogos className="justify-start" imgClassName="h-10 sm:h-12" />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLang(lang === "en" ? "hi" : "en")}
+            className="text-xs flex items-center gap-1.5 h-8 text-primary hover:text-primary-hover hover:bg-primary/5 rounded-full"
+          >
+            <Languages className="w-3.5 h-3.5" />
+            {lang === "en" ? "हिन्दी" : "English"}
+          </Button>
+        </div>
 
-        <h1 className="text-2xl sm:text-3xl font-bold text-center text-[color:oklch(0.18_0.05_260)]">
-          Employee Suggestion Portal
-        </h1>
-        <p className="text-center text-muted-foreground text-sm mt-1 mb-8">
-          Share your ideas. Improve your workplace.
-        </p>
+        {stage !== "track" && (
+          <>
+            <h1 className="text-2xl sm:text-3xl font-bold text-center text-[color:oklch(0.18_0.05_260)]">
+              Employee Suggestion Portal
+            </h1>
+            <p className="text-center text-muted-foreground text-sm mt-1 mb-8">
+              Share your ideas. Improve your workplace.
+            </p>
+          </>
+        )}
 
-        <EmployeeFlow t={t} stage={stage} setStage={setStage} lang={lang} />
+        {stage === "track" ? (
+          <AnonymousTracker t={t} onBack={() => setStage("id")} />
+        ) : (
+          <EmployeeFlow t={t} stage={stage as any} setStage={setStage as any} lang={lang} />
+        )}
 
       </div>
     </div>
@@ -129,8 +192,8 @@ function EmployeeFlow({
   lang,
 }: {
   t: (typeof T)[Lang];
-  stage: "id" | "otp";
-  setStage: (s: "id" | "otp") => void;
+  stage: "id" | "otp" | "track";
+  setStage: (s: "id" | "otp" | "track") => void;
   lang: Lang;
 }) {
   const [empCode, setEmpCode] = useState("");
@@ -256,6 +319,21 @@ function EmployeeFlow({
       >
         <KeyRound className="w-4 h-4" /> {t.sendOtp}
       </Button>
+
+      <div className="relative flex py-2 items-center">
+        <div className="flex-grow border-t border-border"></div>
+        <span className="flex-shrink mx-4 text-xs text-muted-foreground font-semibold uppercase tracking-wider">Or</span>
+        <div className="flex-grow border-t border-border"></div>
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => setStage("track")}
+        className="w-full h-12 text-base border-primary text-primary hover:bg-primary/5 hover:text-primary-hover flex items-center justify-center gap-2"
+      >
+        <Search className="w-4 h-4" /> {t.trackBtn}
+      </Button>
     </form>
   ) : (
     <OtpStage
@@ -376,4 +454,134 @@ function maskEmail(e: string) {
   if (!domain) return e;
   const shown = local.slice(0, 2);
   return `${shown}${"•".repeat(Math.max(1, local.length - 2))}@${domain}`;
+}
+
+function AnonymousTracker({ t, onBack }: { t: (typeof T)[Lang]; onBack: () => void }) {
+  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
+  const track = useServerFn(anonymousTrackSuggestion);
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    if (!code.trim()) return;
+    setLoading(true);
+    setResult(null);
+    setHistory([]);
+    try {
+      const data = await track({ data: code.trim() });
+      if (data) {
+        setResult(data.result);
+        setHistory(data.history);
+      } else {
+        toast.error(t.noSugFound);
+      }
+    } catch (err: any) {
+      toast.error(err.message ?? "Search failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Button type="button" variant="ghost" size="icon" onClick={onBack} className="h-9 w-9 rounded-full shrink-0">
+          <ArrowLeft className="w-5 h-5" />
+        </Button>
+        <div>
+          <h2 className="text-xl font-bold text-[color:oklch(0.18_0.05_260)]">{t.trackTitle}</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">{t.trackDesc}</p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSearch} className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
+          <Input
+            placeholder={t.trackPlaceholder}
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            className="pl-9 h-11 font-mono uppercase"
+          />
+        </div>
+        <Button type="submit" className="h-11 px-5" disabled={loading}>
+          {loading ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
+          {t.trackNow}
+        </Button>
+      </form>
+
+      {result ? (
+        <div className="grid md:grid-cols-3 gap-4 border-t border-border pt-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="md:col-span-2 space-y-4">
+            <div>
+              <div className="text-xs font-mono text-muted-foreground">{result.code}</div>
+              <h3 className="text-lg font-bold mt-1 text-foreground">{result.title}</h3>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <StatusBadge status={result.status} />
+                <PriorityBadge priority={result.priority} />
+                <span className="text-xs text-muted-foreground">
+                  {t.subDate}: {new Date(result.created_at).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 text-sm border-t border-border pt-4">
+              <MetaItem label={t.metaEmp} value={`${result.employees?.name} (${result.employees?.employee_code})`} />
+              <MetaItem label={t.metaCategory} value={result.categories?.name ?? "—"} />
+              <MetaItem label={t.metaDept} value={result.departments?.name ?? "—"} />
+              <MetaItem label={t.metaPlant} value={result.plants?.name ?? "—"} />
+              <div className="col-span-2">
+                <MetaItem label={t.metaLoc} value={result.locations?.location ?? "—"} />
+              </div>
+            </div>
+
+            <div className="border-t border-border pt-4 space-y-3">
+              <SectionItem label={t.metaProblem} content={result.problem} />
+              <SectionItem label={t.metaSolution} content={result.suggested_method} />
+              <SectionItem label={t.metaBenefits} content={result.expected_benefits} />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-muted/30 p-4">
+            <h4 className="text-sm font-bold mb-4 text-foreground">{t.timeline}</h4>
+            <ol className="space-y-4 relative">
+              {history.map((h, i) => (
+                <li key={h.id} className="relative pl-6">
+                  <div className="absolute left-1.5 top-1.5 w-2 h-2 rounded-full bg-primary" />
+                  {i < history.length - 1 && <div className="absolute left-2.5 top-3.5 bottom-[-1.25rem] w-px bg-border" />}
+                  <div className="text-[10px] text-muted-foreground">{new Date(h.created_at).toLocaleString()}</div>
+                  <div className="text-xs font-semibold mt-0.5 text-foreground">
+                    {STATUS_LABEL[h.to_status as keyof typeof STATUS_LABEL]}
+                  </div>
+                  {h.remarks && <div className="text-[11px] text-muted-foreground mt-0.5 italic">"{h.remarks}"</div>}
+                </li>
+              ))}
+              {history.length === 0 && <li className="text-xs text-muted-foreground">No activity yet.</li>}
+            </ol>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function MetaItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-0.5 font-semibold text-foreground text-xs sm:text-sm break-all">{value}</div>
+    </div>
+  );
+}
+
+function SectionItem({ label, content }: { label: string; content: string | null }) {
+  if (!content) return null;
+  return (
+    <div className="bg-muted/20 border border-border/60 rounded-lg p-3">
+      <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-1 text-xs sm:text-sm text-foreground whitespace-pre-wrap leading-relaxed">{content}</div>
+    </div>
+  );
 }

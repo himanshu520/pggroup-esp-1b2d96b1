@@ -1,7 +1,7 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { EmployeeShell, PageHeader } from "@/components/employee-shell";
 import { useSession } from "@/lib/session";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -212,20 +212,20 @@ export function SubmitForm() {
             tone="primary"
             icon={<User className="w-4.5 h-4.5" />}
             index="1"
-            title="Employee & Work Location"
-            subtitle="Your identity and posting"
+            title={t("sec_1_title")}
+            subtitle={t("sec_1_sub")}
           />
           <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <RefField label="Full Name" required>
+            <RefField label={t("lbl_full_name")} required>
               <Input value={emp?.name ?? ""} disabled className="h-11 bg-accent/40 border-accent" />
             </RefField>
-            <RefField label="Employee ID" required>
+            <RefField label={t("lbl_employee_id")} required>
               <Input value={emp?.employee_code ?? ""} disabled className="h-11 bg-accent/40 border-accent" />
             </RefField>
-            <RefField label="Email Address">
+            <RefField label={t("lbl_email_address")}>
               <Input value={emp?.email ?? ""} disabled className="h-11 bg-accent/40 border-accent" />
             </RefField>
-            <RefField label="Mobile Number" required>
+            <RefField label={t("lbl_mobile_number")} required>
               <Input
                 type="tel"
                 inputMode="tel"
@@ -237,12 +237,13 @@ export function SubmitForm() {
             </RefField>
             <div className="sm:col-span-2 space-y-1.5">
               <div className="flex items-center gap-1">
-                <Label className="text-xs font-bold uppercase tracking-wide">Gender</Label>
+                <Label className="text-xs font-bold uppercase tracking-wide">{t("lbl_gender")}</Label>
                 <span className="text-destructive">*</span>
               </div>
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 {(["male", "female", "other"] as const).map((g) => {
                   const active = form.gender === g;
+                  const genderLabel = g === "male" ? t("gender_male") : g === "female" ? t("gender_female") : t("gender_other");
                   return (
                     <button
                       key={g}
@@ -261,13 +262,13 @@ export function SubmitForm() {
                       )}>
                         {active && <span className="w-2 h-2 rounded-full bg-primary" />}
                       </span>
-                      {g}
+                      {genderLabel}
                     </button>
                   );
                 })}
               </div>
             </div>
-            <RefField label="State / Location" required>
+            <RefField label={t("lbl_state_location")} required>
               <Select
                 value={form.location_id}
                 disabled={!hasMultiplePlants}
@@ -275,11 +276,11 @@ export function SubmitForm() {
                   setForm((f) => ({ ...f, location_id: v, plant_id: "", department_id: "" }));
                 }}
               >
-                <SelectTrigger className={cn("h-11 border-accent", !hasMultiplePlants && "bg-accent/40 cursor-not-allowed")}><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectTrigger className={cn("h-11 border-accent", !hasMultiplePlants && "bg-accent/40 cursor-not-allowed")}><SelectValue placeholder={t("opt_select_state")} /></SelectTrigger>
                 <SelectContent>{visibleLocations.map((l) => <SelectItem key={l.id} value={l.id}>{l.location}</SelectItem>)}</SelectContent>
               </Select>
             </RefField>
-            <RefField label="Unit / Plant" required>
+            <RefField label={t("lbl_unit_plant")} required>
               <Select
                 value={form.plant_id}
                 disabled={!hasMultiplePlants || !form.location_id}
@@ -287,17 +288,17 @@ export function SubmitForm() {
                   setForm((f) => ({ ...f, plant_id: v, department_id: "" }));
                 }}
               >
-                <SelectTrigger className={cn("h-11 border-accent", (!hasMultiplePlants || !form.location_id) && "bg-accent/40 cursor-not-allowed")}><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectTrigger className={cn("h-11 border-accent", (!hasMultiplePlants || !form.location_id) && "bg-accent/40 cursor-not-allowed")}><SelectValue placeholder={t("opt_select_plant")} /></SelectTrigger>
                 <SelectContent>{visiblePlants.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
               </Select>
             </RefField>
-            <RefField label="Department" required>
+            <RefField label={t("lbl_department")} required>
               <Select
                 value={form.department_id}
                 disabled={!hasMultiplePlants || !form.plant_id}
                 onValueChange={(v) => setForm((f) => ({ ...f, department_id: v }))}
               >
-                <SelectTrigger className={cn("h-11 border-accent", (!hasMultiplePlants || !form.plant_id) && "bg-accent/40 cursor-not-allowed")}><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectTrigger className={cn("h-11 border-accent", (!hasMultiplePlants || !form.plant_id) && "bg-accent/40 cursor-not-allowed")}><SelectValue placeholder={t("opt_select_dept")} /></SelectTrigger>
                 <SelectContent>{visibleDepartments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
               </Select>
             </RefField>
@@ -310,28 +311,28 @@ export function SubmitForm() {
             tone="warning"
             icon={<Lightbulb className="w-4.5 h-4.5" />}
             index="2"
-            title="Classification & Budget"
-            subtitle="Categorise your idea"
+            title={t("sec_2_title")}
+            subtitle={t("sec_2_sub")}
           />
           <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Idea Category <span className="text-destructive">*</span></Label>
-              <div className="text-[11px] text-muted-foreground">Which category does your idea fall under?</div>
+              <Label className="text-xs font-semibold">{t("lbl_idea_category")} <span className="text-destructive">*</span></Label>
+              <div className="text-[11px] text-muted-foreground">{t("hint_category")}</div>
               <Select value={form.category_id} onValueChange={(v) => setForm({ ...form, category_id: v })}>
-                <SelectTrigger className="h-11"><SelectValue placeholder="Select a category" /></SelectTrigger>
+                <SelectTrigger className="h-11"><SelectValue placeholder={t("opt_select_category")} /></SelectTrigger>
                 <SelectContent>
                   {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Implementation Budget <span className="text-destructive">*</span></Label>
-              <div className="text-[11px] text-muted-foreground">Estimated budget to execute this</div>
+              <Label className="text-xs font-semibold">{t("lbl_implementation_budget")} <span className="text-destructive">*</span></Label>
+              <div className="text-[11px] text-muted-foreground">{t("hint_budget")}</div>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: "no_cost", label: "No Cost", hint: "Method changes only" },
-                  { id: "low_cost", label: "Low Cost", hint: "Minor expense" },
-                  { id: "investment", label: "Investment", hint: "Budget required" },
+                  { id: "no_cost", label: t("budget_no_cost"), hint: t("budget_no_cost_hint") },
+                  { id: "low_cost", label: t("budget_low_cost"), hint: t("budget_low_cost_hint") },
+                  { id: "investment", label: t("budget_investment"), hint: t("budget_investment_hint") },
                 ].map((b) => {
                   const active = form.budget_tier === b.id;
                   return (
@@ -365,15 +366,15 @@ export function SubmitForm() {
             tone="primary"
             icon={<Sparkles className="w-4.5 h-4.5" />}
             index="3"
-            title="Idea Description"
-            subtitle="Tell us about your improvement"
+            title={t("sec_3_title")}
+            subtitle={t("sec_3_sub")}
           />
           <div className="p-4 sm:p-5 space-y-4">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Suggestion Title / Subject <span className="text-destructive">*</span></Label>
-              <div className="text-[11px] text-muted-foreground">A clear, concise headline</div>
+              <Label className="text-xs font-semibold">{t("lbl_suggestion_title")} <span className="text-destructive">*</span></Label>
+              <div className="text-[11px] text-muted-foreground">{t("hint_title")}</div>
               <Input
-                placeholder="Short, descriptive title for your idea..."
+                placeholder={t("ph_suggestion_title")}
                 value={form.title}
                 maxLength={200}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -384,13 +385,13 @@ export function SubmitForm() {
             <AccentField
               tone="destructive"
               icon={<AlertCircle className="w-4 h-4" />}
-              label="Current Problem / Situation"
-              hint="Concern, bottleneck, defect, or safety hazard"
+              label={t("lbl_current_problem")}
+              hint={t("hint_problem")}
               required
             >
               <Textarea
                 rows={3}
-                placeholder="Describe the current issue in detail..."
+                placeholder={t("ph_problem")}
                 value={form.problem}
                 onChange={(e) => setForm({ ...form, problem: e.target.value })}
               />
@@ -399,13 +400,13 @@ export function SubmitForm() {
             <AccentField
               tone="primary"
               icon={<Wrench className="w-4 h-4" />}
-              label="Your Proposed Solution"
-              hint="How would you solve or improve this?"
+              label={t("lbl_proposed_solution")}
+              hint={t("hint_solution")}
               required
             >
               <Textarea
                 rows={3}
-                placeholder="Explain your idea to solve the problem..."
+                placeholder={t("ph_solution")}
                 value={form.suggested_method}
                 onChange={(e) => setForm({ ...form, suggested_method: e.target.value })}
               />
@@ -414,13 +415,13 @@ export function SubmitForm() {
             <AccentField
               tone="success"
               icon={<TrendingUp className="w-4 h-4" />}
-              label="Expected Benefits / Impact"
-              hint="Cost savings, safety, cycle time, quality..."
+              label={t("lbl_expected_benefits")}
+              hint={t("hint_benefits")}
               required
             >
               <Textarea
                 rows={3}
-                placeholder="Positive impacts of your idea..."
+                placeholder={t("ph_benefits")}
                 value={form.expected_benefits}
                 onChange={(e) => setForm({ ...form, expected_benefits: e.target.value })}
               />
@@ -428,8 +429,6 @@ export function SubmitForm() {
 
           </div>
         </section>
-
-
 
         {/* Sticky submit bar (mobile-friendly) */}
         <div className="fixed bottom-0 left-0 right-0 lg:left-64 bg-background/95 backdrop-blur border-t border-border p-3 sm:p-4 z-20">
@@ -459,14 +458,14 @@ export function SubmitForm() {
               }}
               className="h-11 px-4"
             >
-              Reset Form
+              {t("btn_reset_form")}
             </Button>
             <Button
               type="submit"
               disabled={submitting}
               className="h-11 px-6 bg-success hover:bg-success/90 text-success-foreground"
             >
-              {submitting ? "Submitting…" : "Submit Suggestion"}
+              {submitting ? (t("submitting") || "Submitting…") : t("btn_submit_suggestion")}
             </Button>
           </div>
         </div>

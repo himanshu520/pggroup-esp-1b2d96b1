@@ -377,3 +377,42 @@ export const linkAuthUserToEmployee = createServerFn({ method: "POST" })
     }
     return { linked: true };
   });
+
+export const anonymousTrackSuggestion = createServerFn({ method: "GET" })
+  .inputValidator((code: string) => z.string().trim().min(1).max(64).parse(code))
+  .handler(async ({ data: code }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: result } = await supabaseAdmin
+      .from("suggestions")
+      .select(`
+        id,
+        code,
+        title,
+        status,
+        priority,
+        created_at,
+        problem,
+        suggested_method,
+        expected_benefits,
+        categories(name),
+        departments!suggestions_department_id_fkey(name),
+        plants(name),
+        locations(location),
+        employees(name, employee_code)
+      `)
+      .ilike("code", code.trim())
+      .maybeSingle();
+
+    if (!result) return null;
+
+    const { data: history } = await supabaseAdmin
+      .from("suggestion_history")
+      .select("id, created_at, to_status, remarks")
+      .eq("suggestion_id", result.id)
+      .order("created_at");
+
+    return {
+      result,
+      history: history ?? [],
+    };
+  });

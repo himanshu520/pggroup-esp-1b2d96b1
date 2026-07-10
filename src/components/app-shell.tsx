@@ -5,12 +5,13 @@ const AppShellContext = createContext(false);
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { ROLE_LABEL } from "@/lib/statuses";
-import { LogOut, Menu, X, User, Loader2 } from "lucide-react";
+import { LogOut, Menu, X, User, Loader2, Globe } from "lucide-react";
 import { NotificationBell } from "@/components/notification-bell";
 import pgLogo from "@/assets/pg-logo.png.asset.json";
 import espLogo from "@/assets/esp-logo.png.asset.json";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useLang } from "@/lib/i18n";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -78,6 +79,7 @@ function AppShellInner({
   const loc = useLocation();
   const navigate = useNavigate();
   const router = useRouter();
+  const { lang, setLang } = useLang();
 
   const firstRole = session?.roles?.[0];
   const locName = session?.employee?.locations?.location || firstRole?.locations?.location;
@@ -322,6 +324,9 @@ function AppShellInner({
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setProfileOpen(true)} className="cursor-pointer">
                 <User className="w-4 h-4 mr-2" /> My Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLang(lang === "en" ? "hi" : "en")} className="cursor-pointer">
+                <Globe className="w-4 h-4 mr-2" /> {lang === "en" ? "Change to हिन्दी" : "Change to English"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
