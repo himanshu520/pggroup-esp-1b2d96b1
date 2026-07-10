@@ -7,7 +7,7 @@ import { StatusBadge, PriorityBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useSession } from "@/lib/session";
+import { useSession, isSuggestionAccessible } from "@/lib/session";
 import { STATUS_LABEL } from "@/lib/statuses";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
