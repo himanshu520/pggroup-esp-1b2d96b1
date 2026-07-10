@@ -429,40 +429,7 @@ export function SubmitForm() {
           </div>
         </section>
 
-        {/* Section: Attachments */}
-        <section className="rounded-xl border border-border bg-card">
-          <SectionHeader
-            tone="primary"
-            icon={<Paperclip className="w-4.5 h-4.5" />}
-            index="4"
-            title="Attachments (Optional)"
-            subtitle="Images, PDF, Excel, video — up to 10 files"
-          />
-          <div className="p-4 sm:p-5 space-y-3">
-            <label className="block border-2 border-dashed border-border rounded-lg p-6 sm:p-8 text-center cursor-pointer hover:border-primary/50 transition-colors">
-              <input type="file" multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
-              <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-              <div className="text-sm font-medium">Tap or drop files here</div>
-              <div className="text-xs text-muted-foreground mt-1">Up to 10 files</div>
-            </label>
-            {files.length > 0 && (
-              <ul className="divide-y divide-border rounded-md border border-border">
-                {files.map((f, i) => (
-                  <li key={i} className="flex items-center gap-3 px-3 py-2">
-                    <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm truncate">{f.name}</div>
-                      <div className="text-xs text-muted-foreground">{(f.size / 1024).toFixed(1)} KB</div>
-                    </div>
-                    <button type="button" className="p-1 hover:bg-muted rounded shrink-0" onClick={() => setFiles(files.filter((_, j) => j !== i))}>
-                      <X className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
+
 
         {/* Sticky submit bar (mobile-friendly) */}
         <div className="fixed bottom-0 left-0 right-0 lg:left-64 bg-background/95 backdrop-blur border-t border-border p-3 sm:p-4 z-20">
