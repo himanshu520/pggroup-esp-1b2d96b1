@@ -78,6 +78,11 @@ function AppShellInner({
   const loc = useLocation();
   const navigate = useNavigate();
   const router = useRouter();
+
+  const firstRole = session?.roles?.[0];
+  const locName = session?.employee?.locations?.location || firstRole?.locations?.location;
+  const plantName = session?.employee?.plants?.name || firstRole?.plants?.name;
+  const deptName = session?.employee?.departments?.name || firstRole?.departments?.name;
   const qc = useQueryClient();
   const [mobileOpen, setMobileOpen] = useState(false);
   // Persist collapsed state across route changes (AppShell remounts per route)
@@ -208,17 +213,32 @@ function AppShellInner({
 
       {/* Bottom user / role */}
       <div className={cn("border-t border-sidebar-border p-3", collapsible && collapsed && "lg:hidden")}>
-        <div className="rounded-lg bg-muted/50 p-3">
+        <div className="rounded-lg bg-muted/50 p-3 space-y-2">
           <div className="flex items-center gap-2">
             <div className="grid place-items-center w-8 h-8 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">{initials}</div>
             <div className="min-w-0 flex-1">
+              <div className="text-xs font-semibold text-foreground truncate">{session?.employee?.name ?? session?.email ?? "User"}</div>
               {session?.primaryRole && (
-                <span className="inline-block text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                <div className="text-[10px] text-muted-foreground mt-0.5 font-medium truncate">
                   {ROLE_LABEL[session.primaryRole]}
-                </span>
+                </div>
               )}
             </div>
           </div>
+          
+          {(locName || plantName || deptName) && (
+            <div className="text-[10px] border-t border-sidebar-border/60 pt-2 space-y-0.5 text-muted-foreground/90 font-medium leading-normal">
+              {locName && (
+                <div className="truncate"><span className="text-foreground/60 font-semibold">Loc:</span> {locName}</div>
+              )}
+              {plantName && (
+                <div className="truncate"><span className="text-foreground/60 font-semibold">Plant:</span> {plantName}</div>
+              )}
+              {deptName && (
+                <div className="truncate"><span className="text-foreground/60 font-semibold">Dept:</span> {deptName}</div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </aside>
@@ -246,7 +266,7 @@ function AppShellInner({
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-1 sm:gap-3 min-w-0" role="img" aria-label="PG Group — Employee Suggestion Portal">
-            <div className="relative bg-white rounded-md px-1 sm:px-2 h-8 sm:h-10 w-[52px] sm:w-[92px] flex items-center justify-center shadow-sm shrink-0 border border-border/60">
+            <div className="relative bg-white rounded-md px-1 sm:px-2 h-11 sm:h-13 w-[64px] sm:w-[110px] flex items-center justify-center shadow-sm shrink-0 border border-border/60">
               {!pgLoaded && (
                 <div aria-hidden="true" className="absolute inset-1 rounded bg-muted/60 animate-pulse" />
               )}
@@ -259,10 +279,10 @@ function AppShellInner({
                 decoding="async"
                 fetchPriority="high"
                 onLoad={() => setPgLoaded(true)}
-                className={cn("brand-logo h-6 sm:h-9 w-auto max-w-full object-contain hover-scale", pgLoaded && "is-loaded")}
+                className={cn("brand-logo h-8 sm:h-11 w-auto max-w-full object-contain hover-scale", pgLoaded && "is-loaded")}
               />
             </div>
-            <div className="relative bg-white rounded-md px-1 sm:px-2 h-8 sm:h-10 w-[52px] sm:w-[92px] flex items-center justify-center shadow-sm shrink-0 border border-border/60">
+            <div className="relative bg-white rounded-md px-1 sm:px-2 h-11 sm:h-13 w-[64px] sm:w-[110px] flex items-center justify-center shadow-sm shrink-0 border border-border/60">
               {!espLoaded && (
                 <div aria-hidden="true" className="absolute inset-1 rounded bg-muted/60 animate-pulse" />
               )}
@@ -275,7 +295,7 @@ function AppShellInner({
                 decoding="async"
                 fetchPriority="high"
                 onLoad={() => setEspLoaded(true)}
-                className={cn("brand-logo brand-logo-delay h-6 sm:h-9 w-auto max-w-full object-contain hover-scale", espLoaded && "is-loaded")}
+                className={cn("brand-logo brand-logo-delay h-8 sm:h-11 w-auto max-w-full object-contain hover-scale", espLoaded && "is-loaded")}
               />
             </div>
             <div className="hidden sm:flex flex-col leading-tight min-w-0">

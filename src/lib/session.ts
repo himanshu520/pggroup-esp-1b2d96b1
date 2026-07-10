@@ -6,8 +6,20 @@ import type { AppRole } from "@/lib/statuses";
 export type SessionProfile = {
   userId: string;
   email: string;
-  employee: Tables<"employees"> | null;
-  roles: Array<{ role: AppRole; location_id: string | null; plant_id: string | null; department_id: string | null }>;
+  employee: (Tables<"employees"> & {
+    locations?: { location: string } | null;
+    plants?: { name: string } | null;
+    departments?: { name: string } | null;
+  }) | null;
+  roles: Array<{
+    role: AppRole;
+    location_id: string | null;
+    plant_id: string | null;
+    department_id: string | null;
+    locations?: { location: string } | null;
+    plants?: { name: string } | null;
+    departments?: { name: string } | null;
+  }>;
   isAdmin: boolean;
   isPE: boolean;
   primaryRole: AppRole;
@@ -19,8 +31,15 @@ export async function loadSession(): Promise<SessionProfile | null> {
   if (!user) return null;
 
   const [{ data: employee }, { data: rolesRaw }] = await Promise.all([
-    supabase.from("employees").select("*").eq("user_id", user.id).maybeSingle(),
-    supabase.from("user_roles").select("role,location_id,plant_id,department_id").eq("user_id", user.id),
+    supabase
+      .from("employees")
+      .select("*, locations(location), plants(name), departments(name)")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("user_roles")
+      .select("role,location_id,plant_id,department_id, locations(location), plants(name), departments(name)")
+      .eq("user_id", user.id),
   ]);
 
   const roles = (rolesRaw ?? []) as SessionProfile["roles"];
@@ -34,7 +53,7 @@ export async function loadSession(): Promise<SessionProfile | null> {
   return {
     userId: user.id,
     email: user.email ?? "",
-    employee: employee ?? null,
+    employee: (employee as any) ?? null,
     roles,
     isAdmin,
     isPE,
