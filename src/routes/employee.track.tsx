@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge, PriorityBadge } from "@/components/status-badge";
 import { STATUS_LABEL } from "@/lib/statuses";
+import { useT } from "@/lib/i18n";
 import { Search } from "lucide-react";
 
 export const Route = createFileRoute("/employee/track")({
@@ -21,6 +22,7 @@ export function TrackPage({ initialCode }: { initialCode?: string }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
+  const t = useT();
 
   async function search() {
     if (!code.trim()) return;
@@ -61,7 +63,7 @@ export function TrackPage({ initialCode }: { initialCode?: string }) {
             </div>
             <div className="grid sm:grid-cols-3 gap-3 text-sm border-t border-border pt-3">
               <Meta label="Employee" value={`${result.employees?.name} (${result.employees?.employee_code})`} />
-              <Meta label="Category" value={result.categories?.name ?? "—"} />
+              <Meta label="Category" value={result.categories?.name ? t(result.categories.name) : "—"} />
               <Meta label="Department" value={result.departments?.name ?? "—"} />
               <Meta label="Plant" value={result.plants?.name ?? "—"} />
               <Meta label="Location" value={result.locations?.location ?? "—"} />
@@ -80,7 +82,7 @@ export function TrackPage({ initialCode }: { initialCode?: string }) {
                   <div className="absolute left-1.5 top-1 w-2 h-2 rounded-full bg-primary" />
                   {i < history.length - 1 && <div className="absolute left-2 top-3 bottom-[-1rem] w-px bg-border" />}
                   <div className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString()}</div>
-                  <div className="text-sm font-medium">{STATUS_LABEL[h.to_status as keyof typeof STATUS_LABEL]}</div>
+                  <div className="text-sm font-medium">{t(`status_${h.to_status}`) || STATUS_LABEL[h.to_status as keyof typeof STATUS_LABEL]}</div>
                   {h.remarks && <div className="text-xs text-muted-foreground mt-0.5">{h.remarks}</div>}
                 </li>
               ))}

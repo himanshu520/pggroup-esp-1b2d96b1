@@ -321,7 +321,7 @@ export function SubmitForm() {
               <Select value={form.category_id} onValueChange={(v) => setForm({ ...form, category_id: v })}>
                 <SelectTrigger className="h-11"><SelectValue placeholder={t("opt_select_category")} /></SelectTrigger>
                 <SelectContent>
-                  {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  {categories.map((c) => <SelectItem key={c.id} value={c.id}>{t(c.name)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

@@ -123,6 +123,32 @@ const DICT: Dict = {
   budget_low_cost_hint: { en: "Minor expense", hi: "मामूली खर्च" },
   budget_investment: { en: "Investment", hi: "निवेश" },
   budget_investment_hint: { en: "Budget required", hi: "बजट आवश्यक" },
+
+  // Categories
+  "Productivity & Efficiency — Line Balancing, Cycle Time, Energy Saving": { en: "Productivity & Efficiency — Line Balancing, Cycle Time, Energy Saving", hi: "उत्पादकता और दक्षता — लाइन बैलेंसिंग, साइकिल टाइम, ऊर्जा की बचत" },
+  "Quality & Fool Proofing — Poka Yoke, Defect Reduction, Inspection": { en: "Quality & Fool Proofing — Poka Yoke, Defect Reduction, Inspection", hi: "गुणवत्ता और फूल-प्रूफिंग — पोका योके, दोष में कमी, निरीक्षण" },
+  "Safety Improvement — Machine Safety, PPE, Fire/Electrical, Hazards": { en: "Safety Improvement — Machine Safety, PPE, Fire/Electrical, Hazards", hi: "सुरक्षा सुधार — मशीन सुरक्षा, पीपीई (PPE), अग्नि/विद्युत, खतरे" },
+  "Environment / 5S / 3R — Reduce, Reuse, Recycle, Waste": { en: "Environment / 5S / 3R — Reduce, Reuse, Recycle, Waste", hi: "पर्यावरण / 5S / 3R — कम करें, पुन: उपयोग करें, रीसायकल करें, अपशिष्ट" },
+  "Automation & Digitization — LCA, Digital Systems, Paperless": { en: "Automation & Digitization — LCA, Digital Systems, Paperless", hi: "स्वचालन और डिजिटलीकरण — एलसीए (LCA), डिजिटल सिस्टम, पेपरलेस" },
+  "Maintenance Improvement — Preventive Maintenance, Tools": { en: "Maintenance Improvement — Preventive Maintenance, Tools", hi: "रखरखाव में सुधार — निवारक रखरखाव, उपकरण" },
+  "Material Flow & Logistics — FIFO, KANBAN, Layout": { en: "Material Flow & Logistics — FIFO, KANBAN, Layout", hi: "मटेरियल फ्लो और लॉजिस्टिक्स — फीफो (FIFO), कानबन (KANBAN), लेआउट" },
+  "Employee Welfare — Work Culture, Canteen, Rest Area": { en: "Employee Welfare — Work Culture, Canteen, Rest Area", hi: "कर्मचारी कल्याण — कार्य संस्कृति, कैंटीन, विश्राम क्षेत्र" },
+  "Others": { en: "Others", hi: "अन्य" },
+
+  // Statuses
+  status_submitted: { en: "Submitted", hi: "प्रस्तुत किया गया" },
+  status_pe_review: { en: "PE Review", hi: "पीई समीक्षा (PE Review)" },
+  status_transferred: { en: "Transferred", hi: "स्थानांतरित" },
+  status_dept_review: { en: "Department Review", hi: "विभाग समीक्षा" },
+  status_approved: { en: "Approved", hi: "स्वीकृत" },
+  status_evaluation: { en: "Evaluation", hi: "मूल्यांकन" },
+  status_implementation: { en: "Implementation", hi: "कार्यान्वयन" },
+  status_evidence_pending: { en: "Evidence Pending", hi: "साक्ष्य लंबित" },
+  status_evidence_submitted: { en: "Evidence Submitted", hi: "साक्ष्य प्रस्तुत किया गया" },
+  status_pe_verification: { en: "PE Verification", hi: "पीई सत्यापन (PE Verification)" },
+  status_implemented: { en: "Implemented", hi: "लागू किया गया" },
+  status_rejected: { en: "Rejected", hi: "अस्वीकृत" },
+  status_fake_closure: { en: "Fake Closure", hi: "फर्जी बंद (Fake Closure)" },
 };
 
 type Ctx = {

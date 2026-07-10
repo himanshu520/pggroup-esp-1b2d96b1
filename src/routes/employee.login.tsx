@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { KeyRound, ArrowRight, Languages, Search, ArrowLeft, Globe, Loader2 } from "lucide-react";
 import { BrandLogos } from "@/components/brand-logos";
-import { useLang } from "@/lib/i18n";
+import { useLang, useT } from "@/lib/i18n";
 import { StatusBadge, PriorityBadge } from "@/components/status-badge";
 import { STATUS_LABEL } from "@/lib/statuses";
 import { cn } from "@/lib/utils";
@@ -462,6 +462,7 @@ function AnonymousTracker({ t, onBack }: { t: (typeof T)[Lang]; onBack: () => vo
   const [result, setResult] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const track = useServerFn(anonymousTrackSuggestion);
+  const globalT = useT();
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -529,7 +530,7 @@ function AnonymousTracker({ t, onBack }: { t: (typeof T)[Lang]; onBack: () => vo
             
             <div className="grid grid-cols-2 gap-3 text-sm border-t border-border pt-4">
               <MetaItem label={t.metaEmp} value={`${result.employees?.name} (${result.employees?.employee_code})`} />
-              <MetaItem label={t.metaCategory} value={result.categories?.name ?? "—"} />
+              <MetaItem label={t.metaCategory} value={result.categories?.name ? globalT(result.categories.name) : "—"} />
               <MetaItem label={t.metaDept} value={result.departments?.name ?? "—"} />
               <MetaItem label={t.metaPlant} value={result.plants?.name ?? "—"} />
               <div className="col-span-2">
@@ -553,7 +554,7 @@ function AnonymousTracker({ t, onBack }: { t: (typeof T)[Lang]; onBack: () => vo
                   {i < history.length - 1 && <div className="absolute left-2.5 top-3.5 bottom-[-1.25rem] w-px bg-border" />}
                   <div className="text-[10px] text-muted-foreground">{new Date(h.created_at).toLocaleString()}</div>
                   <div className="text-xs font-semibold mt-0.5 text-foreground">
-                    {STATUS_LABEL[h.to_status as keyof typeof STATUS_LABEL]}
+                    {globalT(`status_${h.to_status}`) || STATUS_LABEL[h.to_status as keyof typeof STATUS_LABEL]}
                   </div>
                   {h.remarks && <div className="text-[11px] text-muted-foreground mt-0.5 italic">"{h.remarks}"</div>}
                 </li>

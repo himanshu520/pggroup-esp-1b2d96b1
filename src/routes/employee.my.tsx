@@ -57,9 +57,9 @@ export function MySuggestions() {
         <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-9 rounded-md border border-input bg-background px-3 text-sm">
           <option value="">{t("my_all_statuses")}</option>
           <option value="under_review">{t("my_under_review")}</option>
-          <option value="approved">{STATUS_LABEL.approved}</option>
-          <option value="implemented">{STATUS_LABEL.implemented}</option>
-          <option value="rejected">{STATUS_LABEL.rejected}</option>
+          <option value="approved">{t("status_approved")}</option>
+          <option value="implemented">{t("status_implemented")}</option>
+          <option value="rejected">{t("status_rejected")}</option>
         </select>
       </div>
 
@@ -152,7 +152,7 @@ function SuggestionDetailsDialog({
             </div>
 
             <div className="grid sm:grid-cols-3 gap-3 text-sm border-t border-border pt-3">
-              <Meta label={t("category")} value={s.categories?.name ?? "—"} />
+              <Meta label={t("category")} value={s.categories?.name ? t(s.categories.name) : "—"} />
               <Meta label="Department" value={s.departments?.name ?? "—"} />
               <Meta label="Plant" value={s.plants?.name ?? "—"} />
               <Meta label="Location" value={s.locations?.location ?? "—"} />
@@ -177,7 +177,7 @@ function SuggestionDetailsDialog({
                       {new Date(h.created_at).toLocaleString()}
                     </div>
                     <div className="text-sm font-medium">
-                      {STATUS_LABEL[h.to_status as keyof typeof STATUS_LABEL]}
+                      {t(`status_${h.to_status}`)}
                     </div>
                     {h.remarks && (
                       <div className="text-xs text-muted-foreground mt-0.5">{h.remarks}</div>
