@@ -330,11 +330,32 @@ export function SubmitForm() {
               <div className="text-[11px] text-muted-foreground">{t("hint_budget")}</div>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: "no_cost", label: t("budget_no_cost"), hint: t("budget_no_cost_hint") },
-                  { id: "low_cost", label: t("budget_low_cost"), hint: t("budget_low_cost_hint") },
-                  { id: "investment", label: t("budget_investment"), hint: t("budget_investment_hint") },
+                  { id: "no_cost", label: t("budget_no_cost"), hint: t("budget_no_cost_hint"), color: "emerald" },
+                  { id: "low_cost", label: t("budget_low_cost"), hint: t("budget_low_cost_hint"), color: "amber" },
+                  { id: "investment", label: t("budget_investment"), hint: t("budget_investment_hint"), color: "red" },
                 ].map((b) => {
                   const active = form.budget_tier === b.id;
+                  
+                  const colorMap = {
+                    emerald: {
+                      activeContainer: "border-emerald-600 bg-emerald-500/10 ring-1 ring-emerald-600 shadow-sm",
+                      hoverContainer: "hover:border-emerald-600/40",
+                      activeDot: "border-emerald-600 bg-emerald-600",
+                    },
+                    amber: {
+                      activeContainer: "border-amber-500 bg-amber-500/10 ring-1 ring-amber-500 shadow-sm",
+                      hoverContainer: "hover:border-amber-500/40",
+                      activeDot: "border-amber-500 bg-amber-500",
+                    },
+                    red: {
+                      activeContainer: "border-red-600 bg-red-500/10 ring-1 ring-red-600 shadow-sm",
+                      hoverContainer: "hover:border-red-600/40",
+                      activeDot: "border-red-600 bg-red-600",
+                    },
+                  };
+                  
+                  const c = colorMap[b.color as keyof typeof colorMap];
+
                   return (
                     <button
                       key={b.id}
@@ -342,13 +363,11 @@ export function SubmitForm() {
                       onClick={() => setForm({ ...form, budget_tier: b.id as any })}
                       className={cn(
                         "text-left rounded-lg border p-2.5 transition-all",
-                        active
-                          ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm"
-                          : "border-border bg-background hover:border-primary/40",
+                        active ? c.activeContainer : `border-border bg-background ${c.hoverContainer}`
                       )}
                     >
                       <div className="flex items-center gap-1.5">
-                        <div className={cn("w-3 h-3 rounded-full border-2 shrink-0", active ? "border-primary bg-primary" : "border-muted-foreground/40")} />
+                        <div className={cn("w-3 h-3 rounded-full border-2 shrink-0 transition-colors", active ? c.activeDot : "border-muted-foreground/40")} />
                         <div className="text-xs font-semibold">{b.label}</div>
                       </div>
                       <div className="text-[10px] text-muted-foreground mt-1 leading-tight">{b.hint}</div>
