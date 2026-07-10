@@ -32,6 +32,11 @@ export function SuggestionsList() {
   const [status, setStatus] = useState("");
   const [previewId, setPreviewId] = useState<string | null>(null);
 
+  const isPEOrAdmin = useMemo(() => {
+    if (!sess?.roles) return false;
+    return sess.roles.some((r) => r.role === "pe_user" || r.role === "super_admin" || r.role === "corporate_admin");
+  }, [sess?.roles]);
+
   const { data = [] } = useQuery({
     queryKey: ["admin-suggestions", status],
     queryFn: async () => {
@@ -68,8 +73,8 @@ export function SuggestionsList() {
             columns={[
               { key: "code", header: "Code", format: (s: any) => s.code ?? "" },
               { key: "title", header: "Title", format: (s: any) => s.title ?? "" },
-              { key: "employee", header: "Employee", format: (s: any) => s.employees?.name ?? "" },
-              { key: "employee_code", header: "Employee ID", format: (s: any) => s.employees?.employee_code ?? "" },
+              { key: "employee", header: "Employee", format: (s: any) => isPEOrAdmin ? (s.employees?.name ?? "") : "—" },
+              { key: "employee_code", header: "Employee ID", format: (s: any) => isPEOrAdmin ? (s.employees?.employee_code ?? "") : "—" },
               { key: "plant", header: "Plant", format: (s: any) => s.plants?.name ?? "" },
               { key: "department", header: "Department", format: (s: any) => s.departments?.name ?? "" },
               { key: "category", header: "Category", format: (s: any) => s.categories?.name ?? "" },
@@ -119,7 +124,15 @@ export function SuggestionsList() {
               >
                 <td className="px-4 py-2.5 font-mono text-xs text-primary">{s.code}</td>
                 <td className="px-4 py-2.5 max-w-xs truncate">{s.title}</td>
-                <td className="px-4 py-2.5 text-xs">{s.employees?.name} <span className="text-muted-foreground">({s.employees?.employee_code})</span></td>
+                <td className="px-4 py-2.5 text-xs">
+                  {isPEOrAdmin ? (
+                    <>
+                      {s.employees?.name} <span className="text-muted-foreground">({s.employees?.employee_code})</span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </td>
                 <td className="px-4 py-2.5 text-xs">{s.departments?.name}</td>
                 <td className="px-4 py-2.5"><PriorityBadge priority={s.priority} /></td>
                 <td className="px-4 py-2.5"><StatusBadge status={s.status} /></td>
@@ -138,6 +151,12 @@ export function SuggestionsList() {
 function SuggestionPreviewDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
   const [navigating, setNavigating] = useState(false);
   const open = !!id;
+  const { data: sess } = useSession();
+  const isPEOrAdmin = useMemo(() => {
+    if (!sess?.roles) return false;
+    return sess.roles.some((r) => r.role === "pe_user" || r.role === "super_admin" || r.role === "corporate_admin");
+  }, [sess?.roles]);
+
   const { data: sug, isLoading } = useQuery({
     enabled: open,
     queryKey: ["suggestion-preview", id],
@@ -183,19 +202,21 @@ function SuggestionPreviewDialog({ id, onClose }: { id: string | null; onClose: 
           <div className="py-6 text-sm text-muted-foreground text-center">Not found.</div>
         ) : (
           <div className="space-y-4 py-2">
-            <div className="rounded-lg border border-border bg-muted/20 p-4">
-              <div className="text-xs uppercase font-bold text-muted-foreground mb-3">Employee Information</div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                <Meta label="Name" value={sug.employees?.name ?? "—"} />
-                <Meta label="Employee ID" value={sug.employees?.employee_code ?? "—"} />
-                <Meta label="Email" value={sug.employees?.email ?? "—"} />
-                <Meta label="Mobile" value={sug.employees?.mobile ?? "—"} />
-                <Meta label="Gender" value={sug.employees?.gender ? (sug.employees.gender.charAt(0).toUpperCase() + sug.employees.gender.slice(1).replace(/_/g, " ")) : "—"} />
-                <Meta label="Designation" value={sug.employees?.designation ?? "—"} />
-                <Meta label="Base Department" value={sug.employees?.departments?.name ?? "—"} />
-                <Meta label="Base Plant" value={sug.employees?.plants?.name ?? "—"} />
+            {isPEOrAdmin && (
+              <div className="rounded-lg border border-border bg-muted/20 p-4">
+                <div className="text-xs uppercase font-bold text-muted-foreground mb-3">Employee Information</div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                  <Meta label="Name" value={sug.employees?.name ?? "—"} />
+                  <Meta label="Employee ID" value={sug.employees?.employee_code ?? "—"} />
+                  <Meta label="Email" value={sug.employees?.email ?? "—"} />
+                  <Meta label="Mobile" value={sug.employees?.mobile ?? "—"} />
+                  <Meta label="Gender" value={sug.employees?.gender ? (sug.employees.gender.charAt(0).toUpperCase() + sug.employees.gender.slice(1).replace(/_/g, " ")) : "—"} />
+                  <Meta label="Designation" value={sug.employees?.designation ?? "—"} />
+                  <Meta label="Base Department" value={sug.employees?.departments?.name ?? "—"} />
+                  <Meta label="Base Plant" value={sug.employees?.plants?.name ?? "—"} />
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="grid sm:grid-cols-4 gap-3 text-sm border-t border-border pt-3">
               <Meta label="Category" value={sug.categories?.name} />

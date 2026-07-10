@@ -24,7 +24,7 @@ export function DeptPerf() {
           .is("deleted_at", null)
       ).data ?? [],
   });
-  const { data: sugs = [] } = useQuery({ queryKey: ["all-sugs"], queryFn: async () => (await supabase.from("suggestions").select("id,department_id,status,created_at,completed_at").limit(5000)).data ?? [] });
+  const { data: sugs = [] } = useQuery({ queryKey: ["all-sugs"], queryFn: async () => (await supabase.from("suggestions").select("id,department_id,current_department_id,status,created_at,completed_at").limit(5000)).data ?? [] });
 
   const filteredDepts = useMemo(() => {
     if (!sess?.roles) return [];
@@ -37,7 +37,7 @@ export function DeptPerf() {
 
   const rows = useMemo(() => {
     return filteredDepts.map((d: any) => {
-      const all = sugs.filter((s) => s.department_id === d.id);
+      const all = sugs.filter((s) => s.current_department_id === d.id);
       const impl = all.filter((s) => s.status === "implemented" || s.status === "closed").length;
       const fake = all.filter((s) => s.status === "fake_closure").length;
       const pending = all.filter((s) => !["implemented","closed","rejected"].includes(s.status)).length;
