@@ -86,7 +86,7 @@ export function isDeptAccessible(deptId: string | null, plantId: string | null, 
   });
 }
 
-export function isSuggestionAccessible(sug: { location_id: string | null; plant_id: string | null; department_id: string | null } | null, roles: SessionProfile["roles"] | undefined): boolean {
+export function isSuggestionAccessible(sug: { location_id: string | null; plant_id: string | null; department_id: string | null; current_department_id?: string | null } | null, roles: SessionProfile["roles"] | undefined): boolean {
   if (!sug || !roles) return false;
   if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin")) return true;
   return roles.some((r) => {
@@ -94,7 +94,8 @@ export function isSuggestionAccessible(sug: { location_id: string | null; plant_
     if (r.role === "plant_admin" || r.role === "pe_user" || r.role === "mgmt_viewer") {
       return r.location_id === sug.location_id && r.plant_id === sug.plant_id;
     }
-    return r.location_id === sug.location_id && r.plant_id === sug.plant_id && r.department_id === sug.department_id;
+    const deptId = sug.current_department_id || sug.department_id;
+    return r.location_id === sug.location_id && r.plant_id === sug.plant_id && r.department_id === deptId;
   });
 }
 

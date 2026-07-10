@@ -92,7 +92,7 @@ function OverviewPage() {
 
   const { data: sugs = [] } = useQuery({
     queryKey: ["admin-suggestions-all"],
-    queryFn: async () => (await supabase.from("suggestions").select("id, status, priority, created_at, department_id, plant_id, location_id, category_id, expected_saving").order("created_at", { ascending: false }).limit(5000)).data ?? [],
+    queryFn: async () => (await supabase.from("suggestions").select("id, status, priority, created_at, department_id, current_department_id, plant_id, location_id, category_id, expected_saving").order("created_at", { ascending: false }).limit(5000)).data ?? [],
   });
   const { data: locations = [] } = useQuery({ queryKey: ["locs"], queryFn: async () => (await supabase.from("locations").select("id,location")).data ?? [] });
   const { data: plants = [] } = useQuery({ queryKey: ["plants"], queryFn: async () => (await supabase.from("plants").select("id,name,location_id")).data ?? [] });

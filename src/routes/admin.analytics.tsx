@@ -31,7 +31,7 @@ export function AnalyticsPage() {
     queryFn: async () =>
       (await supabase
         .from("suggestions")
-        .select("id,status,priority,category_id,created_at,expected_saving,actual_cost,department_id,departments(name),location_id,plant_id")
+        .select("id,status,priority,category_id,created_at,expected_saving,actual_cost,department_id,current_department_id,departments(name),location_id,plant_id")
         .limit(10000)).data ?? [],
   });
   const { data: categories = [] } = useQuery({

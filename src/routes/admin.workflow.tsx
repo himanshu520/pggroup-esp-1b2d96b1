@@ -4,8 +4,9 @@ import { ADMIN_NAV } from "@/lib/admin-nav";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { StatusBadge, PriorityBadge } from "@/components/status-badge";
-import { useSession } from "@/lib/session";
+import { useSession, isSuggestionAccessible } from "@/lib/session";
 import type { SuggestionStatus } from "@/lib/statuses";
+import { useMemo } from "react";
 
 const QUEUES: Array<{ key: string; label: string; statuses: SuggestionStatus[]; forPE?: boolean }> = [
   { key: "pe_in", label: "PE Inbox", statuses: ["pe_review","submitted"], forPE: true },
@@ -27,13 +28,18 @@ export function WorkflowPage() {
     queryFn: async () => (await supabase.from("suggestions").select("*, employees(name), departments!suggestions_department_id_fkey(name)").order("created_at", { ascending: false })).data ?? [],
   });
 
+  const accessibleSugs = useMemo(() => {
+    if (!session?.roles) return [];
+    return data.filter((s: any) => isSuggestionAccessible(s, session.roles));
+  }, [data, session?.roles]);
+
   return (
     <AppShell navGroups={ADMIN_NAV} title="Admin Console">
       <PageHeader title="Workflow Queue" description="Everything waiting on someone. PE queues show only for PE / Super / Corporate roles." />
 
       <div className="grid gap-4">
         {QUEUES.filter((q) => !q.forPE || session?.isPE || session?.primaryRole === "super_admin" || session?.primaryRole === "corporate_admin").map((q) => {
-          const items = data.filter((s) => q.statuses.includes(s.status));
+          const items = accessibleSugs.filter((s) => q.statuses.includes(s.status));
           return (
             <div key={q.key} className="rounded-lg border border-border bg-card">
               <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
