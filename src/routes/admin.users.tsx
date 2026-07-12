@@ -598,7 +598,7 @@ function InviteDialog({
 }) {
   const inviteFn = useServerFn(inviteUser);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<AppRole>("employee");
+  const [role, setRole] = useState<AppRole>("dept_user");
   const [scope, setScope] = useState<{ location_id: string | null; plant_id: string | null; plant_ids?: string[] | null; department_id: string | null }>({
     location_id: null,
     plant_id: null,
@@ -618,6 +618,7 @@ function InviteDialog({
             {
               role,
               location_id: scope.location_id,
+              plant_id: scope.plant_id,
               plant_ids: scope.plant_ids,
               department_id: scope.department_id,
             },
