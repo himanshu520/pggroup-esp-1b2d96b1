@@ -21,6 +21,7 @@ export const ADMIN_NAV: Array<{ label?: string; items: NavItem[] }> = [
   ]},
   { label: "Administration", items: [
     { to: "/admin", section: "masters", label: "Masters", icon: Database },
+    { to: "/admin/database", label: "Database Management", icon: Database },
     { to: "/admin", section: "employees", label: "Employees", icon: IdCard },
     { to: "/admin", section: "users", label: "Users & Roles", icon: Users },
     { to: "/admin", section: "audit", label: "Audit Logs", icon: ScrollText },

@@ -7,7 +7,8 @@ import { StatusBadge, PriorityBadge } from "@/components/status-badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { toast } from "sonner";
+import { Search, Trash, RotateCcw, Trash2, Loader2 } from "lucide-react";
 import { STATUS_LABEL } from "@/lib/statuses";
 import { useT } from "@/lib/i18n";
 import {
@@ -30,8 +31,9 @@ export function MySuggestions() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [viewTrash, setViewTrash] = useState(false);
 
-  const { data = [], isLoading } = useQuery({
+  const { data = [], isLoading, refetch } = useQuery({
     queryKey: ["my-suggestions", session?.employee?.id],
     enabled: !!session?.employee?.id,
     queryFn: async () => (await supabase.from("suggestions").select("*, categories(name)").eq("employee_id", session!.employee!.id).order("created_at", { ascending: false })).data ?? [],
@@ -39,6 +41,12 @@ export function MySuggestions() {
 
   const TERMINAL = new Set(["approved","implemented","rejected","closed","fake_closure"]);
   const filtered = data.filter((s: any) => {
+    if (viewTrash) {
+      if (!s.deleted_at) return false;
+    } else {
+      if (s.deleted_at) return false;
+    }
+
     if (status === "under_review") {
       if (TERMINAL.has(s.status)) return false;
     } else if (status && s.status !== status) return false;
@@ -48,7 +56,12 @@ export function MySuggestions() {
 
   return (
     <EmployeeShell>
-      <PageHeader title={t("my_title")} description={t("my_desc")} />
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <PageHeader title={viewTrash ? t("my_trash", "Trash") : t("my_title")} description={viewTrash ? t("my_trash_desc", "Deleted suggestions") : t("my_desc")} />
+        <Button variant="outline" onClick={() => setViewTrash(!viewTrash)}>
+          {viewTrash ? t("my_view_active", "View Active") : t("my_view_trash", "View Trash")}
+        </Button>
+      </div>
       <div className="flex flex-wrap gap-2 mb-4">
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
@@ -95,6 +108,8 @@ export function MySuggestions() {
       <SuggestionDetailsDialog
         suggestionId={selectedId}
         onClose={() => setSelectedId(null)}
+        onChanged={() => refetch()}
+        isTrash={viewTrash}
       />
     </EmployeeShell>
   );
@@ -103,11 +118,16 @@ export function MySuggestions() {
 function SuggestionDetailsDialog({
   suggestionId,
   onClose,
+  onChanged,
+  isTrash,
 }: {
   suggestionId: string | null;
   onClose: () => void;
+  onChanged: () => void;
+  isTrash: boolean;
 }) {
   const t = useT();
+  const [acting, setActing] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["my-suggestion-detail", suggestionId],
     enabled: !!suggestionId,
@@ -130,6 +150,54 @@ function SuggestionDetailsDialog({
 
   const s = data?.s as any;
   const history = data?.h ?? [];
+
+  async function handleMoveToTrash() {
+    if (!suggestionId || !confirm("Are you sure you want to move this suggestion to trash?")) return;
+    setActing(true);
+    try {
+      const { error } = await supabase.from("suggestions").update({ deleted_at: new Date().toISOString() }).eq("id", suggestionId);
+      if (error) throw error;
+      toast.success("Suggestion moved to trash.");
+      onChanged();
+      onClose();
+    } catch (e: any) {
+      toast.error(e.message || "Could not move to trash.");
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function handleRestore() {
+    if (!suggestionId) return;
+    setActing(true);
+    try {
+      const { error } = await supabase.from("suggestions").update({ deleted_at: null }).eq("id", suggestionId);
+      if (error) throw error;
+      toast.success("Suggestion restored.");
+      onChanged();
+      onClose();
+    } catch (e: any) {
+      toast.error(e.message || "Could not restore suggestion.");
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function handlePermanentDelete() {
+    if (!suggestionId || !confirm("Are you sure you want to permanently delete this suggestion? This action cannot be undone.")) return;
+    setActing(true);
+    try {
+      const { error } = await supabase.from("suggestions").delete().eq("id", suggestionId);
+      if (error) throw error;
+      toast.success("Suggestion permanently deleted.");
+      onChanged();
+      onClose();
+    } catch (e: any) {
+      toast.error(e.message || "Could not delete suggestion.");
+    } finally {
+      setActing(false);
+    }
+  }
 
   return (
     <Dialog open={!!suggestionId} onOpenChange={(o) => !o && onClose()}>
@@ -192,7 +260,27 @@ function SuggestionDetailsDialog({
           </div>
         )}
 
-        <DialogFooter>
+        <DialogFooter className="flex flex-row justify-between items-center sm:justify-between w-full">
+          <div className="flex gap-2">
+            {!isLoading && s && !isTrash && (
+              <Button type="button" variant="destructive" onClick={handleMoveToTrash} disabled={acting}>
+                {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash className="w-4 h-4 mr-2" />}
+                Move to Trash
+              </Button>
+            )}
+            {!isLoading && s && isTrash && (
+              <>
+                <Button type="button" variant="outline" onClick={handleRestore} disabled={acting}>
+                  {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
+                  Restore
+                </Button>
+                <Button type="button" variant="destructive" onClick={handlePermanentDelete} disabled={acting}>
+                  {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                  Delete Permanently
+                </Button>
+              </>
+            )}
+          </div>
           <Button variant="outline" onClick={onClose}>{t("close")}</Button>
         </DialogFooter>
       </DialogContent>

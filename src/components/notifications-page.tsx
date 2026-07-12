@@ -119,9 +119,11 @@ export function NotificationsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowPrefs((v) => !v)}>
-            <Settings2 className="w-4 h-4 mr-1" /> Preferences
-          </Button>
+          {(!!session?.isAdmin || !!session?.isPE) && (
+            <Button variant="outline" size="sm" onClick={() => setShowPrefs((v) => !v)}>
+              <Settings2 className="w-4 h-4 mr-1" /> Preferences
+            </Button>
+          )}
           <Button size="sm" onClick={() => markAll.mutate()} disabled={markAll.isPending}>
             <CheckCheck className="w-4 h-4 mr-1" /> Mark all read
           </Button>

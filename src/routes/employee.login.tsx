@@ -115,73 +115,109 @@ const T = {
 } as const;
 
 function EmployeeLogin() {
-  const { lang, setLang } = useLang();
-  const [stage, setStage] = useState<"id" | "otp" | "track">("id");
+  const { lang, setLang, hasChosen, markChosen } = useLang();
+  const [stage, setStage] = useState<"language" | "id" | "otp" | "track">(
+    hasChosen ? "id" : "language"
+  );
   const t = T[lang];
+
+  // If already chosen but stage is language (e.g. from state), sync it
+  useEffect(() => {
+    if (hasChosen && stage === "language") {
+      setStage("id");
+    }
+  }, [hasChosen, stage]);
+
+  function handleLanguageSelect(selectedLang: "en" | "hi") {
+    setLang(selectedLang);
+    markChosen();
+    setStage("id");
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-[color:oklch(0.18_0.05_260)]">
-      <div className={cn("w-full transition-all duration-300 rounded-2xl bg-white shadow-2xl p-6 sm:p-10", stage === "track" ? "max-w-4xl" : "max-w-md")}>
-        <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
-          <BrandLogos className="justify-start" imgClassName="h-10 sm:h-12" />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setLang(lang === "en" ? "hi" : "en")}
-            className="text-xs flex items-center gap-1.5 h-8 text-primary hover:text-primary-hover hover:bg-primary/5 rounded-full"
-          >
-            <Languages className="w-3.5 h-3.5" />
-            {lang === "en" ? "हिन्दी" : "English"}
-          </Button>
-        </div>
-
-        {stage !== "track" && (
-          <>
-            <h1 className="text-2xl sm:text-3xl font-bold text-center text-[color:oklch(0.18_0.05_260)]">
-              Employee Suggestion Portal
-            </h1>
-            <p className="text-center text-muted-foreground text-sm mt-1 mb-8">
+      <div 
+        className={cn(
+          "w-full transition-all duration-500 rounded-2xl bg-white shadow-2xl p-6 sm:p-10", 
+          stage === "track" ? "max-w-4xl" : "max-w-md",
+          "animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out"
+        )}
+      >
+        {stage === "language" ? (
+          <div className="text-center space-y-8 py-6">
+            <BrandLogos className="justify-center" imgClassName="h-12 sm:h-14" />
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-[color:oklch(0.18_0.05_260)]">
+                Welcome / स्वागत है
+              </h1>
+              <p className="text-sm text-muted-foreground mt-2">
+                Employee Suggestion Portal / कर्मचारी सुझाव पोर्टल
+              </p>
+            </div>
+            
+            <p className="text-sm text-foreground/80">
               Share your ideas. Improve your workplace.
+              <br />
+              अपने विचार साझा करें। अपने कार्यस्थल को बेहतर बनाएँ।
             </p>
+
+            <div className="pt-6">
+              <p className="font-semibold text-lg mb-4 text-[color:oklch(0.18_0.05_260)]">
+                Do you want to continue in English or Hindi?
+              </p>
+              <div className="grid gap-3">
+                <Button 
+                  className="h-12 text-base bg-primary hover:bg-primary/90" 
+                  onClick={() => handleLanguageSelect("en")}
+                >
+                  Continue in English <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="h-12 text-base border-primary text-primary hover:bg-primary/5" 
+                  onClick={() => handleLanguageSelect("hi")}
+                >
+                  हिन्दी में जारी रखें <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
+              <BrandLogos className="justify-start" imgClassName="h-10 sm:h-12" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLang(lang === "en" ? "hi" : "en")}
+                className="text-xs flex items-center gap-1.5 h-8 text-primary hover:text-primary-hover hover:bg-primary/5 rounded-full"
+              >
+                <Languages className="w-3.5 h-3.5" />
+                {lang === "en" ? "हिन्दी" : "English"}
+              </Button>
+            </div>
+
+            {stage !== "track" && (
+              <>
+                <h1 className="text-2xl sm:text-3xl font-bold text-center text-[color:oklch(0.18_0.05_260)]">
+                  Employee Suggestion Portal
+                </h1>
+                <p className="text-center text-muted-foreground text-sm mt-1 mb-8">
+                  Share your ideas. Improve your workplace.
+                </p>
+              </>
+            )}
+
+            {stage === "track" ? (
+              <AnonymousTracker t={t} onBack={() => setStage("id")} />
+            ) : (
+              <EmployeeFlow t={t} stage={stage as any} setStage={setStage as any} lang={lang} />
+            )}
           </>
         )}
-
-        {stage === "track" ? (
-          <AnonymousTracker t={t} onBack={() => setStage("id")} />
-        ) : (
-          <EmployeeFlow t={t} stage={stage as any} setStage={setStage as any} lang={lang} />
-        )}
-
       </div>
     </div>
   );
-}
-
-
-function WelcomeScreen({ t, onContinue }: { t: (typeof T)[Lang]; onContinue: () => void }) {
-  return (
-    <div className="text-center space-y-6 py-4">
-      <div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-[color:oklch(0.18_0.05_260)]">
-          {t.welcome}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">{t.subtitle}</p>
-      </div>
-
-      <p className="text-base text-foreground/80 leading-relaxed px-2">{t.intro}</p>
-
-      <div className="pt-2">
-        <p className="text-lg font-semibold text-foreground mb-4">{t.continueQ}</p>
-        <Button
-          onClick={onContinue}
-          className="w-full h-12 text-base bg-primary hover:bg-primary/90"
-        >
-          {t.yes} <ArrowRight className="w-4 h-4 ml-1" />
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 const RESEND_SECONDS = 30;
 
