@@ -3,7 +3,7 @@ import { AppShell, PageHeader } from "@/components/app-shell";
 import { ADMIN_NAV } from "@/lib/admin-nav";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { StatusBadge, PriorityBadge } from "@/components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useSession, isSuggestionAccessible } from "@/lib/session";
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { useState } from "react";
 import { Search, ExternalLink, Loader2, LayoutGrid, List } from "lucide-react";
-import { STATUS_LABEL, PRIORITY_LABEL, getRowColorForStatus } from "@/lib/statuses";
+import { STATUS_LABEL, getRowColorForStatus } from "@/lib/statuses";
 import { ExportMenu } from "@/components/export-menu";
 
 export const Route = createFileRoute("/admin/suggestions/")({
@@ -96,7 +96,6 @@ export function SuggestionsList() {
                 { key: "department", header: "Department", format: (s: any) => s.current_departments?.name || s.departments?.name },
                 { key: "plant", header: "Plant", format: (s: any) => s.plants?.name ?? "" },
                 { key: "category", header: "Category", format: (s: any) => s.categories?.name ?? "" },
-                { key: "priority", header: "Priority", format: (s: any) => PRIORITY_LABEL[s.priority as keyof typeof PRIORITY_LABEL] ?? s.priority },
                 { key: "status", header: "Status", format: (s: any) => STATUS_LABEL[s.status as keyof typeof STATUS_LABEL] ?? s.status },
                 { key: "actual_cost", header: "Actual cost", format: (s: any) => Number(s.actual_cost ?? 0) },
                 { key: "created_at", header: "Created", format: (s: any) => new Date(s.created_at).toLocaleDateString() },
@@ -128,7 +127,7 @@ export function SuggestionsList() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 border-b border-border">
               <tr className="text-left">
-                {["Code","Title","Employee","Department","Priority","Status","Created"].map((h) => (
+                {["Code","Title","Employee","Department","Status","Created"].map((h) => (
                   <th key={h} className="px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -154,7 +153,6 @@ export function SuggestionsList() {
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-xs">{s.current_departments?.name || s.departments?.name}</td>
-                  <td className="px-4 py-2.5"><PriorityBadge priority={s.priority} /></td>
                   <td className="px-4 py-2.5"><StatusBadge status={s.status} /></td>
                   <td className="px-4 py-2.5 text-muted-foreground text-xs">{new Date(s.created_at).toLocaleDateString()}</td>
                 </tr>
@@ -187,7 +185,6 @@ export function SuggestionsList() {
               
               <div className="flex items-center gap-2 mt-auto pt-3 border-t border-border/50">
                 <StatusBadge status={s.status} />
-                <PriorityBadge priority={s.priority} />
               </div>
             </div>
           ))}
@@ -243,7 +240,6 @@ function SuggestionPreviewDialog({ id, onClose }: { id: string | null; onClose: 
             {sug && (
               <>
                 <StatusBadge status={sug.status} />
-                <PriorityBadge priority={sug.priority} />
               </>
             )}
           </DialogTitle>

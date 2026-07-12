@@ -3,7 +3,7 @@ import { AppShell, PageHeader } from "@/components/app-shell";
 import { ADMIN_NAV } from "@/lib/admin-nav";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { StatusBadge, PriorityBadge } from "@/components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -241,7 +241,7 @@ export function SuggestionDetail({ id }: { id: string }) {
       <PageHeader
         title={sug.title}
         description={<span className="font-mono text-xs">{sug.code}</span> as any}
-        actions={<div className="flex items-center gap-2"><StatusBadge status={sug.status} /><PriorityBadge priority={sug.priority} /></div>}
+        actions={<div className="flex items-center gap-2"><StatusBadge status={sug.status} /></div>}
       />
 
       <div className="grid lg:grid-cols-3 gap-4">

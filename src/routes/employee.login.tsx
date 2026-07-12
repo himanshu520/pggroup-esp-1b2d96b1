@@ -10,7 +10,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { KeyRound, ArrowRight, Languages, Search, ArrowLeft, Globe, Loader2 } from "lucide-react";
 import { BrandLogos } from "@/components/brand-logos";
 import { useLang, useT } from "@/lib/i18n";
-import { StatusBadge, PriorityBadge } from "@/components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { STATUS_LABEL } from "@/lib/statuses";
 import { cn } from "@/lib/utils";
 
@@ -116,9 +116,18 @@ const T = {
 
 function EmployeeLogin() {
   const { lang, setLang, hasChosen, markChosen } = useLang();
-  const [stage, setStage] = useState<"language" | "id" | "otp" | "track">(
-    hasChosen ? "id" : "language"
+  const [stage, setStage] = useState<"splash" | "language" | "id" | "otp" | "track">(
+    hasChosen ? "id" : "splash"
   );
+
+  useEffect(() => {
+    if (stage === "splash") {
+      const t = setTimeout(() => {
+        setStage("language");
+      }, 2000);
+      return () => clearTimeout(t);
+    }
+  }, [stage]);
   const t = T[lang];
 
   // If already chosen but stage is language (e.g. from state), sync it
@@ -143,41 +152,44 @@ function EmployeeLogin() {
           "animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out"
         )}
       >
-        {stage === "language" ? (
+        {stage === "splash" ? (
+          <div className="flex flex-col items-center justify-center py-12 space-y-6 animate-pulse">
+            <BrandLogos className="justify-center scale-125 transition-transform duration-1000" imgClassName="h-16 sm:h-20" />
+            <h1 className="text-2xl sm:text-3xl font-bold text-[color:oklch(0.18_0.05_260)] tracking-wide">Employee Suggestion Portal</h1>
+          </div>
+        ) : stage === "language" ? (
           <div className="text-center space-y-8 py-6">
             <BrandLogos className="justify-center" imgClassName="h-12 sm:h-14" />
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-[color:oklch(0.18_0.05_260)]">
-                Welcome / स्वागत है
+                Welcome
               </h1>
               <p className="text-sm text-muted-foreground mt-2">
-                Employee Suggestion Portal / कर्मचारी सुझाव पोर्टल
+                Employee Suggestion Portal
               </p>
             </div>
             
             <p className="text-sm text-foreground/80">
               Share your ideas. Improve your workplace.
-              <br />
-              अपने विचार साझा करें। अपने कार्यस्थल को बेहतर बनाएँ।
             </p>
 
             <div className="pt-6">
               <p className="font-semibold text-lg mb-4 text-[color:oklch(0.18_0.05_260)]">
-                Do you want to continue in English or Hindi?
+                Do you want to continue?
               </p>
               <div className="grid gap-3">
                 <Button 
                   className="h-12 text-base bg-primary hover:bg-primary/90" 
                   onClick={() => handleLanguageSelect("en")}
                 >
-                  Continue in English <ArrowRight className="w-4 h-4 ml-2" />
+                  English <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
                 <Button 
                   variant="outline" 
                   className="h-12 text-base border-primary text-primary hover:bg-primary/5" 
                   onClick={() => handleLanguageSelect("hi")}
                 >
-                  हिन्दी में जारी रखें <ArrowRight className="w-4 h-4 ml-2" />
+                  Hindi <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
             </div>
@@ -230,7 +242,7 @@ function EmployeeFlow({
 }: {
   t: (typeof T)[Lang];
   stage: "id" | "otp" | "track";
-  setStage: (s: "id" | "otp" | "track") => void;
+  setStage: (s: "id" | "otp" | "track" | "language" | "splash") => void;
   lang: Lang;
 }) {
   const [empCode, setEmpCode] = useState("");
@@ -558,7 +570,6 @@ function AnonymousTracker({ t, onBack }: { t: (typeof T)[Lang]; onBack: () => vo
               <h3 className="text-lg font-bold mt-1 text-foreground">{result.title}</h3>
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 <StatusBadge status={result.status} />
-                <PriorityBadge priority={result.priority} />
                 <span className="text-xs text-muted-foreground">
                   {t.subDate}: {new Date(result.created_at).toLocaleDateString()}
                 </span>

@@ -1,4 +1,4 @@
-import { STATUS_LABEL, STATUS_STYLES, PRIORITY_LABEL, PRIORITY_STYLES, type SuggestionStatus, type Priority } from "@/lib/statuses";
+import { STATUS_LABEL, STATUS_STYLES, type SuggestionStatus } from "@/lib/statuses";
 import { cn } from "@/lib/utils";
 import { useT } from "@/lib/i18n";
 
@@ -9,8 +9,4 @@ export function StatusBadge({ status, className }: { status: SuggestionStatus; c
   );
 }
 
-export function PriorityBadge({ priority, className }: { priority: Priority; className?: string }) {
-  return (
-    <span className={cn("status-pill", PRIORITY_STYLES[priority], className)}>{PRIORITY_LABEL[priority]}</span>
-  );
-}
+

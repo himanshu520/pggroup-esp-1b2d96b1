@@ -3,7 +3,7 @@ import { AppShell, PageHeader } from "@/components/app-shell";
 import { ADMIN_NAV } from "@/lib/admin-nav";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { StatusBadge, PriorityBadge } from "@/components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { useSession, isSuggestionAccessible } from "@/lib/session";
 import type { SuggestionStatus } from "@/lib/statuses";
 import { useMemo } from "react";
@@ -101,7 +101,6 @@ export function WorkflowPage() {
                           </td>
                           <td className="px-4 py-2 max-w-[200px] sm:max-w-md truncate font-medium">{s.title}</td>
                           <td className="px-4 py-2 text-xs text-muted-foreground hidden sm:table-cell">{s.departments?.name}</td>
-                          <td className="px-4 py-2 w-24 hidden md:table-cell"><PriorityBadge priority={s.priority} /></td>
                           <td className="px-4 py-2 w-32"><StatusBadge status={s.status} /></td>
                           <td className="px-4 py-2 text-xs text-muted-foreground text-right w-24 hidden lg:table-cell">{new Date(s.created_at).toLocaleDateString()}</td>
                         </tr>
@@ -126,7 +125,6 @@ export function WorkflowPage() {
                       <div className="text-xs text-muted-foreground truncate">{s.departments?.name ?? "No Department"}</div>
                       <div className="flex items-center gap-2 mt-auto pt-2 border-t border-border/50">
                         <StatusBadge status={s.status} />
-                        <PriorityBadge priority={s.priority} />
                       </div>
                     </Link>
                   ))}

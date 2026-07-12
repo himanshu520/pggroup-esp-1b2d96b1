@@ -3,7 +3,7 @@ import { EmployeeShell, PageHeader } from "@/components/employee-shell";
 import { useSession } from "@/lib/session";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { StatusBadge, PriorityBadge } from "@/components/status-badge";
+import { StatusBadge } from "@/components/status-badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -120,7 +120,6 @@ export function MySuggestions() {
               </div>
               <div className="flex items-center gap-2 mt-auto w-full pt-3 border-t border-border/50">
                 <StatusBadge status={s.status} />
-                <PriorityBadge priority={s.priority} />
               </div>
             </button>
           ))}
@@ -130,7 +129,7 @@ export function MySuggestions() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 border-b border-border">
               <tr className="text-left">
-                {["Code", "Title", "Category", "Priority", "Status", "Created"].map((h) => (
+                {["Code", "Title", "Category", "Status", "Created"].map((h) => (
                   <th key={h} className="px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -145,7 +144,6 @@ export function MySuggestions() {
                   <td className="px-4 py-2.5 font-mono text-xs text-primary w-24">{s.code}</td>
                   <td className="px-4 py-2.5 max-w-[200px] sm:max-w-xs truncate font-medium">{s.title}</td>
                   <td className="px-4 py-2.5 text-xs text-muted-foreground truncate max-w-[120px]">{s.categories?.name ?? "—"}</td>
-                  <td className="px-4 py-2.5 w-24 hidden sm:table-cell"><PriorityBadge priority={s.priority} /></td>
                   <td className="px-4 py-2.5 w-32"><StatusBadge status={s.status} /></td>
                   <td className="px-4 py-2.5 text-muted-foreground text-xs w-24 hidden md:table-cell">{new Date(s.created_at).toLocaleDateString()}</td>
                 </tr>
@@ -268,7 +266,6 @@ function SuggestionDetailsDialog({
           <div className="space-y-4">
             <div className="flex items-center gap-2 flex-wrap">
               <StatusBadge status={s.status} />
-              <PriorityBadge priority={s.priority} />
               <span className="text-xs text-muted-foreground">
                 {t("submitted_on")} {new Date(s.created_at).toLocaleDateString()}
               </span>

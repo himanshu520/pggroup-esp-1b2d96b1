@@ -1,7 +1,7 @@
 import type { Database } from "@/integrations/supabase/types";
 
 export type SuggestionStatus = Database["public"]["Enums"]["suggestion_status"];
-export type Priority = Database["public"]["Enums"]["priority_level"];
+
 export type AppRole = Database["public"]["Enums"]["app_role"];
 
 export const STATUS_LABEL: Record<SuggestionStatus, string> = {
@@ -66,19 +66,7 @@ export function getRowColorForStatus(status: SuggestionStatus): string {
   }
 }
 
-export const PRIORITY_LABEL: Record<Priority, string> = {
-  low: "Low",
-  medium: "Medium",
-  high: "High",
-  critical: "Critical",
-};
 
-export const PRIORITY_STYLES: Record<Priority, string> = {
-  low: "bg-muted text-muted-foreground border-border",
-  medium: "bg-info/10 text-info border-info/30",
-  high: "bg-warning/10 text-warning border-warning/30",
-  critical: "bg-destructive/10 text-destructive border-destructive/30",
-};
 
 export const ROLE_LABEL: Record<AppRole, string> = {
   super_admin: "Super Admin",
