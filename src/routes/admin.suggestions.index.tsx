@@ -17,8 +17,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useState } from "react";
-import { Search, ExternalLink, Loader2 } from "lucide-react";
-import { STATUS_LABEL, PRIORITY_LABEL } from "@/lib/statuses";
+import { Search, ExternalLink, Loader2, LayoutGrid, List } from "lucide-react";
+import { STATUS_LABEL, PRIORITY_LABEL, getRowColorForStatus } from "@/lib/statuses";
 import { ExportMenu } from "@/components/export-menu";
 
 export const Route = createFileRoute("/admin/suggestions/")({
@@ -31,6 +31,7 @@ export function SuggestionsList() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"table" | "card">("table");
 
   const isPEOrAdmin = useMemo(() => {
     if (!sess?.roles) return false;
@@ -51,43 +52,61 @@ export function SuggestionsList() {
     },
   });
 
-  const accessibleSugs = useMemo(() => {
-    if (!sess?.roles) return [];
-    return data.filter((s: any) => isSuggestionAccessible(s, sess.roles));
-  }, [data, sess?.roles]);
-
   const filtered = useMemo(() => {
-    const list = accessibleSugs;
-    if (!q) return list;
-    return list.filter((s: any) => `${s.code} ${s.title} ${s.employees?.name}`.toLowerCase().includes(q.toLowerCase()));
-  }, [accessibleSugs, q]);
+    if (!q) return data;
+    const lowq = q.toLowerCase();
+    return data.filter((s: any) => 
+      s.title?.toLowerCase().includes(lowq) || 
+      s.code?.toLowerCase().includes(lowq) || 
+      s.employees?.name?.toLowerCase().includes(lowq)
+    );
+  }, [data, q]);
 
   return (
     <AppShell navGroups={ADMIN_NAV} title="Admin Console">
-      <PageHeader
-        title="Suggestions"
-        description="Cross-plant register with role-scoped visibility. Click a row to preview."
+      <PageHeader 
+        title="Suggestions" 
+        description="All suggestions recorded in the system." 
         actions={
-          <ExportMenu
-            data={filtered}
-            columns={[
-              { key: "code", header: "Code", format: (s: any) => s.code ?? "" },
-              { key: "title", header: "Title", format: (s: any) => s.title ?? "" },
-              { key: "employee", header: "Employee", format: (s: any) => isPEOrAdmin ? (s.employees?.name ?? "") : "—" },
-              { key: "employee_code", header: "Employee ID", format: (s: any) => isPEOrAdmin ? (s.employees?.employee_code ?? "") : "—" },
-              { key: "plant", header: "Plant", format: (s: any) => s.plants?.name ?? "" },
-              { key: "department", header: "Department", format: (s: any) => s.current_departments?.name || s.departments?.name || "" },
-              { key: "category", header: "Category", format: (s: any) => s.categories?.name ?? "" },
-              { key: "priority", header: "Priority", format: (s: any) => PRIORITY_LABEL[s.priority as keyof typeof PRIORITY_LABEL] ?? s.priority },
-              { key: "status", header: "Status", format: (s: any) => STATUS_LABEL[s.status as keyof typeof STATUS_LABEL] ?? s.status },
-              { key: "actual_cost", header: "Actual cost", format: (s: any) => Number(s.actual_cost ?? 0) },
-              { key: "created_at", header: "Created", format: (s: any) => new Date(s.created_at).toLocaleDateString() },
-              { key: "completed_at", header: "Completed", format: (s: any) => (s.completed_at ? new Date(s.completed_at).toLocaleDateString() : "") },
-            ]}
-            filename="suggestions"
-            title="Suggestions Register"
-            subtitle={status ? `Filtered by status: ${status === "under_review" ? "Under Review" : STATUS_LABEL[status as keyof typeof STATUS_LABEL]}` : "All statuses"}
-          />
+          <div className="flex items-center gap-2">
+            <div className="flex bg-muted/50 p-1 rounded-md border border-border">
+              <Button
+                variant={viewMode === "table" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-8 px-3 text-xs"
+                onClick={() => setViewMode("table")}
+              >
+                <List className="w-3.5 h-3.5 mr-1.5" /> Table
+              </Button>
+              <Button
+                variant={viewMode === "card" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-8 px-3 text-xs"
+                onClick={() => setViewMode("card")}
+              >
+                <LayoutGrid className="w-3.5 h-3.5 mr-1.5" /> Card
+              </Button>
+            </div>
+            <ExportMenu 
+              data={filtered}
+              columns={[
+                { key: "code", header: "Code" },
+                { key: "title", header: "Title" },
+                { key: "employee", header: "Employee", format: (s: any) => `${s.employees?.name} (${s.employees?.employee_code})` },
+                { key: "department", header: "Department", format: (s: any) => s.current_departments?.name || s.departments?.name },
+                { key: "plant", header: "Plant", format: (s: any) => s.plants?.name ?? "" },
+                { key: "category", header: "Category", format: (s: any) => s.categories?.name ?? "" },
+                { key: "priority", header: "Priority", format: (s: any) => PRIORITY_LABEL[s.priority as keyof typeof PRIORITY_LABEL] ?? s.priority },
+                { key: "status", header: "Status", format: (s: any) => STATUS_LABEL[s.status as keyof typeof STATUS_LABEL] ?? s.status },
+                { key: "actual_cost", header: "Actual cost", format: (s: any) => Number(s.actual_cost ?? 0) },
+                { key: "created_at", header: "Created", format: (s: any) => new Date(s.created_at).toLocaleDateString() },
+                { key: "completed_at", header: "Completed", format: (s: any) => (s.completed_at ? new Date(s.completed_at).toLocaleDateString() : "") },
+              ]}
+              filename="suggestions"
+              title="Suggestions Register"
+              subtitle={status ? `Filtered by status: ${status === "under_review" ? "Under Review" : STATUS_LABEL[status as keyof typeof STATUS_LABEL]}` : "All statuses"}
+            />
+          </div>
         }
       />
       <div className="flex gap-2 mb-4">
@@ -104,44 +123,81 @@ export function SuggestionsList() {
         </select>
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50 border-b border-border">
-            <tr className="text-left">
-              {["Code","Title","Employee","Department","Priority","Status","Created"].map((h) => (
-                <th key={h} className="px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {filtered.length === 0 ? (
-              <tr><td colSpan={7} className="text-center py-12 text-sm text-muted-foreground">No suggestions match your filters.</td></tr>
-            ) : filtered.map((s: any) => (
-              <tr
-                key={s.id}
-                className="hover:bg-muted/30 cursor-pointer"
-                onClick={() => setPreviewId(s.id)}
-              >
-                <td className="px-4 py-2.5 font-mono text-xs text-primary">{s.code}</td>
-                <td className="px-4 py-2.5 max-w-xs truncate">{s.title}</td>
-                <td className="px-4 py-2.5 text-xs">
-                  {isPEOrAdmin ? (
-                    <>
-                      {s.employees?.name} <span className="text-muted-foreground">({s.employees?.employee_code})</span>
-                    </>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="px-4 py-2.5 text-xs">{s.current_departments?.name || s.departments?.name}</td>
-                <td className="px-4 py-2.5"><PriorityBadge priority={s.priority} /></td>
-                <td className="px-4 py-2.5"><StatusBadge status={s.status} /></td>
-                <td className="px-4 py-2.5 text-muted-foreground text-xs">{new Date(s.created_at).toLocaleDateString()}</td>
+      {viewMode === "table" ? (
+        <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 border-b border-border">
+              <tr className="text-left">
+                {["Code","Title","Employee","Department","Priority","Status","Created"].map((h) => (
+                  <th key={h} className="px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.length === 0 ? (
+                <tr><td colSpan={7} className="text-center py-12 text-sm text-muted-foreground">No suggestions match your filters.</td></tr>
+              ) : filtered.map((s: any) => (
+                <tr
+                  key={s.id}
+                  className={`transition-colors cursor-pointer ${getRowColorForStatus(s.status)}`}
+                  onClick={() => setPreviewId(s.id)}
+                >
+                  <td className="px-4 py-2.5 font-mono text-xs text-primary">{s.code}</td>
+                  <td className="px-4 py-2.5 max-w-xs truncate">{s.title}</td>
+                  <td className="px-4 py-2.5 text-xs">
+                    {isPEOrAdmin ? (
+                      <>
+                        {s.employees?.name} <span className="text-muted-foreground">({s.employees?.employee_code})</span>
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-xs">{s.current_departments?.name || s.departments?.name}</td>
+                  <td className="px-4 py-2.5"><PriorityBadge priority={s.priority} /></td>
+                  <td className="px-4 py-2.5"><StatusBadge status={s.status} /></td>
+                  <td className="px-4 py-2.5 text-muted-foreground text-xs">{new Date(s.created_at).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((s: any) => (
+            <div
+              key={s.id}
+              onClick={() => setPreviewId(s.id)}
+              className={`flex flex-col gap-3 p-4 rounded-xl border border-border shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md cursor-pointer ${getRowColorForStatus(s.status)}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-mono text-xs font-semibold text-primary">{s.code}</span>
+                <span className="text-[10px] text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</span>
+              </div>
+              <h3 className="font-semibold text-sm leading-tight line-clamp-2 flex-1">{s.title}</h3>
+              
+              <div className="flex flex-col gap-1 mt-1 text-xs text-muted-foreground">
+                <div className="truncate">
+                  {isPEOrAdmin ? (
+                    <span className="font-medium text-foreground/80">{s.employees?.name} <span className="font-normal opacity-70">({s.employees?.employee_code})</span></span>
+                  ) : "—"}
+                </div>
+                <div className="truncate">{s.current_departments?.name || s.departments?.name}</div>
+              </div>
+              
+              <div className="flex items-center gap-2 mt-auto pt-3 border-t border-border/50">
+                <StatusBadge status={s.status} />
+                <PriorityBadge priority={s.priority} />
+              </div>
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div className="col-span-full py-12 text-center text-sm text-muted-foreground border rounded-lg bg-card">
+              No suggestions match your filters.
+            </div>
+          )}
+        </div>
+      )}
 
       <SuggestionPreviewDialog id={previewId} onClose={() => setPreviewId(null)} />
     </AppShell>

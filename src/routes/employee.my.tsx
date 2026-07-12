@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Search, Trash, RotateCcw, Trash2, Loader2 } from "lucide-react";
-import { STATUS_LABEL } from "@/lib/statuses";
+import { Search, Trash, RotateCcw, Trash2, Loader2, LayoutGrid, List } from "lucide-react";
+import { STATUS_LABEL, getRowColorForStatus } from "@/lib/statuses";
 import { useT } from "@/lib/i18n";
 import {
   Dialog,
@@ -32,6 +32,7 @@ export function MySuggestions() {
   const [status, setStatus] = useState<string>("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [viewTrash, setViewTrash] = useState(false);
+  const [viewMode, setViewMode] = useState<"card" | "table">("card");
 
   const { data = [], isLoading, refetch } = useQuery({
     queryKey: ["my-suggestions", session?.employee?.id],
@@ -56,11 +57,32 @@ export function MySuggestions() {
 
   return (
     <EmployeeShell>
-      <div className="flex items-center justify-between gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
         <PageHeader title={viewTrash ? t("my_trash", "Trash") : t("my_title")} description={viewTrash ? t("my_trash_desc", "Deleted suggestions") : t("my_desc")} />
-        <Button variant="outline" onClick={() => setViewTrash(!viewTrash)}>
-          {viewTrash ? t("my_view_active", "View Active") : t("my_view_trash", "View Trash")}
-        </Button>
+        
+        <div className="flex items-center gap-2">
+          <div className="flex bg-muted/50 p-1 rounded-md border border-border">
+            <Button
+              variant={viewMode === "card" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-3 text-xs"
+              onClick={() => setViewMode("card")}
+            >
+              <LayoutGrid className="w-3.5 h-3.5 mr-1.5" /> Card
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-3 text-xs"
+              onClick={() => setViewMode("table")}
+            >
+              <List className="w-3.5 h-3.5 mr-1.5" /> Table
+            </Button>
+          </div>
+          <Button variant="outline" size="sm" className="h-9" onClick={() => setViewTrash(!viewTrash)}>
+            {viewTrash ? t("my_view_active", "View Active") : t("my_view_trash", "View Trash")}
+          </Button>
+        </div>
       </div>
       <div className="flex flex-wrap gap-2 mb-4">
         <div className="relative flex-1 min-w-[200px] max-w-md">
@@ -80,28 +102,56 @@ export function MySuggestions() {
         <div className="text-sm text-muted-foreground">{t("my_loading")}</div>
       ) : filtered.length === 0 ? (
         <div className="text-sm text-muted-foreground text-center py-12 border border-dashed border-border rounded-lg">{t("my_empty")}</div>
-      ) : (
-        <div className="grid gap-3">
+      ) : viewMode === "card" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((s: any) => (
             <button
               key={s.id}
               type="button"
               onClick={() => setSelectedId(s.id)}
-              className="text-left block p-4 rounded-lg border border-border bg-card hover:shadow-md hover:border-primary/50 transition-all"
+              className={`text-left flex flex-col justify-between p-4 rounded-xl border border-border shadow-sm hover:shadow-md transition-all ${getRowColorForStatus(s.status)}`}
             >
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start justify-between gap-3 w-full mb-3">
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-mono text-muted-foreground">{s.code}</div>
-                  <div className="mt-0.5 font-medium truncate">{s.title}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{s.categories?.name ?? "—"} · {new Date(s.created_at).toLocaleDateString()}</div>
+                  <div className="text-xs font-mono font-semibold text-primary">{s.code}</div>
+                  <div className="mt-1 font-semibold text-sm line-clamp-2 leading-tight">{s.title}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1 truncate">{s.categories?.name ?? "—"} · {new Date(s.created_at).toLocaleDateString()}</div>
                 </div>
-                <div className="flex flex-col gap-1 items-end">
-                  <StatusBadge status={s.status} />
-                  <PriorityBadge priority={s.priority} />
-                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-auto w-full pt-3 border-t border-border/50">
+                <StatusBadge status={s.status} />
+                <PriorityBadge priority={s.priority} />
               </div>
             </button>
           ))}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-border bg-card overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 border-b border-border">
+              <tr className="text-left">
+                {["Code", "Title", "Category", "Priority", "Status", "Created"].map((h) => (
+                  <th key={h} className="px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map((s: any) => (
+                <tr
+                  key={s.id}
+                  className={`cursor-pointer transition-colors ${getRowColorForStatus(s.status)}`}
+                  onClick={() => setSelectedId(s.id)}
+                >
+                  <td className="px-4 py-2.5 font-mono text-xs text-primary w-24">{s.code}</td>
+                  <td className="px-4 py-2.5 max-w-[200px] sm:max-w-xs truncate font-medium">{s.title}</td>
+                  <td className="px-4 py-2.5 text-xs text-muted-foreground truncate max-w-[120px]">{s.categories?.name ?? "—"}</td>
+                  <td className="px-4 py-2.5 w-24 hidden sm:table-cell"><PriorityBadge priority={s.priority} /></td>
+                  <td className="px-4 py-2.5 w-32"><StatusBadge status={s.status} /></td>
+                  <td className="px-4 py-2.5 text-muted-foreground text-xs w-24 hidden md:table-cell">{new Date(s.created_at).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

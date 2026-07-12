@@ -41,6 +41,31 @@ export const STATUS_STYLES: Record<SuggestionStatus, string> = {
   closed: "bg-success/10 text-success border-success/30",
 };
 
+export function getRowColorForStatus(status: SuggestionStatus): string {
+  switch (status) {
+    case "implemented":
+    case "approved":
+    case "closed":
+      return "bg-success/10 hover:bg-success/20";
+    case "rejected":
+    case "fake_closure":
+      return "bg-destructive/10 hover:bg-destructive/20";
+    case "evaluation":
+    case "implementation":
+    case "evidence_pending":
+    case "reopened":
+      return "bg-warning/10 hover:bg-warning/20";
+    case "pe_review":
+    case "dept_review":
+    case "transferred":
+    case "evidence_submitted":
+    case "pe_verification":
+      return "bg-info/10 hover:bg-info/20";
+    default:
+      return "hover:bg-muted/30"; // default for submitted etc.
+  }
+}
+
 export const PRIORITY_LABEL: Record<Priority, string> = {
   low: "Low",
   medium: "Medium",
