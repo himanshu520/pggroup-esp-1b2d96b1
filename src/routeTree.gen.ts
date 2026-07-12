@@ -32,6 +32,7 @@ import { Route as AdminMastersRouteImport } from './routes/admin.masters'
 import { Route as AdminLocationsRouteImport } from './routes/admin.locations'
 import { Route as AdminEmployeesRouteImport } from './routes/admin.employees'
 import { Route as AdminDepartmentsRouteImport } from './routes/admin.departments'
+import { Route as AdminDatabaseRouteImport } from './routes/admin.database'
 import { Route as AdminAuditRouteImport } from './routes/admin.audit'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminSuggestionsIndexRouteImport } from './routes/admin.suggestions.index'
@@ -152,6 +153,11 @@ const AdminDepartmentsRoute = AdminDepartmentsRouteImport.update({
   path: '/departments',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminDatabaseRoute = AdminDatabaseRouteImport.update({
+  id: '/database',
+  path: '/database',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAuditRoute = AdminAuditRouteImport.update({
   id: '/audit',
   path: '/audit',
@@ -180,6 +186,7 @@ export interface FileRoutesByFullPath {
   '/employee': typeof EmployeeRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/audit': typeof AdminAuditRoute
+  '/admin/database': typeof AdminDatabaseRoute
   '/admin/departments': typeof AdminDepartmentsRoute
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/locations': typeof AdminLocationsRoute
@@ -207,6 +214,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/audit': typeof AdminAuditRoute
+  '/admin/database': typeof AdminDatabaseRoute
   '/admin/departments': typeof AdminDepartmentsRoute
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/locations': typeof AdminLocationsRoute
@@ -236,6 +244,7 @@ export interface FileRoutesById {
   '/employee': typeof EmployeeRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/audit': typeof AdminAuditRoute
+  '/admin/database': typeof AdminDatabaseRoute
   '/admin/departments': typeof AdminDepartmentsRoute
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/locations': typeof AdminLocationsRoute
@@ -267,6 +276,7 @@ export interface FileRouteTypes {
     | '/employee'
     | '/admin/analytics'
     | '/admin/audit'
+    | '/admin/database'
     | '/admin/departments'
     | '/admin/employees'
     | '/admin/locations'
@@ -294,6 +304,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin/analytics'
     | '/admin/audit'
+    | '/admin/database'
     | '/admin/departments'
     | '/admin/employees'
     | '/admin/locations'
@@ -322,6 +333,7 @@ export interface FileRouteTypes {
     | '/employee'
     | '/admin/analytics'
     | '/admin/audit'
+    | '/admin/database'
     | '/admin/departments'
     | '/admin/employees'
     | '/admin/locations'
@@ -515,6 +527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDepartmentsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/database': {
+      id: '/admin/database'
+      path: '/database'
+      fullPath: '/admin/database'
+      preLoaderRoute: typeof AdminDatabaseRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/audit': {
       id: '/admin/audit'
       path: '/audit'
@@ -562,6 +581,7 @@ const AdminSuggestionsRouteWithChildren =
 interface AdminRouteChildren {
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminAuditRoute: typeof AdminAuditRoute
+  AdminDatabaseRoute: typeof AdminDatabaseRoute
   AdminDepartmentsRoute: typeof AdminDepartmentsRoute
   AdminEmployeesRoute: typeof AdminEmployeesRoute
   AdminLocationsRoute: typeof AdminLocationsRoute
@@ -579,6 +599,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminAuditRoute: AdminAuditRoute,
+  AdminDatabaseRoute: AdminDatabaseRoute,
   AdminDepartmentsRoute: AdminDepartmentsRoute,
   AdminEmployeesRoute: AdminEmployeesRoute,
   AdminLocationsRoute: AdminLocationsRoute,
