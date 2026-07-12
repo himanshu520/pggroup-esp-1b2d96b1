@@ -218,6 +218,7 @@ function EmployeeLogin() {
       </div>
     </div>
   );
+}
 
 const RESEND_SECONDS = 30;
 
