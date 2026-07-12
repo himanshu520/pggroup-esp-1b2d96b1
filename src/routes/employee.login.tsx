@@ -198,15 +198,6 @@ function EmployeeLogin() {
           <>
             <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
               <BrandLogos className="justify-start" imgClassName="h-10 sm:h-12" />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setLang(lang === "en" ? "hi" : "en")}
-                className="text-xs flex items-center gap-1.5 h-8 text-primary hover:text-primary-hover hover:bg-primary/5 rounded-full"
-              >
-                <Languages className="w-3.5 h-3.5" />
-                {lang === "en" ? "हिन्दी" : "English"}
-              </Button>
             </div>
 
             {stage !== "track" && (
