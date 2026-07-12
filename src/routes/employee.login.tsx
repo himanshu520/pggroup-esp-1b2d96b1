@@ -116,9 +116,7 @@ const T = {
 
 function EmployeeLogin() {
   const { lang, setLang, hasChosen, markChosen } = useLang();
-  const [stage, setStage] = useState<"splash" | "language" | "id" | "otp" | "track">(
-    hasChosen ? "id" : "splash"
-  );
+  const [stage, setStage] = useState<"splash" | "language" | "id" | "otp" | "track">("splash");
 
   useEffect(() => {
     if (stage === "splash") {
@@ -130,12 +128,7 @@ function EmployeeLogin() {
   }, [stage]);
   const t = T[lang];
 
-  // If already chosen but stage is language (e.g. from state), sync it
-  useEffect(() => {
-    if (hasChosen && stage === "language") {
-      setStage("id");
-    }
-  }, [hasChosen, stage]);
+
 
   function handleLanguageSelect(selectedLang: "en" | "hi") {
     setLang(selectedLang);
