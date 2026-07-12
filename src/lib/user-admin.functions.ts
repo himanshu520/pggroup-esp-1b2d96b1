@@ -22,17 +22,16 @@ async function requireAdmin(userId: string) {
   return supabaseAdmin;
 }
 
-// List users with roles + employee record (admin view)
+// List users with roles (admin view)
 export const listUsersWithRoles = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const supabaseAdmin = await requireAdmin(context.userId);
-    const [{ data: roles }, { data: employees }, authList] = await Promise.all([
+    const [{ data: roles }, authList] = await Promise.all([
       supabaseAdmin
         .from("user_roles")
         .select("id,user_id,role,location_id,plant_id,department_id,created_at, locations(location), plants(name), departments(name)")
         .order("created_at", { ascending: false }),
-      supabaseAdmin.from("employees").select("id,user_id,name,email,employee_code,designation,active,location_id,plant_id,department_id"),
       supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
     ]);
     const users = authList.data.users.map((u) => ({
@@ -45,7 +44,6 @@ export const listUsersWithRoles = createServerFn({ method: "POST" })
     return {
       users,
       roles: roles ?? [],
-      employees: employees ?? [],
     };
   });
 

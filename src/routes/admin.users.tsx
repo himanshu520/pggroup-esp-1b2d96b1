@@ -11,8 +11,6 @@ import {
   inviteUser,
   addRole,
   removeRole,
-  
-  setEmployeeActive,
   deleteUser,
 } from "@/lib/user-admin.functions";
 import { ROLE_LABEL, type AppRole } from "@/lib/statuses";
@@ -38,7 +36,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { toast } from "sonner";
-import { Search, UserPlus, Shield, Trash2, Plus, PowerOff, Power, UserX } from "lucide-react";
+import { Search, UserPlus, Shield, Trash2, Plus, UserX } from "lucide-react";
 import { ExportMenu } from "@/components/export-menu";
 
 export const Route = createFileRoute("/admin/users")({
@@ -70,25 +68,10 @@ type RoleRow = {
   departments?: { name: string } | null;
 };
 
-type EmployeeLite = {
-  id: string;
-  user_id: string | null;
-  name: string;
-  email: string;
-  employee_code: string;
-  designation: string | null;
-  active: boolean;
-  location_id: string | null;
-  plant_id: string | null;
-  department_id: string | null;
-};
-
 export function UsersPage() {
   const qc = useQueryClient();
   const listFn = useServerFn(listUsersWithRoles);
   const removeRoleFn = useServerFn(removeRole);
-  
-  const toggleActiveFn = useServerFn(setEmployeeActive);
   const deleteUserFn = useServerFn(deleteUser);
 
   const { data, isLoading } = useQuery({
@@ -117,11 +100,8 @@ export function UsersPage() {
 
   const users = data?.users ?? [];
   const roles = (data?.roles ?? []) as RoleRow[];
-  const employees = (data?.employees ?? []) as EmployeeLite[];
 
   const rowsByUser = useMemo(() => {
-    const empByUser = new Map<string, EmployeeLite>();
-    for (const e of employees) if (e.user_id) empByUser.set(e.user_id, e);
     const rolesByUser = new Map<string, RoleRow[]>();
     for (const r of roles) {
       const arr = rolesByUser.get(r.user_id) ?? [];
@@ -131,30 +111,16 @@ export function UsersPage() {
     return users
       .map((u) => ({
         ...u,
-        employee: empByUser.get(u.user_id) ?? null,
         roles: rolesByUser.get(u.user_id) ?? [],
       }))
       .filter((u) => u.roles.length > 0);
-  }, [users, employees, roles]);
+  }, [users, roles]);
 
   const filtered = q
-    ? rowsByUser.filter((r) => {
-        const hay = `${r.email} ${r.employee?.name ?? ""} ${r.employee?.employee_code ?? ""}`.toLowerCase();
-        return hay.includes(q.toLowerCase());
-      })
+    ? rowsByUser.filter((r) => r.email.toLowerCase().includes(q.toLowerCase()))
     : rowsByUser;
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["users-and-roles"] });
-
-
-  const toggleActive = useMutation({
-    mutationFn: (v: { employee_id: string; active: boolean }) => toggleActiveFn({ data: v }),
-    onSuccess: () => {
-      toast.success("Employee status updated.");
-      invalidate();
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
 
   const removeRoleM = useMutation({
     mutationFn: (id: string) => removeRoleFn({ data: { id } }),
@@ -284,7 +250,7 @@ export function UsersPage() {
         <table className="w-full text-sm">
           <thead className="bg-muted/50 border-b border-border">
             <tr>
-              {["User", "Employee", "Roles & scope", "Last sign-in", "Actions"].map((h) => (
+              {["User", "Roles & scope", "Last sign-in", "Actions"].map((h) => (
                 <th
                   key={h}
                   className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
@@ -297,13 +263,13 @@ export function UsersPage() {
           <tbody className="divide-y divide-border">
             {isLoading ? (
               <tr>
-                <td colSpan={5} className="text-center py-12 text-sm text-muted-foreground">
+                <td colSpan={4} className="text-center py-12 text-sm text-muted-foreground">
                   Loading users…
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-12 text-sm text-muted-foreground">
+                <td colSpan={4} className="text-center py-12 text-sm text-muted-foreground">
                   No users found.
                 </td>
               </tr>
@@ -316,24 +282,7 @@ export function UsersPage() {
                       {u.user_id.slice(0, 8)}…
                     </div>
                   </td>
-                  <td className="px-4 py-3">
-                    {u.employee ? (
-                      <div>
-                        <div className="text-sm font-medium">{u.employee.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {u.employee.employee_code}
-                          {u.employee.designation ? ` · ${u.employee.designation}` : ""}
-                        </div>
-                        {!u.employee.active && (
-                          <Badge variant="destructive" className="mt-1 text-[10px]">
-                            Inactive
-                          </Badge>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground italic">No employee record</span>
-                    )}
-                  </td>
+
                   <td className="px-4 py-3">
                     {u.roles.length === 0 ? (
                       <span className="text-xs text-muted-foreground italic">No roles assigned</span>
@@ -376,25 +325,7 @@ export function UsersPage() {
                         <Plus className="w-3.5 h-3.5 mr-1" />
                         Role
                       </Button>
-                      {u.employee && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() =>
-                            toggleActive.mutate({
-                              employee_id: u.employee!.id,
-                              active: !u.employee!.active,
-                            })
-                          }
-                          title={u.employee.active ? "Deactivate employee" : "Reactivate employee"}
-                        >
-                          {u.employee.active ? (
-                            <PowerOff className="w-3.5 h-3.5 text-destructive" />
-                          ) : (
-                            <Power className="w-3.5 h-3.5 text-success" />
-                          )}
-                        </Button>
-                      )}
+
                       <Button
                         size="sm"
                         variant="ghost"
