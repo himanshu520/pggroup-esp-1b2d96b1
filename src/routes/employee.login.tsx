@@ -31,7 +31,7 @@ const T = {
   en: {
     welcome: "Welcome",
     subtitle: "Employee Suggestion Portal",
-    intro: "Share your ideas. Improve your workplace. Get recognised.",
+    intro: "Share your ideas. Improve your workplace.",
     continueQ: "Do you want to continue?",
     yes: "Yes, continue",
     switch: "हिन्दी में देखें",
@@ -73,7 +73,7 @@ const T = {
   hi: {
     welcome: "स्वागत है",
     subtitle: "कर्मचारी सुझाव पोर्टल",
-    intro: "अपने विचार साझा करें। अपने कार्यस्थल को बेहतर बनाएँ। सम्मान पाएँ।",
+    intro: "अपने विचार साझा करें। अपने कार्यस्थल को बेहतर बनाएँ।",
     continueQ: "क्या आप जारी रखना चाहते हैं?",
     yes: "हाँ, जारी रखें",
     switch: "View in English",
@@ -203,10 +203,10 @@ function EmployeeLogin() {
             {stage !== "track" && (
               <>
                 <h1 className="text-2xl sm:text-3xl font-bold text-center text-[color:oklch(0.18_0.05_260)]">
-                  Employee Suggestion Portal
+                  {t.subtitle}
                 </h1>
                 <p className="text-center text-muted-foreground text-sm mt-1 mb-8">
-                  Share your ideas. Improve your workplace.
+                  {t.intro}
                 </p>
               </>
             )}
