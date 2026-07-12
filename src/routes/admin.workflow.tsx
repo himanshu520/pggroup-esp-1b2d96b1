@@ -28,7 +28,7 @@ import { getRowColorForStatus } from "@/lib/statuses";
 
 export function WorkflowPage() {
   const { data: session } = useSession();
-  const [viewMode, setViewMode] = useState<"table" | "card">("table");
+  const [viewMode, setViewMode] = useState<"table" | "card">("card");
 
   const { data = [] } = useQuery({
     queryKey: ["workflow-queue"],
@@ -94,7 +94,7 @@ export function WorkflowPage() {
                 <div className="rounded-lg border border-border bg-card overflow-hidden">
                   <table className="w-full text-sm">
                     <tbody className="divide-y divide-border">
-                      {items.slice(0, 8).map((s: any) => (
+                      {items.map((s: any) => (
                         <tr key={s.id} className={`transition-colors ${getRowColorForStatus(s.status)}`}>
                           <td className="px-4 py-2 font-mono text-xs w-24">
                             <Link to="/admin" search={{ section: "suggestion", id: s.id } as any} className="text-primary hover:underline font-medium">{s.code}</Link>
@@ -110,7 +110,7 @@ export function WorkflowPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {items.slice(0, 12).map((s: any) => (
+                  {items.map((s: any) => (
                     <Link
                       key={s.id}
                       to="/admin"
