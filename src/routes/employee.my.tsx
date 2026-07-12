@@ -115,6 +115,8 @@ export function MySuggestions() {
   );
 }
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
+
 function SuggestionDetailsDialog({
   suggestionId,
   onClose,
@@ -128,6 +130,7 @@ function SuggestionDetailsDialog({
 }) {
   const t = useT();
   const [acting, setActing] = useState(false);
+  const [confirming, setConfirming] = useState<"trash" | "delete" | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["my-suggestion-detail", suggestionId],
     enabled: !!suggestionId,
@@ -152,7 +155,7 @@ function SuggestionDetailsDialog({
   const history = data?.h ?? [];
 
   async function handleMoveToTrash() {
-    if (!suggestionId || !confirm("Are you sure you want to move this suggestion to trash?")) return;
+    if (!suggestionId) return;
     setActing(true);
     try {
       const { error } = await supabase.from("suggestions").update({ deleted_at: new Date().toISOString() }).eq("id", suggestionId);
@@ -164,6 +167,7 @@ function SuggestionDetailsDialog({
       toast.error(e.message || "Could not move to trash.");
     } finally {
       setActing(false);
+      setConfirming(null);
     }
   }
 
@@ -184,7 +188,7 @@ function SuggestionDetailsDialog({
   }
 
   async function handlePermanentDelete() {
-    if (!suggestionId || !confirm("Are you sure you want to permanently delete this suggestion? This action cannot be undone.")) return;
+    if (!suggestionId) return;
     setActing(true);
     try {
       const { error } = await supabase.from("suggestions").delete().eq("id", suggestionId);
@@ -196,6 +200,7 @@ function SuggestionDetailsDialog({
       toast.error(e.message || "Could not delete suggestion.");
     } finally {
       setActing(false);
+      setConfirming(null);
     }
   }
 
@@ -263,7 +268,7 @@ function SuggestionDetailsDialog({
         <DialogFooter className="flex flex-row justify-between items-center sm:justify-between w-full">
           <div className="flex gap-2">
             {!isLoading && s && !isTrash && (
-              <Button type="button" variant="destructive" onClick={handleMoveToTrash} disabled={acting}>
+              <Button type="button" variant="destructive" onClick={() => setConfirming("trash")} disabled={acting}>
                 {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash className="w-4 h-4 mr-2" />}
                 Move to Trash
               </Button>
@@ -274,7 +279,7 @@ function SuggestionDetailsDialog({
                   {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
                   Restore
                 </Button>
-                <Button type="button" variant="destructive" onClick={handlePermanentDelete} disabled={acting}>
+                <Button type="button" variant="destructive" onClick={() => setConfirming("delete")} disabled={acting}>
                   {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
                   Delete Permanently
                 </Button>
@@ -284,6 +289,30 @@ function SuggestionDetailsDialog({
           <Button variant="outline" onClick={onClose}>{t("close")}</Button>
         </DialogFooter>
       </DialogContent>
+      
+      <ConfirmDialog
+        open={confirming === "trash"}
+        onOpenChange={(o) => !o && setConfirming(null)}
+        title="Move to Trash"
+        description="Are you sure you want to move this suggestion to trash?"
+        confirmLabel="Move to Trash"
+        cancelLabel="Cancel"
+        destructive
+        loading={acting}
+        onConfirm={handleMoveToTrash}
+      />
+
+      <ConfirmDialog
+        open={confirming === "delete"}
+        onOpenChange={(o) => !o && setConfirming(null)}
+        title="Delete Permanently"
+        description="Are you sure you want to permanently delete this suggestion? This action cannot be undone."
+        confirmLabel="Delete Permanently"
+        cancelLabel="Cancel"
+        destructive
+        loading={acting}
+        onConfirm={handlePermanentDelete}
+      />
     </Dialog>
   );
 }

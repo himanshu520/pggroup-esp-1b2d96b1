@@ -36,6 +36,8 @@ const TABLES = [
   "categories",
 ];
 
+import { ConfirmDialog } from "@/components/confirm-dialog";
+
 export function AdminDatabase() {
   const { data: sess } = useSession();
   const isSuperAdmin = sess?.roles?.some((r) => r.role === "super_admin");
@@ -43,6 +45,7 @@ export function AdminDatabase() {
 
   const [table, setTable] = useState<string>("suggestions");
   const [editingRow, setEditingRow] = useState<any>(null);
+  const [deletingRowId, setDeletingRowId] = useState<string | null>(null);
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["admin-database", table],
@@ -151,11 +154,7 @@ export function AdminDatabase() {
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => {
-                        if (confirm("Are you sure you want to permanently delete this record?")) {
-                          deleteMut.mutate(row.id);
-                        }
-                      }}
+                      onClick={() => setDeletingRowId(row.id)}
                     >
                       <Trash2 className="w-3 h-3" />
                     </Button>
@@ -209,6 +208,23 @@ export function AdminDatabase() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deletingRowId}
+        onOpenChange={(open) => !open && setDeletingRowId(null)}
+        title="Permanently Delete Record"
+        description="Are you sure you want to permanently delete this record? This action cannot be undone."
+        confirmLabel="Delete Permanently"
+        cancelLabel="Cancel"
+        destructive
+        loading={deleteMut.isPending}
+        onConfirm={async () => {
+          if (deletingRowId) {
+            await deleteMut.mutateAsync(deletingRowId);
+            setDeletingRowId(null);
+          }
+        }}
+      />
     </AppShell>
   );
 }
