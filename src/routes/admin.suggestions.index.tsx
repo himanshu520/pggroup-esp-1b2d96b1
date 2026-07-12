@@ -31,7 +31,7 @@ export function SuggestionsList() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("");
   const [previewId, setPreviewId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"table" | "card">("table");
+  const [viewMode, setViewMode] = useState<"table" | "card">("card");
 
   const isPEOrAdmin = useMemo(() => {
     if (!sess?.roles) return false;
