@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Search, Trash, RotateCcw, Trash2, Loader2, LayoutGrid, List } from "lucide-react";
+import { Search, LayoutGrid, List } from "lucide-react";
 import { STATUS_LABEL, getRowColorForStatus } from "@/lib/statuses";
 import { useT } from "@/lib/i18n";
 import {
@@ -31,7 +31,6 @@ export function MySuggestions() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [viewTrash, setViewTrash] = useState(false);
   const [viewMode, setViewMode] = useState<"card" | "table">("card");
 
   const { data = [], isLoading, refetch } = useQuery({
@@ -42,11 +41,7 @@ export function MySuggestions() {
 
   const TERMINAL = new Set(["approved","implemented","rejected","closed","fake_closure"]);
   const filtered = data.filter((s: any) => {
-    if (viewTrash) {
-      if (!s.deleted_at) return false;
-    } else {
-      if (s.deleted_at) return false;
-    }
+    if (s.deleted_at) return false;
 
     if (status === "under_review") {
       if (TERMINAL.has(s.status)) return false;
@@ -58,7 +53,7 @@ export function MySuggestions() {
   return (
     <EmployeeShell>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-        <PageHeader title={viewTrash ? t("my_trash", "Trash") : t("my_title")} description={viewTrash ? t("my_trash_desc", "Deleted suggestions") : t("my_desc")} />
+        <PageHeader title={t("my_title")} description={t("my_desc")} />
         
         <div className="flex items-center gap-2">
           <div className="flex bg-muted/50 p-1 rounded-md border border-border">
@@ -79,9 +74,6 @@ export function MySuggestions() {
               <List className="w-3.5 h-3.5 mr-1.5" /> Table
             </Button>
           </div>
-          <Button variant="outline" size="sm" className="h-9" onClick={() => setViewTrash(!viewTrash)}>
-            {viewTrash ? t("my_view_active", "View Active") : t("my_view_trash", "View Trash")}
-          </Button>
         </div>
       </div>
       <div className="flex flex-wrap gap-2 mb-4">
@@ -157,28 +149,21 @@ export function MySuggestions() {
         suggestionId={selectedId}
         onClose={() => setSelectedId(null)}
         onChanged={() => refetch()}
-        isTrash={viewTrash}
       />
     </EmployeeShell>
   );
 }
 
-import { ConfirmDialog } from "@/components/confirm-dialog";
-
 function SuggestionDetailsDialog({
   suggestionId,
   onClose,
   onChanged,
-  isTrash,
 }: {
   suggestionId: string | null;
   onClose: () => void;
   onChanged: () => void;
-  isTrash: boolean;
 }) {
   const t = useT();
-  const [acting, setActing] = useState(false);
-  const [confirming, setConfirming] = useState<"trash" | "delete" | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["my-suggestion-detail", suggestionId],
     enabled: !!suggestionId,
@@ -201,56 +186,6 @@ function SuggestionDetailsDialog({
 
   const s = data?.s as any;
   const history = data?.h ?? [];
-
-  async function handleMoveToTrash() {
-    if (!suggestionId) return;
-    setActing(true);
-    try {
-      const { error } = await supabase.from("suggestions").update({ deleted_at: new Date().toISOString() }).eq("id", suggestionId);
-      if (error) throw error;
-      toast.success("Suggestion moved to trash.");
-      onChanged();
-      onClose();
-    } catch (e: any) {
-      toast.error(e.message || "Could not move to trash.");
-    } finally {
-      setActing(false);
-      setConfirming(null);
-    }
-  }
-
-  async function handleRestore() {
-    if (!suggestionId) return;
-    setActing(true);
-    try {
-      const { error } = await supabase.from("suggestions").update({ deleted_at: null }).eq("id", suggestionId);
-      if (error) throw error;
-      toast.success("Suggestion restored.");
-      onChanged();
-      onClose();
-    } catch (e: any) {
-      toast.error(e.message || "Could not restore suggestion.");
-    } finally {
-      setActing(false);
-    }
-  }
-
-  async function handlePermanentDelete() {
-    if (!suggestionId) return;
-    setActing(true);
-    try {
-      const { error } = await supabase.from("suggestions").delete().eq("id", suggestionId);
-      if (error) throw error;
-      toast.success("Suggestion permanently deleted.");
-      onChanged();
-      onClose();
-    } catch (e: any) {
-      toast.error(e.message || "Could not delete suggestion.");
-    } finally {
-      setActing(false);
-      setConfirming(null);
-    }
-  }
 
   return (
     <Dialog open={!!suggestionId} onOpenChange={(o) => !o && onClose()}>
@@ -312,54 +247,10 @@ function SuggestionDetailsDialog({
           </div>
         )}
 
-        <DialogFooter className="flex flex-row justify-between items-center sm:justify-between w-full">
-          <div className="flex gap-2">
-            {!isLoading && s && !isTrash && (
-              <Button type="button" variant="destructive" onClick={() => setConfirming("trash")} disabled={acting}>
-                {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash className="w-4 h-4 mr-2" />}
-                Move to Trash
-              </Button>
-            )}
-            {!isLoading && s && isTrash && (
-              <>
-                <Button type="button" variant="outline" onClick={handleRestore} disabled={acting}>
-                  {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCcw className="w-4 h-4 mr-2" />}
-                  Restore
-                </Button>
-                <Button type="button" variant="destructive" onClick={() => setConfirming("delete")} disabled={acting}>
-                  {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                  Delete Permanently
-                </Button>
-              </>
-            )}
-          </div>
+        <DialogFooter className="flex flex-row justify-end items-center sm:justify-end w-full">
           <Button variant="outline" onClick={onClose}>{t("close")}</Button>
         </DialogFooter>
       </DialogContent>
-      
-      <ConfirmDialog
-        open={confirming === "trash"}
-        onOpenChange={(o) => !o && setConfirming(null)}
-        title="Move to Trash"
-        description="Are you sure you want to move this suggestion to trash?"
-        confirmLabel="Move to Trash"
-        cancelLabel="Cancel"
-        destructive
-        loading={acting}
-        onConfirm={handleMoveToTrash}
-      />
-
-      <ConfirmDialog
-        open={confirming === "delete"}
-        onOpenChange={(o) => !o && setConfirming(null)}
-        title="Delete Permanently"
-        description="Are you sure you want to permanently delete this suggestion? This action cannot be undone."
-        confirmLabel="Delete Permanently"
-        cancelLabel="Cancel"
-        destructive
-        loading={acting}
-        onConfirm={handlePermanentDelete}
-      />
     </Dialog>
   );
 }
