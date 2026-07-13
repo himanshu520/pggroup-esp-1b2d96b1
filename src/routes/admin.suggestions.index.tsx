@@ -144,13 +144,7 @@ export function SuggestionsList() {
                   <td className="px-4 py-2.5 font-mono text-xs text-primary">{s.code}</td>
                   <td className="px-4 py-2.5 max-w-xs truncate">{s.title}</td>
                   <td className="px-4 py-2.5 text-xs">
-                    {isPEOrAdmin ? (
-                      <>
-                        {s.employees?.name} <span className="text-muted-foreground">({s.employees?.employee_code})</span>
-                      </>
-                    ) : (
-                      "—"
-                    )}
+                    {s.employees?.name} <span className="text-muted-foreground">({s.employees?.employee_code})</span>
                   </td>
                   <td className="px-4 py-2.5 text-xs">{s.current_departments?.name || s.departments?.name}</td>
                   <td className="px-4 py-2.5"><StatusBadge status={s.status} /></td>
@@ -176,9 +170,7 @@ export function SuggestionsList() {
               
               <div className="flex flex-col gap-1 mt-1 text-xs text-muted-foreground">
                 <div className="truncate">
-                  {isPEOrAdmin ? (
-                    <span className="font-medium text-foreground/80">{s.employees?.name} <span className="font-normal opacity-70">({s.employees?.employee_code})</span></span>
-                  ) : "—"}
+                  <span className="font-medium text-foreground/80">{s.employees?.name} <span className="font-normal opacity-70">({s.employees?.employee_code})</span></span>
                 </div>
                 <div className="truncate">{s.current_departments?.name || s.departments?.name}</div>
               </div>
@@ -254,21 +246,19 @@ function SuggestionPreviewDialog({ id, onClose }: { id: string | null; onClose: 
           <div className="py-6 text-sm text-muted-foreground text-center">Not found.</div>
         ) : (
           <div className="space-y-4 py-2">
-            {isPEOrAdmin && (
-              <div className="rounded-lg border border-border bg-muted/20 p-4">
-                <div className="text-xs uppercase font-bold text-muted-foreground mb-3">Employee Information</div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                  <Meta label="Name" value={sug.employees?.name ?? "—"} />
-                  <Meta label="Employee ID" value={sug.employees?.employee_code ?? "—"} />
-                  <Meta label="Email" value={sug.employees?.email ?? "—"} />
-                  <Meta label="Mobile" value={sug.employees?.mobile ?? "—"} />
-                  <Meta label="Gender" value={sug.employees?.gender ? (sug.employees.gender.charAt(0).toUpperCase() + sug.employees.gender.slice(1).replace(/_/g, " ")) : "—"} />
-                  <Meta label="Designation" value={sug.employees?.designation ?? "—"} />
-                  <Meta label="Base Department" value={sug.employees?.departments?.name ?? "—"} />
-                  <Meta label="Base Plant" value={sug.employees?.plants?.name ?? "—"} />
-                </div>
+            <div className="rounded-lg border border-border bg-muted/20 p-4">
+              <div className="text-xs uppercase font-bold text-muted-foreground mb-3">Employee Information</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                <Meta label="Name" value={sug.employees?.name ?? "—"} />
+                <Meta label="Employee ID" value={sug.employees?.employee_code ?? "—"} />
+                <Meta label="Email" value={sug.employees?.email ?? "—"} />
+                <Meta label="Mobile" value={sug.employees?.mobile ?? "—"} />
+                <Meta label="Gender" value={sug.employees?.gender ? (sug.employees.gender.charAt(0).toUpperCase() + sug.employees.gender.slice(1).replace(/_/g, " ")) : "—"} />
+                <Meta label="Designation" value={sug.employees?.designation ?? "—"} />
+                <Meta label="Base Department" value={sug.employees?.departments?.name ?? "—"} />
+                <Meta label="Base Plant" value={sug.employees?.plants?.name ?? "—"} />
               </div>
-            )}
+            </div>
 
             <div className="grid sm:grid-cols-4 gap-3 text-sm border-t border-border pt-3">
               <Meta label="Category" value={sug.categories?.name} />

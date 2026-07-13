@@ -248,7 +248,7 @@ export function SuggestionDetail({ id }: { id: string }) {
         <div className="lg:col-span-2 space-y-4">
           <Card>
             <div className="grid sm:grid-cols-3 gap-3 text-sm">
-              {isPE && <Meta label="Employee" value={`${sug.employees?.name} (${sug.employees?.employee_code})`} />}
+              <Meta label="Employee" value={`${sug.employees?.name} (${sug.employees?.employee_code})`} />
               <Meta label="Category" value={sug.categories?.name} />
               <Meta label="Owner department" value={sug.current_departments?.name || sug.departments?.name} />
               <Meta label="Plant" value={sug.plants?.name} />
