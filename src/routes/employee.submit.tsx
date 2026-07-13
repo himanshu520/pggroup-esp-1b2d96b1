@@ -158,6 +158,7 @@ export function SubmitForm() {
   }
 
   async function submit() {
+    if (submitting) return; // Prevent double submissions
     if (!emp) return toast.error("Employee record missing");
     if (!form.title.trim()) return toast.error("Please enter a title");
     if (!form.suggested_method.trim()) return toast.error("Please describe your proposed solution");
@@ -229,12 +230,167 @@ export function SubmitForm() {
         onSubmit={(e) => { e.preventDefault(); submit(); }}
         className="space-y-5 pb-24"
       >
+        {/* Section: Classification & Budget */}
+        <section className="rounded-xl border border-border bg-card">
+          <SectionHeader
+            tone="warning"
+            icon={<Lightbulb className="w-4.5 h-4.5" />}
+            index="1"
+            title={t("sec_2_title")}
+            subtitle={t("sec_2_sub")}
+          />
+          <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">{t("lbl_idea_category")} <span className="text-destructive">*</span></Label>
+              <div className="text-[11px] text-muted-foreground">{t("hint_category")}</div>
+              <Select value={form.category_id} onValueChange={(v) => setForm({ ...form, category_id: v })}>
+                <SelectTrigger className="h-11"><SelectValue placeholder={t("opt_select_category")} /></SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => <SelectItem key={c.id} value={c.id}>{t(c.name)}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">{t("lbl_implementation_budget")} <span className="text-destructive">*</span></Label>
+              <div className="text-[11px] text-muted-foreground">{t("hint_budget")}</div>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: "no_cost", label: t("budget_no_cost"), hint: t("budget_no_cost_hint"), color: "emerald" },
+                  { id: "low_cost", label: t("budget_low_cost"), hint: t("budget_low_cost_hint"), color: "amber" },
+                  { id: "investment", label: t("budget_investment"), hint: t("budget_investment_hint"), color: "red" },
+                ].map((b) => {
+                  const active = form.budget_tier === b.id;
+                  
+                  const colorMap = {
+                    emerald: {
+                      activeContainer: "border-emerald-600 bg-emerald-500/10 ring-1 ring-emerald-600 shadow-sm",
+                      hoverContainer: "hover:border-emerald-600/40",
+                      activeDot: "border-emerald-600 bg-emerald-600",
+                    },
+                    amber: {
+                      activeContainer: "border-amber-500 bg-amber-500/10 ring-1 ring-amber-500 shadow-sm",
+                      hoverContainer: "hover:border-amber-500/40",
+                      activeDot: "border-amber-500 bg-amber-500",
+                    },
+                    red: {
+                      activeContainer: "border-red-600 bg-red-500/10 ring-1 ring-red-600 shadow-sm",
+                      hoverContainer: "hover:border-red-600/40",
+                      activeDot: "border-red-600 bg-red-600",
+                    },
+                  };
+                  
+                  const c = colorMap[b.color as keyof typeof colorMap];
+
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => setForm({ ...form, budget_tier: b.id as any })}
+                      className={cn(
+                        "text-left rounded-lg border p-2.5 transition-all",
+                        active ? c.activeContainer : `border-border bg-background ${c.hoverContainer}`
+                      )}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <div className={cn("w-3 h-3 rounded-full border-2 shrink-0 transition-colors", active ? c.activeDot : "border-muted-foreground/40")} />
+                        <div className="text-xs font-semibold">{b.label}</div>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-1 leading-tight">{b.hint}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section: Idea Description */}
+        <section className="rounded-xl border border-border bg-card">
+          <SectionHeader
+            tone="primary"
+            icon={<Sparkles className="w-4.5 h-4.5" />}
+            index="2"
+            title={t("sec_3_title")}
+            subtitle={t("sec_3_sub")}
+          />
+          <div className="p-4 sm:p-5 space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">{t("lbl_suggestion_title")} <span className="text-destructive">*</span></Label>
+              <div className="text-[11px] text-muted-foreground">{t("hint_title")}</div>
+              <Input
+                placeholder={t("ph_suggestion_title")}
+                value={form.title}
+                maxLength={200}
+                onChange={(e) => setForm({ ...form, title: enforceWordLimit(e.target.value, 50) })}
+                className="h-11"
+              />
+              <div className="text-[10px] text-right text-muted-foreground">
+                {getWordCount(form.title)} / 50 {t("words") || "words"}
+              </div>
+            </div>
+
+            <AccentField
+              tone="destructive"
+              icon={<AlertCircle className="w-4 h-4" />}
+              label={t("lbl_current_problem")}
+              hint={t("hint_problem")}
+              required
+            >
+              <Textarea
+                rows={3}
+                placeholder={t("ph_problem")}
+                value={form.problem}
+                onChange={(e) => setForm({ ...form, problem: enforceWordLimit(e.target.value, 100) })}
+              />
+              <div className="text-[10px] text-right text-muted-foreground mt-1">
+                {getWordCount(form.problem)} / 100 {t("words") || "words"}
+              </div>
+            </AccentField>
+
+            <AccentField
+              tone="primary"
+              icon={<Wrench className="w-4 h-4" />}
+              label={t("lbl_proposed_solution")}
+              hint={t("hint_solution")}
+              required
+            >
+              <Textarea
+                rows={3}
+                placeholder={t("ph_solution")}
+                value={form.suggested_method}
+                onChange={(e) => setForm({ ...form, suggested_method: enforceWordLimit(e.target.value, 100) })}
+              />
+              <div className="text-[10px] text-right text-muted-foreground mt-1">
+                {getWordCount(form.suggested_method)} / 100 {t("words") || "words"}
+              </div>
+            </AccentField>
+
+            <AccentField
+              tone="success"
+              icon={<TrendingUp className="w-4 h-4" />}
+              label={t("lbl_expected_benefits")}
+              hint={t("hint_benefits")}
+              required
+            >
+              <Textarea
+                rows={3}
+                placeholder={t("ph_benefits")}
+                value={form.expected_benefits}
+                onChange={(e) => setForm({ ...form, expected_benefits: enforceWordLimit(e.target.value, 100) })}
+              />
+              <div className="text-[10px] text-right text-muted-foreground mt-1">
+                {getWordCount(form.expected_benefits)} / 100 {t("words") || "words"}
+              </div>
+            </AccentField>
+          </div>
+        </section>
+
         {/* Section: Employee & Location */}
         <section className="rounded-xl border border-border bg-card">
           <SectionHeader
             tone="primary"
             icon={<User className="w-4.5 h-4.5" />}
-            index="1"
+            index="3"
             title={t("sec_1_title")}
             subtitle={t("sec_1_sub")}
           />
@@ -325,162 +481,6 @@ export function SubmitForm() {
                 <SelectContent>{visibleDepartments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
               </Select>
             </RefField>
-          </div>
-        </section>
-
-        {/* Section: Classification & Budget */}
-        <section className="rounded-xl border border-border bg-card">
-          <SectionHeader
-            tone="warning"
-            icon={<Lightbulb className="w-4.5 h-4.5" />}
-            index="2"
-            title={t("sec_2_title")}
-            subtitle={t("sec_2_sub")}
-          />
-          <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">{t("lbl_idea_category")} <span className="text-destructive">*</span></Label>
-              <div className="text-[11px] text-muted-foreground">{t("hint_category")}</div>
-              <Select value={form.category_id} onValueChange={(v) => setForm({ ...form, category_id: v })}>
-                <SelectTrigger className="h-11"><SelectValue placeholder={t("opt_select_category")} /></SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => <SelectItem key={c.id} value={c.id}>{t(c.name)}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">{t("lbl_implementation_budget")} <span className="text-destructive">*</span></Label>
-              <div className="text-[11px] text-muted-foreground">{t("hint_budget")}</div>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { id: "no_cost", label: t("budget_no_cost"), hint: t("budget_no_cost_hint"), color: "emerald" },
-                  { id: "low_cost", label: t("budget_low_cost"), hint: t("budget_low_cost_hint"), color: "amber" },
-                  { id: "investment", label: t("budget_investment"), hint: t("budget_investment_hint"), color: "red" },
-                ].map((b) => {
-                  const active = form.budget_tier === b.id;
-                  
-                  const colorMap = {
-                    emerald: {
-                      activeContainer: "border-emerald-600 bg-emerald-500/10 ring-1 ring-emerald-600 shadow-sm",
-                      hoverContainer: "hover:border-emerald-600/40",
-                      activeDot: "border-emerald-600 bg-emerald-600",
-                    },
-                    amber: {
-                      activeContainer: "border-amber-500 bg-amber-500/10 ring-1 ring-amber-500 shadow-sm",
-                      hoverContainer: "hover:border-amber-500/40",
-                      activeDot: "border-amber-500 bg-amber-500",
-                    },
-                    red: {
-                      activeContainer: "border-red-600 bg-red-500/10 ring-1 ring-red-600 shadow-sm",
-                      hoverContainer: "hover:border-red-600/40",
-                      activeDot: "border-red-600 bg-red-600",
-                    },
-                  };
-                  
-                  const c = colorMap[b.color as keyof typeof colorMap];
-
-                  return (
-                    <button
-                      key={b.id}
-                      type="button"
-                      onClick={() => setForm({ ...form, budget_tier: b.id as any })}
-                      className={cn(
-                        "text-left rounded-lg border p-2.5 transition-all",
-                        active ? c.activeContainer : `border-border bg-background ${c.hoverContainer}`
-                      )}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <div className={cn("w-3 h-3 rounded-full border-2 shrink-0 transition-colors", active ? c.activeDot : "border-muted-foreground/40")} />
-                        <div className="text-xs font-semibold">{b.label}</div>
-                      </div>
-                      <div className="text-[10px] text-muted-foreground mt-1 leading-tight">{b.hint}</div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Section: Idea Description */}
-        <section className="rounded-xl border border-border bg-card">
-          <SectionHeader
-            tone="primary"
-            icon={<Sparkles className="w-4.5 h-4.5" />}
-            index="3"
-            title={t("sec_3_title")}
-            subtitle={t("sec_3_sub")}
-          />
-          <div className="p-4 sm:p-5 space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">{t("lbl_suggestion_title")} <span className="text-destructive">*</span></Label>
-              <div className="text-[11px] text-muted-foreground">{t("hint_title")}</div>
-              <Input
-                placeholder={t("ph_suggestion_title")}
-                value={form.title}
-                maxLength={200}
-                onChange={(e) => setForm({ ...form, title: enforceWordLimit(e.target.value, 50) })}
-                className="h-11"
-              />
-              <div className="text-[10px] text-right text-muted-foreground">
-                {getWordCount(form.title)} / 50 {t("words") || "words"}
-              </div>
-            </div>
-
-            <AccentField
-              tone="destructive"
-              icon={<AlertCircle className="w-4 h-4" />}
-              label={t("lbl_current_problem")}
-              hint={t("hint_problem")}
-              required
-            >
-              <Textarea
-                rows={3}
-                placeholder={t("ph_problem")}
-                value={form.problem}
-                onChange={(e) => setForm({ ...form, problem: enforceWordLimit(e.target.value, 100) })}
-              />
-              <div className="text-[10px] text-right text-muted-foreground mt-1">
-                {getWordCount(form.problem)} / 100 {t("words") || "words"}
-              </div>
-            </AccentField>
-
-            <AccentField
-              tone="primary"
-              icon={<Wrench className="w-4 h-4" />}
-              label={t("lbl_proposed_solution")}
-              hint={t("hint_solution")}
-              required
-            >
-              <Textarea
-                rows={3}
-                placeholder={t("ph_solution")}
-                value={form.suggested_method}
-                onChange={(e) => setForm({ ...form, suggested_method: enforceWordLimit(e.target.value, 100) })}
-              />
-              <div className="text-[10px] text-right text-muted-foreground mt-1">
-                {getWordCount(form.suggested_method)} / 100 {t("words") || "words"}
-              </div>
-            </AccentField>
-
-            <AccentField
-              tone="success"
-              icon={<TrendingUp className="w-4 h-4" />}
-              label={t("lbl_expected_benefits")}
-              hint={t("hint_benefits")}
-              required
-            >
-              <Textarea
-                rows={3}
-                placeholder={t("ph_benefits")}
-                value={form.expected_benefits}
-                onChange={(e) => setForm({ ...form, expected_benefits: enforceWordLimit(e.target.value, 100) })}
-              />
-              <div className="text-[10px] text-right text-muted-foreground mt-1">
-                {getWordCount(form.expected_benefits)} / 100 {t("words") || "words"}
-              </div>
-            </AccentField>
-
           </div>
         </section>
 
