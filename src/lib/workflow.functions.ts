@@ -130,8 +130,8 @@ export const deptSubmitEvidence = createServerFn({ method: "POST" })
     completion_date: z.string().optional(),
     actual_cost: z.number().nullable().optional(),
     benefits_achieved: z.string().optional(),
-    attachment_ids: z.array(z.string().uuid()).max(10).optional(),
-    file_names: z.array(z.string()).max(10).optional(),
+    attachment_ids: z.array(z.string().uuid()).min(1, "At least one evidence file is required").max(10),
+    file_names: z.array(z.string()).min(1).max(10),
   }).parse(d))
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;

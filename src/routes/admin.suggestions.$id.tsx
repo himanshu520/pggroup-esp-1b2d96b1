@@ -126,6 +126,10 @@ export function SuggestionDetail({ id }: { id: string }) {
   }
 
   async function submitEvidenceWithFiles() {
+    if (evidenceFiles.length === 0) {
+      return toast.error("Please attach at least one evidence file");
+    }
+    
     setUploading(true);
     const attachmentIds: string[] = [];
     const uploadedNames: string[] = [];
