@@ -11,7 +11,7 @@ import { useSession, isSuggestionAccessible } from "@/lib/session";
 import { STATUS_LABEL } from "@/lib/statuses";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { peTransferSuggestion, deptDecide, deptStartImplementation, deptSubmitEvidence, peVerify } from "@/lib/workflow.functions";
+import { peTransferSuggestion, peRejectSuggestion, deptDecide, deptStartImplementation, deptSubmitEvidence, peVerify } from "@/lib/workflow.functions";
 import { toast } from "sonner";
 import { Send, ThumbsUp, ThumbsDown, PlayCircle, Upload, Check, AlertTriangle, Loader2, Paperclip, X, FileText, History } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -74,6 +74,7 @@ export function SuggestionDetail({ id }: { id: string }) {
   });
 
   const transferFn = useServerFn(peTransferSuggestion);
+  const rejectPEFn = useServerFn(peRejectSuggestion);
   const decideFn = useServerFn(deptDecide);
   const startFn = useServerFn(deptStartImplementation);
   const evidenceFn = useServerFn(deptSubmitEvidence);
@@ -88,6 +89,7 @@ export function SuggestionDetail({ id }: { id: string }) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const [peApproved, setPeApproved] = useState(false);
 
   // Accepted evidence file types
   const ACCEPTED_EXT = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".mp4", ".mov"];
@@ -286,19 +288,43 @@ export function SuggestionDetail({ id }: { id: string }) {
             <div className="text-sm font-medium">Actions</div>
 
             {isPE && (status === "submitted" || status === "pe_review") && (
-              <div className="space-y-2">
-                <div className="text-xs text-muted-foreground">PE — Transfer to concern department</div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Select value={targetDept} onValueChange={setTargetDept} disabled={isPending}>
-                    <SelectTrigger className="w-64"><SelectValue placeholder="Select department" /></SelectTrigger>
-                    <SelectContent>{departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <Textarea placeholder="Remarks (optional)" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="min-h-[38px] max-w-md" disabled={isPending} />
-                  <Button disabled={isPending || !targetDept} onClick={() => run(() => transferFn({ data: { suggestion_id: id, target_department_id: targetDept, remarks } }), "Transferred to department")}>
-                    {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    Transfer
-                  </Button>
-                </div>
+              <div className="space-y-3">
+                <div className="text-xs text-muted-foreground">PE — Initial Review</div>
+                {!peApproved ? (
+                  <div className="space-y-2">
+                    <Textarea placeholder="Remarks (optional)" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="max-w-lg" disabled={isPending} />
+                    <div className="flex gap-2">
+                      <Button disabled={isPending} onClick={() => setPeApproved(true)}>
+                        <ThumbsUp className="w-4 h-4" />
+                        Approve
+                      </Button>
+                      <Button variant="destructive" disabled={isPending} onClick={() => run(() => rejectPEFn({ data: { suggestion_id: id, remarks } }), "Rejected suggestion")}>
+                        {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="text-xs text-muted-foreground">Select department to transfer:</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Select value={targetDept} onValueChange={setTargetDept} disabled={isPending}>
+                        <SelectTrigger className="w-64"><SelectValue placeholder="Select department" /></SelectTrigger>
+                        <SelectContent>{departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                      <Textarea placeholder="Remarks (optional)" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="min-h-[38px] max-w-md" disabled={isPending} />
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <Button disabled={isPending || !targetDept} onClick={() => run(() => transferFn({ data: { suggestion_id: id, target_department_id: targetDept, remarks } }), "Transferred to department")}>
+                          {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                          Transfer
+                        </Button>
+                        <Button variant="ghost" disabled={isPending} onClick={() => setPeApproved(false)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

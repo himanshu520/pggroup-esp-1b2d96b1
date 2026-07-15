@@ -65,6 +65,35 @@ export const peTransferSuggestion = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// PE rejects a submitted suggestion
+export const peRejectSuggestion = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      suggestion_id: z.string().uuid(),
+      remarks: z.string().max(2000).optional(),
+    }).parse(d)
+  )
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const { data: sug, error } = await supabase.from("suggestions").select("id,status").eq("id", data.suggestion_id).single();
+    if (error || !sug) throw new Error("Suggestion not found");
+    const { error: uErr } = await supabase.from("suggestions").update({
+      status: "rejected" satisfies SuggestionStatus,
+    }).eq("id", data.suggestion_id);
+    if (uErr) throw new Error(uErr.message);
+    await insertHistory(supabase, data.suggestion_id, sug.status, "rejected", userId, data.remarks ?? null);
+    const { notifyForSuggestion } = await import("./notify.server");
+    await notifyForSuggestion({
+      suggestion_id: data.suggestion_id,
+      title: "Your suggestion was rejected by PE",
+      body: data.remarks ?? undefined,
+      event_type: "reject",
+      audience: ["submitter"],
+    });
+    return { ok: true };
+  });
+
 // Department approves (moves to evaluation/implementation) or rejects
 export const deptDecide = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
