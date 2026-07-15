@@ -86,9 +86,9 @@ export const deptDecide = createServerFn({ method: "POST" })
       await insertHistory(supabase, data.suggestion_id, sug.status, "approved", userId, data.remarks ?? null);
       await notifyForSuggestion({ suggestion_id: data.suggestion_id, title: "Your suggestion was approved", body: data.remarks ?? undefined, event_type: "approve", audience: ["submitter", "pe"] });
     } else if (data.decision === "reject") {
-      await supabase.from("suggestions").update({ status: "rejected" as SuggestionStatus }).eq("id", data.suggestion_id);
-      await insertHistory(supabase, data.suggestion_id, sug.status, "rejected", userId, data.remarks ?? null);
-      await notifyForSuggestion({ suggestion_id: data.suggestion_id, title: "Your suggestion was rejected", body: data.remarks ?? undefined, event_type: "reject", audience: ["submitter", "pe"] });
+      await supabase.from("suggestions").update({ status: "pe_review" as SuggestionStatus }).eq("id", data.suggestion_id);
+      await insertHistory(supabase, data.suggestion_id, sug.status, "pe_review", userId, data.remarks ?? null);
+      await notifyForSuggestion({ suggestion_id: data.suggestion_id, title: "Your suggestion was rejected by the department", body: data.remarks ?? undefined, event_type: "reject", audience: ["submitter", "pe"] });
     } else {
       if (!data.target_department_id) throw new Error("target_department_id required");
       await supabase.from("suggestions").update({

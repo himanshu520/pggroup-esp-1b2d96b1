@@ -168,9 +168,11 @@ export function SuggestionDetail({ id }: { id: string }) {
       toast.success("Evidence submitted", { description: `${uploadedNames.length} file${uploadedNames.length === 1 ? "" : "s"} attached` });
       setEvidenceFiles([]);
       setEvidenceRemarks(""); setActualCost(""); setBenefits("");
-      qc.invalidateQueries({ queryKey: ["suggestion", id] });
-      qc.invalidateQueries({ queryKey: ["suggestion-history", id] });
-      qc.invalidateQueries({ queryKey: ["suggestion-evidence", id] });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["suggestion", id] }),
+        qc.invalidateQueries({ queryKey: ["suggestion-history", id] }),
+        qc.invalidateQueries({ queryKey: ["suggestion-evidence", id] })
+      ]);
     } catch (e: any) {
       toast.error("Failed to submit evidence", { description: e.message ?? "Unknown error" });
     } finally {
@@ -184,8 +186,10 @@ export function SuggestionDetail({ id }: { id: string }) {
     try {
       await fn();
       toast.success(label);
-      qc.invalidateQueries({ queryKey: ["suggestion", id] });
-      qc.invalidateQueries({ queryKey: ["suggestion-history", id] });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["suggestion", id] }),
+        qc.invalidateQueries({ queryKey: ["suggestion-history", id] })
+      ]);
     } catch (e: any) { 
       toast.error(e.message ?? "Action failed"); 
     } finally {
@@ -245,6 +249,11 @@ export function SuggestionDetail({ id }: { id: string }) {
   }
 
   const isPE = session?.isPE || session?.primaryRole === "super_admin" || session?.primaryRole === "corporate_admin";
+  const isCurrentDept = session?.roles?.some(r => 
+    r.role === "super_admin" || 
+    r.role === "corporate_admin" || 
+    (!!sug.current_department_id && r.department_id === sug.current_department_id)
+  ) || session?.primaryRole === "super_admin" || session?.primaryRole === "corporate_admin";
   const status = sug.status;
 
   return (
@@ -293,7 +302,7 @@ export function SuggestionDetail({ id }: { id: string }) {
               </div>
             )}
 
-            {(status === "dept_review" || status === "transferred") && (
+            {isCurrentDept && (status === "dept_review" || status === "transferred") && (
               <div className="space-y-2">
                 <div className="text-xs text-muted-foreground">Department — Decide</div>
                 <Textarea placeholder="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="max-w-lg" disabled={isPending} />
@@ -318,7 +327,7 @@ export function SuggestionDetail({ id }: { id: string }) {
               </div>
             )}
 
-            {status === "approved" && (
+            {isCurrentDept && status === "approved" && (
               <div className="flex items-center gap-2">
                 <Button disabled={isPending} onClick={() => run(() => startFn({ data: { suggestion_id: id } }), "Implementation started")}>
                   {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
@@ -327,7 +336,7 @@ export function SuggestionDetail({ id }: { id: string }) {
               </div>
             )}
 
-            {(status === "implementation" || status === "evidence_pending" || status === "fake_closure" || status === "reopened") && (
+            {isCurrentDept && (status === "implementation" || status === "evidence_pending" || status === "fake_closure" || status === "reopened") && (
               <div className="space-y-2">
                 <div className="text-xs text-muted-foreground">Department — Submit evidence</div>
                 <div className="grid md:grid-cols-2 gap-2 max-w-2xl">
