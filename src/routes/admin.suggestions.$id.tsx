@@ -87,6 +87,7 @@ export function SuggestionDetail({ id }: { id: string }) {
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [isPending, setIsPending] = useState(false);
 
   // Accepted evidence file types
   const ACCEPTED_EXT = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".mp4", ".mov"];
@@ -178,12 +179,18 @@ export function SuggestionDetail({ id }: { id: string }) {
   }
 
   async function run(fn: () => Promise<any>, label: string) {
+    if (isPending) return;
+    setIsPending(true);
     try {
       await fn();
       toast.success(label);
       qc.invalidateQueries({ queryKey: ["suggestion", id] });
       qc.invalidateQueries({ queryKey: ["suggestion-history", id] });
-    } catch (e: any) { toast.error(e.message ?? "Action failed"); }
+    } catch (e: any) { 
+      toast.error(e.message ?? "Action failed"); 
+    } finally {
+      setIsPending(false);
+    }
   }
 
   if (!validId) {
@@ -273,12 +280,15 @@ export function SuggestionDetail({ id }: { id: string }) {
               <div className="space-y-2">
                 <div className="text-xs text-muted-foreground">PE — Transfer to concern department</div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Select value={targetDept} onValueChange={setTargetDept}>
+                  <Select value={targetDept} onValueChange={setTargetDept} disabled={isPending}>
                     <SelectTrigger className="w-64"><SelectValue placeholder="Select department" /></SelectTrigger>
                     <SelectContent>{departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
                   </Select>
-                  <Textarea placeholder="Remarks (optional)" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="min-h-[38px] max-w-md" />
-                  <Button disabled={!targetDept} onClick={() => run(() => transferFn({ data: { suggestion_id: id, target_department_id: targetDept, remarks } }), "Transferred to department")}><Send className="w-4 h-4" /> Transfer</Button>
+                  <Textarea placeholder="Remarks (optional)" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="min-h-[38px] max-w-md" disabled={isPending} />
+                  <Button disabled={isPending || !targetDept} onClick={() => run(() => transferFn({ data: { suggestion_id: id, target_department_id: targetDept, remarks } }), "Transferred to department")}>
+                    {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    Transfer
+                  </Button>
                 </div>
               </div>
             )}
@@ -286,22 +296,34 @@ export function SuggestionDetail({ id }: { id: string }) {
             {(status === "dept_review" || status === "transferred") && (
               <div className="space-y-2">
                 <div className="text-xs text-muted-foreground">Department — Decide</div>
-                <Textarea placeholder="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="max-w-lg" />
+                <Textarea placeholder="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="max-w-lg" disabled={isPending} />
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={() => run(() => decideFn({ data: { suggestion_id: id, decision: "approve", remarks } }), "Approved")}><ThumbsUp className="w-4 h-4" /> Approve</Button>
-                  <Button variant="destructive" onClick={() => run(() => decideFn({ data: { suggestion_id: id, decision: "reject", remarks } }), "Rejected")}><ThumbsDown className="w-4 h-4" /> Reject</Button>
-                  <Select value={targetDept} onValueChange={setTargetDept}>
+                  <Button disabled={isPending} onClick={() => run(() => decideFn({ data: { suggestion_id: id, decision: "approve", remarks } }), "Approved")}>
+                    {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsUp className="w-4 h-4" />}
+                    Approve
+                  </Button>
+                  <Button variant="destructive" disabled={isPending} onClick={() => run(() => decideFn({ data: { suggestion_id: id, decision: "reject", remarks } }), "Rejected")}>
+                    {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
+                    Reject
+                  </Button>
+                  <Select value={targetDept} onValueChange={setTargetDept} disabled={isPending}>
                     <SelectTrigger className="w-56"><SelectValue placeholder="Or transfer to…" /></SelectTrigger>
                     <SelectContent>{departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
                   </Select>
-                  <Button variant="outline" disabled={!targetDept} onClick={() => run(() => decideFn({ data: { suggestion_id: id, decision: "transfer", target_department_id: targetDept, remarks } }), "Transferred")}><Send className="w-4 h-4" /> Transfer</Button>
+                  <Button variant="outline" disabled={isPending || !targetDept} onClick={() => run(() => decideFn({ data: { suggestion_id: id, decision: "transfer", target_department_id: targetDept, remarks } }), "Transferred")}>
+                    {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    Transfer
+                  </Button>
                 </div>
               </div>
             )}
 
             {status === "approved" && (
               <div className="flex items-center gap-2">
-                <Button onClick={() => run(() => startFn({ data: { suggestion_id: id } }), "Implementation started")}><PlayCircle className="w-4 h-4" /> Start implementation</Button>
+                <Button disabled={isPending} onClick={() => run(() => startFn({ data: { suggestion_id: id } }), "Implementation started")}>
+                  {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
+                  Start implementation
+                </Button>
               </div>
             )}
 
@@ -309,24 +331,24 @@ export function SuggestionDetail({ id }: { id: string }) {
               <div className="space-y-2">
                 <div className="text-xs text-muted-foreground">Department — Submit evidence</div>
                 <div className="grid md:grid-cols-2 gap-2 max-w-2xl">
-                  <input type="number" placeholder="Actual cost (₹)" value={actualCost} onChange={(e) => setActualCost(e.target.value)} className="border border-input rounded-md px-3 py-1.5 text-sm bg-background" />
-                  <input type="text" placeholder="Benefits achieved" value={benefits} onChange={(e) => setBenefits(e.target.value)} className="border border-input rounded-md px-3 py-1.5 text-sm bg-background" />
+                  <input type="number" placeholder="Actual cost (₹)" value={actualCost} onChange={(e) => setActualCost(e.target.value)} className="border border-input rounded-md px-3 py-1.5 text-sm bg-background" disabled={uploading || isPending} />
+                  <input type="text" placeholder="Benefits achieved" value={benefits} onChange={(e) => setBenefits(e.target.value)} className="border border-input rounded-md px-3 py-1.5 text-sm bg-background" disabled={uploading || isPending} />
                 </div>
-                <Textarea placeholder="Completion remarks" value={evidenceRemarks} onChange={(e) => setEvidenceRemarks(e.target.value)} className="max-w-2xl" />
+                <Textarea placeholder="Completion remarks" value={evidenceRemarks} onChange={(e) => setEvidenceRemarks(e.target.value)} className="max-w-2xl" disabled={uploading || isPending} />
                 <label
                   onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                   onDragLeave={() => setDragOver(false)}
                   onDrop={(e) => {
                     e.preventDefault();
                     setDragOver(false);
-                    handleEvidenceFiles(e.dataTransfer.files);
+                    if (!uploading && !isPending) handleEvidenceFiles(e.dataTransfer.files);
                   }}
                   className={cn(
-                    "max-w-2xl block border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-colors",
-                    dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
+                    "max-w-2xl block border-2 border-dashed rounded-lg p-5 text-center transition-colors",
+                    (uploading || isPending) ? "bg-muted cursor-not-allowed border-muted-foreground/30" : dragOver ? "border-primary bg-primary/5 cursor-pointer" : "border-border hover:border-primary/50 cursor-pointer",
                   )}
                 >
-                  <input type="file" multiple accept={ACCEPTED_ATTR} className="hidden" onChange={(e) => handleEvidenceFiles(e.target.files)} />
+                  <input type="file" multiple accept={ACCEPTED_ATTR} className="hidden" onChange={(e) => handleEvidenceFiles(e.target.files)} disabled={uploading || isPending} />
                   <Paperclip className="w-6 h-6 mx-auto text-muted-foreground mb-1.5" />
                   <div className="text-sm font-medium">Drag & drop files here, or click to browse</div>
                   <div className="text-xs text-muted-foreground mt-1">Images, PDF, Word, Excel, PowerPoint, MP4/MOV, TXT, CSV</div>
@@ -341,24 +363,33 @@ export function SuggestionDetail({ id }: { id: string }) {
                           <div className="text-sm truncate">{f.name}</div>
                           <div className="text-xs text-muted-foreground">{(f.size / 1024).toFixed(1)} KB</div>
                         </div>
-                        <button type="button" className="p-1 hover:bg-muted rounded shrink-0" onClick={() => setEvidenceFiles(evidenceFiles.filter((_, j) => j !== i))}>
+                        <button type="button" className="p-1 hover:bg-muted rounded shrink-0" onClick={() => setEvidenceFiles(evidenceFiles.filter((_, j) => j !== i))} disabled={uploading || isPending}>
                           <X className="w-4 h-4 text-muted-foreground" />
                         </button>
                       </li>
                     ))}
                   </ul>
                 )}
-                <Button disabled={uploading} onClick={submitEvidenceWithFiles}><Upload className="w-4 h-4" /> {uploading ? "Submitting…" : "Submit evidence"}</Button>
+                <Button disabled={uploading || isPending} onClick={submitEvidenceWithFiles}>
+                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  {uploading ? "Submitting…" : "Submit evidence"}
+                </Button>
               </div>
             )}
 
             {isPE && (status === "pe_verification" || status === "evidence_submitted") && (
               <div className="space-y-2">
                 <div className="text-xs text-muted-foreground">PE — Final verification</div>
-                <Textarea placeholder="Verification remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="max-w-lg" />
+                <Textarea placeholder="Verification remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="max-w-lg" disabled={isPending} />
                 <div className="flex gap-2">
-                  <Button onClick={() => run(() => verifyFn({ data: { suggestion_id: id, outcome: "implemented", remarks } }), "Marked implemented")}><Check className="w-4 h-4" /> Mark implemented</Button>
-                  <Button variant="destructive" onClick={() => run(() => verifyFn({ data: { suggestion_id: id, outcome: "fake_closure", remarks } }), "Marked fake closure")}><AlertTriangle className="w-4 h-4" /> Fake closure</Button>
+                  <Button disabled={isPending} onClick={() => run(() => verifyFn({ data: { suggestion_id: id, outcome: "implemented", remarks } }), "Marked implemented")}>
+                    {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    Mark implemented
+                  </Button>
+                  <Button variant="destructive" disabled={isPending} onClick={() => run(() => verifyFn({ data: { suggestion_id: id, outcome: "fake_closure", remarks } }), "Marked fake closure")}>
+                    {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
+                    Fake closure
+                  </Button>
                 </div>
               </div>
             )}

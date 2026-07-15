@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { Mail, KeyRound } from "lucide-react";
+import { Mail, KeyRound, Loader2 } from "lucide-react";
 import { BrandLogos } from "@/components/brand-logos";
 
 export const Route = createFileRoute("/auth")({
@@ -113,7 +113,8 @@ function AdminFlow() {
         </div>
       </div>
       <Button type="submit" className="w-full h-12 text-base bg-primary hover:bg-primary/90" disabled={loading || !email.trim()}>
-        <KeyRound className="w-4 h-4" /> Send OTP
+        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+        {loading ? "Sending OTP…" : "Send OTP"}
       </Button>
     </form>
   ) : (
@@ -166,8 +167,11 @@ function OtpStage({ email, otp, setOtp, onBack, onVerify, onResend, loading }: {
         )}
       </div>
       <div className="flex gap-2">
-        <Button variant="outline" className="h-12" onClick={onBack}>Back</Button>
-        <Button className="flex-1 h-12 text-base bg-primary hover:bg-primary/90" onClick={onVerify} disabled={loading || otp.length !== 6}>Verify &amp; sign in</Button>
+        <Button variant="outline" className="h-12" onClick={onBack} disabled={loading}>Back</Button>
+        <Button className="flex-1 h-12 text-base bg-primary hover:bg-primary/90" onClick={onVerify} disabled={loading || otp.length !== 6}>
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+          {loading ? "Verifying…" : "Verify & sign in"}
+        </Button>
       </div>
     </div>
   );

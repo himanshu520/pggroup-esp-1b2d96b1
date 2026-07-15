@@ -350,7 +350,16 @@ function EmployeeFlow({
         className="w-full h-12 text-base bg-primary hover:bg-primary/90"
         disabled={loading || !empCode.trim()}
       >
-        <KeyRound className="w-4 h-4" /> {t.sendOtp}
+        {loading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            {t.resending || "Sending…"}
+          </>
+        ) : (
+          <>
+            <KeyRound className="w-4 h-4" /> {t.sendOtp}
+          </>
+        )}
       </Button>
 
       <div className="relative flex py-2 items-center">
@@ -467,7 +476,7 @@ function OtpStage({
         )}
       </div>
       <div className="flex gap-2">
-        <Button variant="outline" className="h-12" onClick={onBack}>
+        <Button variant="outline" className="h-12" onClick={onBack} disabled={loading}>
           {t.back}
         </Button>
         <Button
@@ -475,7 +484,14 @@ function OtpStage({
           onClick={onVerify}
           disabled={loading || otp.length !== 6}
         >
-          {t.verifyBtn}
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              {t.resending || "Verifying…"}
+            </>
+          ) : (
+            t.verifyBtn
+          )}
         </Button>
       </div>
     </div>
