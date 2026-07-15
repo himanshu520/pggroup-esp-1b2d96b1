@@ -39,7 +39,7 @@ export function MySuggestions() {
     queryFn: async () => (await supabase.from("suggestions").select("*, categories(name)").eq("employee_id", session!.employee!.id).order("created_at", { ascending: false })).data ?? [],
   });
 
-  const TERMINAL = new Set(["approved","implemented","rejected","closed","fake_closure"]);
+  const TERMINAL = new Set(["approved","implemented","rejected","closed"]);
   const filtered = data.filter((s: any) => {
     if (s.deleted_at) return false;
 

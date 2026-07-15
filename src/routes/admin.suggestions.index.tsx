@@ -43,7 +43,7 @@ export function SuggestionsList() {
     queryFn: async () => {
       let query = supabase.from("suggestions").select("*, employees(name, employee_code), categories(name), departments!suggestions_department_id_fkey(name), current_departments:departments!suggestions_current_department_id_fkey(name), plants(name)").order("created_at", { ascending: false }).limit(500);
       if (status === "under_review") {
-        query = query.not("status", "in", "(approved,implemented,rejected,closed,fake_closure)");
+        query = query.not("status", "in", "(approved,implemented,rejected,closed)");
       } else if (status) {
         query = query.eq("status", status as any);
       }

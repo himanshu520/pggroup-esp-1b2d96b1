@@ -274,10 +274,10 @@ function OverviewPage() {
       <div className="sticky top-14 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 mb-6 bg-background border-b border-border shadow-sm">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <StatCard label="Total Suggestions" value={total} tone="info" icon={ClipboardList} />
-          <StatCard label="Under Review" value={by(["submitted", "pe_review", "dept_review"])} tone="accent" icon={Search} />
-          <StatCard label="Approved" value={by(["approved", "evaluation", "implementation"])} tone="success" icon={CheckCircle2} />
+          <StatCard label="Under Review" value={by(["submitted", "pe_review", "transferred", "dept_review", "evidence_submitted", "pe_verification", "fake_closure", "reopened"])} tone="accent" icon={Search} />
+          <StatCard label="Approved" value={by(["approved", "evaluation", "implementation", "evidence_pending"])} tone="success" icon={CheckCircle2} />
           <StatCard label="Implemented" value={by(["implemented", "closed"])} tone="info" icon={Rocket} />
-          <StatCard label="Rejected" value={by(["rejected", "fake_closure"])} tone="destructive" icon={XCircle} />
+          <StatCard label="Rejected" value={by(["rejected"])} tone="destructive" icon={XCircle} />
           <StatCard label="Impl. Rate" value={`${implRate}%`} tone="accent" icon={TrendingUp} />
         </div>
       </div>
