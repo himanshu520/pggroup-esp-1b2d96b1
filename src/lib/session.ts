@@ -33,12 +33,12 @@ export async function loadSession(): Promise<SessionProfile | null> {
   const [{ data: employee }, { data: rolesRaw }] = await Promise.all([
     supabase
       .from("employees")
-      .select("*, locations(location), plants(name), departments(name)")
+      .select("*, locations(location), plants(name), departments(name, code)")
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase
       .from("user_roles")
-      .select("role,location_id,plant_id,department_id, locations(location), plants(name), departments(name)")
+      .select("role,location_id,plant_id,department_id, locations(location), plants(name), departments(name, code)")
       .eq("user_id", user.id),
   ]);
 

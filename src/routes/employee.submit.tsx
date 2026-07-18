@@ -423,7 +423,7 @@ export function SubmitForm() {
                 onValueChange={(v) => setForm((f) => ({ ...f, department_id: v }))}
               >
                 <SelectTrigger className={cn("h-11 border-accent", (!hasMultiplePlants || !form.plant_id) && "bg-accent/40 cursor-not-allowed")}><SelectValue placeholder={t("opt_select_dept")} /></SelectTrigger>
-                <SelectContent>{visibleDepartments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+                <SelectContent>{visibleDepartments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name} {d.code ? `(${d.code})` : ""}</SelectItem>)}</SelectContent>
               </Select>
             </RefField>
           </div>

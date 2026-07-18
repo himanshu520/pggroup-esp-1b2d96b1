@@ -92,14 +92,20 @@ export function isAdminRole(r: AppRole) {
 export function getHistoryActionText(h: { 
   to_status: SuggestionStatus; 
   from_status?: SuggestionStatus | null; 
-  from_dept?: { name: string } | null; 
-  to_dept?: { name: string } | null; 
+  from_dept?: { name: string; code?: string | null } | null; 
+  to_dept?: { name: string; code?: string | null } | null; 
   remarks?: string | null 
 }) {
   const toStatus = h.to_status;
   const fromStatus = h.from_status;
-  const toDept = h.to_dept?.name;
-  const fromDept = h.from_dept?.name;
+
+  const formatDept = (dept?: { name: string; code?: string | null } | null) => {
+    if (!dept) return "";
+    return dept.name + (dept.code ? ` (${dept.code})` : "");
+  };
+
+  const toDept = formatDept(h.to_dept);
+  const fromDept = formatDept(h.from_dept);
 
   switch (toStatus) {
     case "submitted":

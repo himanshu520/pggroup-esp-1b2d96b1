@@ -84,7 +84,11 @@ function AppShellInner({
   const firstRole = session?.roles?.[0];
   const locName = session?.employee?.locations?.location || firstRole?.locations?.location;
   const plantName = session?.employee?.plants?.name || firstRole?.plants?.name;
-  const deptName = session?.employee?.departments?.name || firstRole?.departments?.name;
+  const getSessionDeptDisplay = (dept: any) => {
+    if (!dept) return "";
+    return dept.name + (dept.code ? ` (${dept.code})` : "");
+  };
+  const deptName = getSessionDeptDisplay(session?.employee?.departments) || getSessionDeptDisplay(firstRole?.departments);
   const qc = useQueryClient();
   const [mobileOpen, setMobileOpen] = useState(false);
   // Persist collapsed state across route changes (AppShell remounts per route)

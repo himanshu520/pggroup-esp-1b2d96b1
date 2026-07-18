@@ -20,6 +20,11 @@ import { EmployeeBadges } from "@/components/employee-badges";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const getDeptDisplay = (dept: any) => {
+  if (!dept) return "—";
+  return dept.name + (dept.code ? ` (${dept.code})` : "");
+};
+
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
@@ -46,7 +51,7 @@ export function SuggestionDetail({ id }: { id: string }) {
     enabled: validId,
     queryKey: ["suggestion", id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("suggestions").select("*, employees(name, employee_code, email), categories(name), departments!suggestions_department_id_fkey(name), current_departments:departments!suggestions_current_department_id_fkey(name), plants(name), locations(location)").eq("id", id).maybeSingle();
+      const { data, error } = await supabase.from("suggestions").select("*, employees(name, employee_code, email), categories(name), departments!suggestions_department_id_fkey(name, code), current_departments:departments!suggestions_current_department_id_fkey(name, code), plants(name), locations(location)").eq("id", id).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -57,7 +62,7 @@ export function SuggestionDetail({ id }: { id: string }) {
     queryFn: async () => {
       const { data } = await supabase
         .from("suggestion_history")
-        .select("*, from_dept:departments!suggestion_history_from_department_id_fkey(name), to_dept:departments!suggestion_history_to_department_id_fkey(name)")
+        .select("*, from_dept:departments!suggestion_history_from_department_id_fkey(name, code), to_dept:departments!suggestion_history_to_department_id_fkey(name, code)")
         .eq("suggestion_id", id)
         .order("created_at");
       return data ?? [];
@@ -430,7 +435,7 @@ export function SuggestionDetail({ id }: { id: string }) {
                 />
               )}
               <Meta label="Category" value={sug.categories?.name} />
-              <Meta label="Owner department" value={sug.current_departments?.name || sug.departments?.name} />
+              <Meta label="Owner department" value={getDeptDisplay(sug.current_departments || sug.departments)} />
               <Meta label="Plant" value={sug.plants?.name} />
               <Meta label="Location" value={sug.locations?.location} />
               {sug.budget_tier && (
@@ -541,7 +546,7 @@ export function SuggestionDetail({ id }: { id: string }) {
                             <SelectContent>
                               {departments
                                 .filter((d: any) => d.plant_id === sug.plant_id)
-                                .map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                                .map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name} {d.code ? `(${d.code})` : ""}</SelectItem>)}
                             </SelectContent>
                           </Select>
                           <Textarea placeholder="Remarks (optional)" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="min-h-[38px] max-w-md" disabled={isPending} />
@@ -600,7 +605,7 @@ export function SuggestionDetail({ id }: { id: string }) {
                         <SelectContent>
                           {departments
                             .filter((d: any) => d.plant_id === sug.plant_id && d.id !== sug.current_department_id) // Limit to suggestion's plant and exclude current department
-                            .map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                            .map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name} {d.code ? `(${d.code})` : ""}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>

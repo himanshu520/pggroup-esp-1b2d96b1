@@ -22,6 +22,11 @@ import { STATUS_LABEL, getRowColorForStatus, getHistoryActionText } from "@/lib/
 import { ExportMenu } from "@/components/export-menu";
 import { EmployeeBadges } from "@/components/employee-badges";
 
+const getDeptDisplay = (dept: any) => {
+  if (!dept) return "—";
+  return dept.name + (dept.code ? ` (${dept.code})` : "");
+};
+
 export const Route = createFileRoute("/admin/suggestions/")({
   beforeLoad: () => { throw redirect({ to: "/admin", search: { section: "suggestions" } as any }); },
   component: () => null,
@@ -42,7 +47,7 @@ export function SuggestionsList() {
   const { data = [] } = useQuery({
     queryKey: ["admin-suggestions", status],
     queryFn: async () => {
-      let query = supabase.from("suggestions").select("*, employees(name, employee_code), categories(name), departments!suggestions_department_id_fkey(name), current_departments:departments!suggestions_current_department_id_fkey(name), plants(name)").order("created_at", { ascending: false }).limit(500);
+      let query = supabase.from("suggestions").select("*, employees(name, employee_code), categories(name), departments!suggestions_department_id_fkey(name, code), current_departments:departments!suggestions_current_department_id_fkey(name, code), plants(name)").order("created_at", { ascending: false }).limit(500);
       if (status === "under_review") {
         query = query.not("status", "in", "(approved,implemented,rejected,closed)");
       } else if (status) {
@@ -59,7 +64,9 @@ export function SuggestionsList() {
     return data.filter((s: any) => 
       s.title?.toLowerCase().includes(lowq) || 
       s.code?.toLowerCase().includes(lowq) || 
-      s.employees?.name?.toLowerCase().includes(lowq)
+      s.employees?.name?.toLowerCase().includes(lowq) ||
+      (s.current_departments?.name?.toLowerCase().includes(lowq) || s.departments?.name?.toLowerCase().includes(lowq)) ||
+      (s.current_departments?.code?.toLowerCase().includes(lowq) || s.departments?.code?.toLowerCase().includes(lowq))
     );
   }, [data, q]);
 
@@ -155,7 +162,7 @@ export function SuggestionsList() {
                       "—"
                     )}
                   </td>
-                  <td className="px-4 py-2.5 text-xs">{s.current_departments?.name || s.departments?.name}</td>
+                  <td className="px-4 py-2.5 text-xs">{getDeptDisplay(s.current_departments || s.departments)}</td>
                   <td className="px-4 py-2.5"><StatusBadge status={s.status} /></td>
                   <td className="px-4 py-2.5 text-muted-foreground text-xs">{new Date(s.created_at).toLocaleDateString()}</td>
                 </tr>
@@ -186,7 +193,7 @@ export function SuggestionsList() {
                     </>
                   ) : "—"}
                 </div>
-                <div className="truncate">{s.current_departments?.name || s.departments?.name}</div>
+                <div className="truncate">{getDeptDisplay(s.current_departments || s.departments)}</div>
               </div>
               
               <div className="flex items-center gap-2 mt-auto pt-3 border-t border-border/50">
@@ -224,7 +231,7 @@ function SuggestionPreviewDialog({ id, onClose }: { id: string | null; onClose: 
         await supabase
           .from("suggestions")
           .select(
-            "*, employees(id, name, employee_code, email, mobile, gender, designation, department_id, plant_id, location_id, departments(name), plants(name), locations(location)), categories(name), departments!suggestions_department_id_fkey(name), current_departments:departments!suggestions_current_department_id_fkey(name), plants(name), locations(location)",
+            "*, employees(id, name, employee_code, email, mobile, gender, designation, department_id, plant_id, location_id, departments(name, code), plants(name), locations(location)), categories(name), departments!suggestions_department_id_fkey(name, code), current_departments:departments!suggestions_current_department_id_fkey(name, code), plants(name), locations(location)",
           )
           .eq("id", id!)
           .maybeSingle()
@@ -237,7 +244,7 @@ function SuggestionPreviewDialog({ id, onClose }: { id: string | null; onClose: 
       (
         await supabase
           .from("suggestion_history")
-          .select("*, from_dept:departments!suggestion_history_from_department_id_fkey(name), to_dept:departments!suggestion_history_to_department_id_fkey(name)")
+          .select("*, from_dept:departments!suggestion_history_from_department_id_fkey(name, code), to_dept:departments!suggestion_history_to_department_id_fkey(name, code)")
           .eq("suggestion_id", id!)
           .order("created_at")
       ).data ?? [],

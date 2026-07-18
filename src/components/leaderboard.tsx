@@ -57,7 +57,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
   // Fetch locations & plants
   const { data: locations = [] } = useQuery({ queryKey: ["locs"], queryFn: async () => (await supabase.from("locations").select("id,location")).data ?? [] });
   const { data: plants = [] } = useQuery({ queryKey: ["plants"], queryFn: async () => (await supabase.from("plants").select("id,name,location_id")).data ?? [] });
-  const { data: departments = [] } = useQuery({ queryKey: ["departments-all"], queryFn: async () => (await supabase.from("departments").select("id,name,plant_id")).data ?? [] });
+  const { data: departments = [] } = useQuery({ queryKey: ["departments-all"], queryFn: async () => (await supabase.from("departments").select("id,name,code,plant_id")).data ?? [] });
 
   // Find accessible locations and plants based on roles
   const accessibleLocationIds = useMemo(() => {
@@ -274,11 +274,14 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
 
       const plant = plants.find((p: any) => p.id === d.plant_id);
       const location = locations.find((l: any) => l.id === d.location_id);
+      const deptInfo = departments.find((dept: any) => dept.id === d.department_id);
+      const deptCode = deptInfo?.code ?? "";
 
       return {
         ...d,
         plant_name: plant?.name ?? "—",
         location_name: location?.location ?? "—",
+        department_code: deptCode,
         total_suggestions: total,
         implemented_suggestions: implemented,
         fake_closures: fake,
@@ -553,7 +556,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
           >
             <option value="all">All Departments</option>
             {departments.map((d: any) => (
-              <option key={d.id} value={d.id}>{d.name}</option>
+              <option key={d.id} value={d.id}>{d.name} {d.code ? `(${d.code})` : ""}</option>
             ))}
           </select>
         </div>
@@ -718,7 +721,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
                         </td>
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm">{d.department_name}</span>
+                            <span className="font-semibold text-sm">{d.department_name} {d.department_code ? `(${d.department_code})` : ""}</span>
                             <div className="flex items-center gap-1 flex-wrap">
                               {badges.includes("leader") && (
                                 <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">👑 Leader</span>
