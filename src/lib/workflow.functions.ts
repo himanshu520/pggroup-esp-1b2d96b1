@@ -173,14 +173,14 @@ export const deptDecide = createServerFn({ method: "POST" })
       await notifyForSuggestion({ suggestion_id: data.suggestion_id, title: "Your suggestion was approved", body: data.remarks ?? undefined, event_type: "approve", audience: ["submitter", "pe"] });
     } else if (data.decision === "reject") {
       await supabaseAdmin.from("suggestions").update({ status: "pe_review" as SuggestionStatus }).eq("id", data.suggestion_id);
-      await insertHistory(supabaseAdmin, data.suggestion_id, sug.status, "pe_review", userId, data.remarks ?? null);
+      await insertHistory(supabaseAdmin, data.suggestion_id, sug.status, "pe_review", userId, data.remarks ?? null, sug.current_department_id);
       await notifyForSuggestion({ suggestion_id: data.suggestion_id, title: "Your suggestion was rejected by the department", body: data.remarks ?? undefined, event_type: "reject", audience: ["submitter", "pe"] });
     } else if (data.decision === "not_related") {
       await supabaseAdmin.from("suggestions").update({
         status: "pe_review" as SuggestionStatus,
         current_department_id: null,
       }).eq("id", data.suggestion_id);
-      await insertHistory(supabaseAdmin, data.suggestion_id, sug.status, "pe_review", userId, data.remarks ?? "Not related to department");
+      await insertHistory(supabaseAdmin, data.suggestion_id, sug.status, "pe_review", userId, data.remarks ?? "Not related to department", sug.current_department_id);
       await notifyForSuggestion({
         suggestion_id: data.suggestion_id,
         title: "Suggestion returned to PE (Not related to department)",
