@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useSession } from "@/lib/session";
+import { useSession, isLocationAccessible, isPlantAccessible, isDeptAccessible, isSuggestionAccessible } from "@/lib/session";
 import { toast } from "sonner";
 import { 
   Trophy, Medal, Award, Star, Flame, Zap, TrendingUp, AlertTriangle, 
@@ -39,6 +39,12 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
   const isSuper = sess?.primaryRole === "super_admin";
   const qc = useQueryClient();
 
+  // 1. Check if user is global (super_admin or corporate_admin)
+  const isGlobal = useMemo(() => {
+    if (!sess?.roles) return true;
+    return sess.roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin");
+  }, [sess?.roles]);
+
   // Filters state
   const [locationId, setLocationId] = useState<string>("all");
   const [plantId, setPlantId] = useState<string>("all");
@@ -53,19 +59,58 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
   const { data: plants = [] } = useQuery({ queryKey: ["plants"], queryFn: async () => (await supabase.from("plants").select("id,name,location_id")).data ?? [] });
   const { data: departments = [] } = useQuery({ queryKey: ["departments-all"], queryFn: async () => (await supabase.from("departments").select("id,name,plant_id")).data ?? [] });
 
-  // Filter plants by selected location
+  // Allowed Locations list
+  const allowedLocations = useMemo(() => {
+    if (!sess?.roles) return [];
+    return locations.filter((l: any) => isLocationAccessible(l.id, sess.roles));
+  }, [locations, sess?.roles]);
+
+  // Allowed Plants list
+  const allowedPlants = useMemo(() => {
+    if (!sess?.roles) return [];
+    return plants.filter((p: any) => isPlantAccessible(p.id, p.location_id, sess.roles));
+  }, [plants, sess?.roles]);
+
+  // Allowed Departments list
+  const allowedDepartments = useMemo(() => {
+    if (!sess?.roles) return [];
+    return departments.filter((d: any) => {
+      const plant = plants.find((p: any) => p.id === d.plant_id);
+      return isDeptAccessible(d.id, d.plant_id, plant?.location_id ?? null, sess.roles);
+    });
+  }, [departments, plants, sess?.roles]);
+
+  // Filter plants by selected location (and filter by user allowed plants if not global)
   const filteredPlants = useMemo(() => {
-    if (locationId === "all") return plants;
-    return plants.filter((p: any) => p.location_id === locationId);
-  }, [plants, locationId]);
+    const basePlants = isGlobal ? plants : allowedPlants;
+    if (locationId === "all") return basePlants;
+    return basePlants.filter((p: any) => p.location_id === locationId);
+  }, [plants, allowedPlants, locationId, isGlobal]);
 
   // Sync plant selection if it goes out of scope
   useEffect(() => {
+    const basePlants = isGlobal ? plants : allowedPlants;
     if (plantId !== "all" && locationId !== "all") {
-      const isMatch = plants.some((p: any) => p.id === plantId && p.location_id === locationId);
+      const isMatch = basePlants.some((p: any) => p.id === plantId && p.location_id === locationId);
       if (!isMatch) setPlantId("all");
     }
-  }, [locationId, plantId, plants]);
+  }, [locationId, plantId, plants, allowedPlants, isGlobal]);
+
+  // Sync default location and plant on load if not global
+  useEffect(() => {
+    if (sess?.roles && !isGlobal) {
+      if (allowedLocations.length > 0 && locationId === "all") {
+        if (allowedLocations.length === 1) {
+          setLocationId(allowedLocations[0].id);
+        }
+      }
+      if (allowedPlants.length > 0 && plantId === "all") {
+        if (allowedPlants.length === 1) {
+          setPlantId(allowedPlants[0].id);
+        }
+      }
+    }
+  }, [sess?.roles, isGlobal, allowedLocations, allowedPlants, locationId, plantId]);
 
   // 1. Fetch Scoring Settings
   const { data: settings = {} } = useQuery({
@@ -182,7 +227,18 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
 
   // Calculate scores & metrics for Departments
   const deptLeaderboard = useMemo(() => {
-    const list = deptLeaderboardRaw.map((d: any) => {
+    let list = deptLeaderboardRaw;
+    
+    // SECURE ACCESS FILTER
+    if (!isGlobal && sess?.roles) {
+      list = list.filter((d: any) => {
+        const deptInfo = departments.find((dept: any) => dept.id === d.department_id);
+        const plantInfo = plants.find((p: any) => p.id === deptInfo?.plant_id);
+        return isDeptAccessible(d.department_id, deptInfo?.plant_id ?? null, plantInfo?.location_id ?? null, sess.roles);
+      });
+    }
+
+    const calculated = list.map((d: any) => {
       const total = Number(d.total_suggestions ?? 0);
       const implemented = Number(d.implemented_suggestions ?? 0);
       const fake = Number(d.fake_closures ?? 0);
@@ -205,16 +261,23 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
     });
 
     // Sort descending by score
-    return list.sort((a, b) => b.score - a.score);
-  }, [deptLeaderboardRaw, scoringRules]);
+    return calculated.sort((a, b) => b.score - a.score);
+  }, [deptLeaderboardRaw, scoringRules, isGlobal, sess?.roles, departments, plants]);
 
   // Calculate scores & badges for Employees
   const empLeaderboard = useMemo(() => {
-    const list = empLeaderboardRaw.map((e: any) => {
+    let list = empLeaderboardRaw;
+    
+    // SECURE ACCESS FILTER
+    if (!isGlobal && sess?.roles) {
+      list = list.filter((e: any) => {
+        return isDeptAccessible(e.department_id, e.plant_id, e.location_id, sess.roles);
+      });
+    }
+
+    const calculated = list.map((e: any) => {
       const total = Number(e.total_suggestions ?? 0);
       const implemented = Number(e.implemented_suggestions ?? 0);
-      
-      // Score = Implemented suggestions * 1
       const score = implemented * 1;
 
       return {
@@ -226,8 +289,16 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
     });
 
     // Sort descending by score
-    return list.sort((a, b) => b.score - a.score);
-  }, [empLeaderboardRaw]);
+    return calculated.sort((a, b) => b.score - a.score);
+  }, [empLeaderboardRaw, isGlobal, sess?.roles]);
+
+  const showBestSuggestion = useMemo(() => {
+    if (!bestSuggestion) return false;
+    if (isGlobal) return true;
+    if (!sess?.roles) return false;
+    const sugInfo = bestSuggestion.suggestions;
+    return isSuggestionAccessible(sugInfo, sess.roles);
+  }, [bestSuggestion, isGlobal, sess?.roles]);
 
   // Filter lists by search query
   const filteredDepts = useMemo(() => {
@@ -424,8 +495,12 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
             onChange={(e) => setLocationId(e.target.value)}
             className="w-full mt-1 h-9 rounded-md border border-input bg-background px-2.5 text-xs font-medium"
           >
-            <option value="all">All Locations</option>
-            {locations.map((l: any) => (
+            {isGlobal ? (
+              <option value="all">All Locations</option>
+            ) : (
+              allowedLocations.length > 1 && <option value="all">All Accessible Locations</option>
+            )}
+            {allowedLocations.map((l: any) => (
               <option key={l.id} value={l.id}>{l.location}</option>
             ))}
           </select>
@@ -438,7 +513,11 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
             onChange={(e) => setPlantId(e.target.value)}
             className="w-full mt-1 h-9 rounded-md border border-input bg-background px-2.5 text-xs font-medium"
           >
-            <option value="all">All Plants</option>
+            {isGlobal ? (
+              <option value="all">All Plants</option>
+            ) : (
+              filteredPlants.length > 1 && <option value="all">All Accessible Plants</option>
+            )}
             {filteredPlants.map((p: any) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
@@ -452,8 +531,12 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
             onChange={(e) => setDeptFilterId(e.target.value)}
             className="w-full mt-1 h-9 rounded-md border border-input bg-background px-2.5 text-xs font-medium"
           >
-            <option value="all">All Departments</option>
-            {departments.map((d: any) => (
+            {isGlobal ? (
+              <option value="all">All Departments</option>
+            ) : (
+              allowedDepartments.length > 1 && <option value="all">All Accessible Departments</option>
+            )}
+            {allowedDepartments.map((d: any) => (
               <option key={d.id} value={d.id}>{d.name}</option>
             ))}
           </select>
@@ -781,7 +864,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
               ⭐ Best Suggestion Showcase
             </div>
 
-            {bestSuggestion ? (
+            {showBestSuggestion ? (
               <div className="relative overflow-hidden rounded-xl border-2 border-amber-500 bg-gradient-to-r from-amber-500/10 via-background to-amber-500/5 p-6 md:p-8 shadow-md space-y-6">
                 {/* Visual Trophy background */}
                 <div className="absolute right-4 top-4 text-amber-500/10 pointer-events-none">
@@ -1092,13 +1175,13 @@ function StatWidget({
   isWarning?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-border/80 bg-card/60 backdrop-blur-md p-4 flex flex-col justify-between shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
-      <div className="flex items-start justify-between gap-3 w-full">
-        <div className="space-y-0.5">
+    <div className="rounded-xl border border-border/80 bg-card/60 backdrop-blur-md p-4 flex flex-col justify-between shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 min-w-0">
+      <div className="flex items-start justify-between gap-2 w-full min-w-0">
+        <div className="space-y-0.5 min-w-0 flex-1">
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{title}</span>
-          <div className="text-base font-extrabold truncate max-w-[130px] leading-tight text-foreground">{value}</div>
+          <div className="text-sm font-extrabold truncate leading-tight text-foreground" title={value}>{value}</div>
         </div>
-        <div className="p-2 rounded-lg bg-muted/40 shrink-0 border border-border/40">{icon}</div>
+        <div className="p-1.5 rounded-lg bg-muted/40 shrink-0 border border-border/40">{icon}</div>
       </div>
       {progress !== undefined ? (
         <div className="mt-3 space-y-1">
