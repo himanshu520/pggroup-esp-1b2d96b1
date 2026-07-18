@@ -436,7 +436,11 @@ export function SuggestionDetail({ id }: { id: string }) {
                         <div className="flex flex-wrap items-center gap-2">
                           <Select value={targetDept} onValueChange={setTargetDept} disabled={isPending}>
                             <SelectTrigger className="w-64"><SelectValue placeholder="Select department" /></SelectTrigger>
-                            <SelectContent>{departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+                            <SelectContent>
+                              {departments
+                                .filter((d: any) => d.plant_id === sug.plant_id)
+                                .map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                            </SelectContent>
                           </Select>
                           <Textarea placeholder="Remarks (optional)" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="min-h-[38px] max-w-md" disabled={isPending} />
                           <div className="flex gap-2 w-full sm:w-auto">
@@ -493,7 +497,7 @@ export function SuggestionDetail({ id }: { id: string }) {
                         <SelectTrigger className="w-full bg-background"><SelectValue placeholder="Select suggested department" /></SelectTrigger>
                         <SelectContent>
                           {departments
-                            .filter((d: any) => d.id !== sug.current_department_id) // Exclude current department
+                            .filter((d: any) => d.plant_id === sug.plant_id && d.id !== sug.current_department_id) // Limit to suggestion's plant and exclude current department
                             .map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
