@@ -88,3 +88,47 @@ export const ADMIN_ROLES: AppRole[] = [
 export function isAdminRole(r: AppRole) {
   return ADMIN_ROLES.includes(r);
 }
+
+export function getHistoryActionText(h: { 
+  to_status: SuggestionStatus; 
+  from_status?: SuggestionStatus | null; 
+  from_dept?: { name: string } | null; 
+  to_dept?: { name: string } | null; 
+  remarks?: string | null 
+}) {
+  const toStatus = h.to_status;
+  const fromStatus = h.from_status;
+  const toDept = h.to_dept?.name;
+  const fromDept = h.from_dept?.name;
+
+  switch (toStatus) {
+    case "submitted":
+      return "Suggestion Submitted";
+    case "pe_review":
+      if (fromStatus === "dept_review" || fromStatus === "transferred") {
+        return `Returned to PE Review (Rejected / Not related by ${fromDept || "department"})`;
+      }
+      return "PE Review Pending";
+    case "transferred":
+    case "dept_review":
+      return toDept ? `Transferred to ${toDept}` : "Transferred to Department";
+    case "approved":
+      return "Approved by Department";
+    case "implementation":
+      return "Implementation Started";
+    case "evidence_submitted":
+      return "Evidence Submitted by Department";
+    case "pe_verification":
+      return "PE Verification Pending";
+    case "implemented":
+      return "Verified & Implemented";
+    case "fake_closure":
+      return "Marked as Fake Closure";
+    case "rejected":
+      return "Rejected";
+    case "closed":
+      return "Closed";
+    default:
+      return STATUS_LABEL[toStatus] || toStatus;
+  }
+}

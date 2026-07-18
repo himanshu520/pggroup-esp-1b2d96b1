@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Search, LayoutGrid, List } from "lucide-react";
-import { STATUS_LABEL, getRowColorForStatus } from "@/lib/statuses";
+import { STATUS_LABEL, getRowColorForStatus, getHistoryActionText } from "@/lib/statuses";
 import { useT } from "@/lib/i18n";
 import {
   Dialog,
@@ -176,7 +176,7 @@ function SuggestionDetailsDialog({
           .maybeSingle(),
         supabase
           .from("suggestion_history")
-          .select("*")
+          .select("*, from_dept:departments!suggestion_history_from_department_id_fkey(name), to_dept:departments!suggestion_history_to_department_id_fkey(name)")
           .eq("suggestion_id", suggestionId!)
           .order("created_at"),
       ]);
@@ -233,7 +233,7 @@ function SuggestionDetailsDialog({
                       {new Date(h.created_at).toLocaleString()}
                     </div>
                     <div className="text-sm font-medium">
-                      {t(`status_${h.to_status}`)}
+                      {getHistoryActionText(h)}
                     </div>
                     {h.remarks && (
                       <div className="text-xs text-muted-foreground mt-0.5">{h.remarks}</div>

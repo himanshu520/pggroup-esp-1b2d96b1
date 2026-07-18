@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge, BudgetBadge } from "@/components/status-badge";
-import { STATUS_LABEL } from "@/lib/statuses";
+import { STATUS_LABEL, getHistoryActionText } from "@/lib/statuses";
 import { useT } from "@/lib/i18n";
 import { Search } from "lucide-react";
 
@@ -31,7 +31,11 @@ export function TrackPage({ initialCode }: { initialCode?: string }) {
       const { data } = await supabase.from("suggestions").select("*, categories(name), employees(name, employee_code), departments!suggestions_department_id_fkey(name), plants(name), locations(location)").ilike("code", code.trim()).maybeSingle();
       setResult(data);
       if (data) {
-        const { data: h } = await supabase.from("suggestion_history").select("*").eq("suggestion_id", data.id).order("created_at");
+        const { data: h } = await supabase
+          .from("suggestion_history")
+          .select("*, from_dept:departments!suggestion_history_from_department_id_fkey(name), to_dept:departments!suggestion_history_to_department_id_fkey(name)")
+          .eq("suggestion_id", data.id)
+          .order("created_at");
         setHistory(h ?? []);
       } else setHistory([]);
     } finally { setLoading(false); }
@@ -83,7 +87,7 @@ export function TrackPage({ initialCode }: { initialCode?: string }) {
                   <div className="absolute left-1.5 top-1 w-2 h-2 rounded-full bg-primary" />
                   {i < history.length - 1 && <div className="absolute left-2 top-3 bottom-[-1rem] w-px bg-border" />}
                   <div className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString()}</div>
-                  <div className="text-sm font-medium">{t(`status_${h.to_status}`) || STATUS_LABEL[h.to_status as keyof typeof STATUS_LABEL]}</div>
+                  <div className="text-sm font-medium">{getHistoryActionText(h)}</div>
                   {h.remarks && <div className="text-xs text-muted-foreground mt-0.5">{h.remarks}</div>}
                 </li>
               ))}

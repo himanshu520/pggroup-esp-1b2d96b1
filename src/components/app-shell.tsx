@@ -301,7 +301,7 @@ function AppShellInner({
               />
             </div>
             <div className="hidden sm:flex flex-col leading-tight min-w-0">
-              <span className="text-sm font-bold text-foreground truncate">Employee Suggestion Portal (ESP)</span>
+              <span className="text-sm font-bold text-foreground truncate">ESP - Employee Suggestion Portal</span>
               <span className="text-[11px] text-muted-foreground truncate">{title}</span>
             </div>
           </div>
