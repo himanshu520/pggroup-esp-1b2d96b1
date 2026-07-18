@@ -98,35 +98,55 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
     return ids;
   }, [sess?.roles, plants, departments]);
 
+  // Allowed Locations list
+  const allowedLocations = useMemo(() => {
+    if (!sess?.roles) return [];
+    return locations.filter((l: any) => isLocationAccessible(l.id, sess.roles));
+  }, [locations, sess?.roles]);
+
+  // Allowed Plants list
+  const allowedPlants = useMemo(() => {
+    if (!sess?.roles) return [];
+    return plants.filter((p: any) => isPlantAccessible(p.id, p.location_id, sess.roles));
+  }, [plants, sess?.roles]);
+
+  // Allowed Departments list (shows all departments in their accessible plants)
+  const allowedDepartments = useMemo(() => {
+    if (isGlobal) return departments;
+    return departments.filter((d: any) => accessiblePlantIds.has(d.plant_id));
+  }, [departments, isGlobal, accessiblePlantIds]);
+
   // Filter plants by selected location
   const filteredPlants = useMemo(() => {
-    if (locationId === "all") return plants;
-    return plants.filter((p: any) => p.location_id === locationId);
-  }, [plants, locationId]);
+    const basePlants = isGlobal ? plants : allowedPlants;
+    if (locationId === "all") return basePlants;
+    return basePlants.filter((p: any) => p.location_id === locationId);
+  }, [plants, allowedPlants, locationId, isGlobal]);
 
   // Sync plant selection if it goes out of scope
   useEffect(() => {
+    const basePlants = isGlobal ? plants : allowedPlants;
     if (plantId !== "all" && locationId !== "all") {
-      const isMatch = plants.some((p: any) => p.id === plantId && p.location_id === locationId);
+      const isMatch = basePlants.some((p: any) => p.id === plantId && p.location_id === locationId);
       if (!isMatch) setPlantId("all");
     }
-  }, [locationId, plantId, plants]);
+  }, [locationId, plantId, plants, allowedPlants, isGlobal]);
 
   // Sync default location and plant on load if not global
   useEffect(() => {
     if (sess?.roles && !isGlobal) {
-      if (accessibleLocationIds.size > 0 && locationId === "all") {
-        if (accessibleLocationIds.size === 1) {
-          setLocationId(Array.from(accessibleLocationIds)[0]);
+      if (allowedLocations.length > 0 && locationId === "all") {
+        if (allowedLocations.length === 1) {
+          setLocationId(allowedLocations[0].id);
         }
       }
-      if (accessiblePlantIds.size > 0 && plantId === "all") {
-        if (accessiblePlantIds.size === 1) {
-          setPlantId(Array.from(accessiblePlantIds)[0]);
+      if (allowedPlants.length > 0 && plantId === "all") {
+        if (allowedPlants.length === 1) {
+          setPlantId(allowedPlants[0].id);
         }
       }
     }
-  }, [sess?.roles, isGlobal, accessibleLocationIds, accessiblePlantIds, locationId, plantId]);
+  }, [sess?.roles, isGlobal, allowedLocations, allowedPlants, locationId, plantId]);
 
   // 1. Fetch Scoring Settings
   const { data: settings = {} } = useQuery({
@@ -517,8 +537,12 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
             onChange={(e) => setLocationId(e.target.value)}
             className="w-full mt-1 h-9 rounded-md border border-input bg-background px-2.5 text-xs font-medium"
           >
-            <option value="all">All Locations</option>
-            {locations.map((l: any) => (
+            {isGlobal ? (
+              <option value="all">All Locations</option>
+            ) : (
+              allowedLocations.length > 1 && <option value="all">All Accessible Locations</option>
+            )}
+            {allowedLocations.map((l: any) => (
               <option key={l.id} value={l.id}>{l.location}</option>
             ))}
           </select>
@@ -531,7 +555,11 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
             onChange={(e) => setPlantId(e.target.value)}
             className="w-full mt-1 h-9 rounded-md border border-input bg-background px-2.5 text-xs font-medium"
           >
-            <option value="all">All Plants</option>
+            {isGlobal ? (
+              <option value="all">All Plants</option>
+            ) : (
+              filteredPlants.length > 1 && <option value="all">All Accessible Plants</option>
+            )}
             {filteredPlants.map((p: any) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
@@ -545,8 +573,12 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
             onChange={(e) => setDeptFilterId(e.target.value)}
             className="w-full mt-1 h-9 rounded-md border border-input bg-background px-2.5 text-xs font-medium"
           >
-            <option value="all">All Departments</option>
-            {departments.map((d: any) => (
+            {isGlobal ? (
+              <option value="all">All Departments</option>
+            ) : (
+              allowedDepartments.length > 1 && <option value="all">All Accessible Departments</option>
+            )}
+            {allowedDepartments.map((d: any) => (
               <option key={d.id} value={d.id}>{d.name} {d.code ? `(${d.code})` : ""}</option>
             ))}
           </select>
