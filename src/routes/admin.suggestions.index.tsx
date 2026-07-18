@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { useState } from "react";
 import { Search, ExternalLink, Loader2, LayoutGrid, List } from "lucide-react";
-import { STATUS_LABEL, getRowColorForStatus } from "@/lib/statuses";
+import { STATUS_LABEL, getRowColorForStatus, getHistoryActionText } from "@/lib/statuses";
 import { ExportMenu } from "@/components/export-menu";
 
 export const Route = createFileRoute("/admin/suggestions/")({
@@ -228,7 +228,13 @@ function SuggestionPreviewDialog({ id, onClose }: { id: string | null; onClose: 
     enabled: open,
     queryKey: ["suggestion-preview-history", id],
     queryFn: async () =>
-      (await supabase.from("suggestion_history").select("*").eq("suggestion_id", id!).order("created_at")).data ?? [],
+      (
+        await supabase
+          .from("suggestion_history")
+          .select("*, from_dept:departments!suggestion_history_from_department_id_fkey(name), to_dept:departments!suggestion_history_to_department_id_fkey(name)")
+          .eq("suggestion_id", id!)
+          .order("created_at")
+      ).data ?? [],
   });
 
   return (
@@ -292,7 +298,7 @@ function SuggestionPreviewDialog({ id, onClose }: { id: string | null; onClose: 
                     <li key={h.id} className="relative pl-4 border-l-2 border-border">
                       <div className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString()}</div>
                       <div className="text-sm font-medium">
-                        {STATUS_LABEL[h.to_status as keyof typeof STATUS_LABEL] ?? h.to_status}
+                        {getHistoryActionText(h)}
                       </div>
                       {h.remarks && <div className="text-xs text-muted-foreground mt-0.5">{h.remarks}</div>}
                     </li>
