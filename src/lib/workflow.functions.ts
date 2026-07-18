@@ -102,7 +102,7 @@ export const deptDecide = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({
       suggestion_id: z.string().uuid(),
-      decision: z.enum(["approve","reject","transfer"]),
+      decision: z.enum(["approve","reject","transfer","not_related"]),
       target_department_id: z.string().uuid().nullable().optional(),
       remarks: z.string().max(2000).optional(),
     }).parse(d)
@@ -112,6 +112,11 @@ export const deptDecide = createServerFn({ method: "POST" })
     const { data: sug } = await supabase.from("suggestions").select("status,current_department_id").eq("id", data.suggestion_id).single();
     if (!sug) throw new Error("Not found");
     const { notifyForSuggestion } = await import("./notify.server");
+
+    if ((data.decision === "reject" || data.decision === "not_related") && (!data.remarks || !data.remarks.trim())) {
+      throw new Error("Remarks/reason is required for this decision");
+    }
+
     if (data.decision === "approve") {
       await supabase.from("suggestions").update({ status: "approved" as SuggestionStatus }).eq("id", data.suggestion_id);
       await insertHistory(supabase, data.suggestion_id, sug.status, "approved", userId, data.remarks ?? null);
@@ -120,6 +125,19 @@ export const deptDecide = createServerFn({ method: "POST" })
       await supabase.from("suggestions").update({ status: "pe_review" as SuggestionStatus }).eq("id", data.suggestion_id);
       await insertHistory(supabase, data.suggestion_id, sug.status, "pe_review", userId, data.remarks ?? null);
       await notifyForSuggestion({ suggestion_id: data.suggestion_id, title: "Your suggestion was rejected by the department", body: data.remarks ?? undefined, event_type: "reject", audience: ["submitter", "pe"] });
+    } else if (data.decision === "not_related") {
+      await supabase.from("suggestions").update({
+        status: "pe_review" as SuggestionStatus,
+        current_department_id: null,
+      }).eq("id", data.suggestion_id);
+      await insertHistory(supabase, data.suggestion_id, sug.status, "pe_review", userId, data.remarks ?? "Not related to department");
+      await notifyForSuggestion({
+        suggestion_id: data.suggestion_id,
+        title: "Suggestion returned to PE (Not related to department)",
+        body: data.remarks ?? undefined,
+        event_type: "transfer",
+        audience: ["submitter", "pe"],
+      });
     } else {
       if (!data.target_department_id) throw new Error("target_department_id required");
       await supabase.from("suggestions").update({

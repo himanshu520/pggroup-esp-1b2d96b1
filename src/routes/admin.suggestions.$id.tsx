@@ -3,7 +3,7 @@ import { AppShell, PageHeader } from "@/components/app-shell";
 import { ADMIN_NAV } from "@/lib/admin-nav";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { StatusBadge } from "@/components/status-badge";
+import { StatusBadge, BudgetBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -265,7 +265,7 @@ export function SuggestionDetail({ id }: { id: string }) {
       <PageHeader
         title={sug.title}
         description={<span className="font-mono text-xs">{sug.code}</span> as any}
-        actions={<div className="flex items-center gap-2"><StatusBadge status={sug.status} /></div>}
+        actions={<div className="flex items-center gap-2"><StatusBadge status={sug.status} />{sug.budget_tier && <BudgetBadge tier={sug.budget_tier} />}</div>}
       />
 
       <div className="grid lg:grid-cols-3 gap-4">
@@ -377,17 +377,25 @@ export function SuggestionDetail({ id }: { id: string }) {
                     {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsUp className="w-4 h-4" />}
                     Approve
                   </Button>
-                  <Button variant="destructive" disabled={isPending} onClick={() => run(() => decideFn({ data: { suggestion_id: id, decision: "reject", remarks } }), "Rejected")}>
+                  <Button variant="destructive" disabled={isPending} onClick={() => {
+                    if (!remarks.trim()) {
+                      toast.error("Please enter remarks/reason for rejection");
+                      return;
+                    }
+                    run(() => decideFn({ data: { suggestion_id: id, decision: "reject", remarks } }), "Rejected");
+                  }}>
                     {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
                     Reject
                   </Button>
-                  <Select value={targetDept} onValueChange={setTargetDept} disabled={isPending}>
-                    <SelectTrigger className="w-56"><SelectValue placeholder="Or transfer to…" /></SelectTrigger>
-                    <SelectContent>{departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <Button variant="outline" disabled={isPending || !targetDept} onClick={() => run(() => decideFn({ data: { suggestion_id: id, decision: "transfer", target_department_id: targetDept, remarks } }), "Transferred")}>
-                    {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    Transfer
+                  <Button variant="outline" className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30" disabled={isPending} onClick={() => {
+                    if (!remarks.trim()) {
+                      toast.error("Please enter remarks/reason why this suggestion is not related to your department");
+                      return;
+                    }
+                    run(() => decideFn({ data: { suggestion_id: id, decision: "not_related", remarks } }), "Returned to PE");
+                  }}>
+                    {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                    Not related to my department
                   </Button>
                 </div>
               </div>

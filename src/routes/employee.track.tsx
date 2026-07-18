@@ -4,7 +4,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { StatusBadge } from "@/components/status-badge";
+import { StatusBadge, BudgetBadge } from "@/components/status-badge";
 import { STATUS_LABEL } from "@/lib/statuses";
 import { useT } from "@/lib/i18n";
 import { Search } from "lucide-react";
@@ -57,6 +57,7 @@ export function TrackPage({ initialCode }: { initialCode?: string }) {
                 <h2 className="text-lg font-semibold mt-1">{result.title}</h2>
                 <div className="flex items-center gap-2 mt-2">
                   <StatusBadge status={result.status} />
+                  {result.budget_tier && <BudgetBadge tier={result.budget_tier} />}
                   <span className="text-xs text-muted-foreground">Submitted {new Date(result.created_at).toLocaleDateString()}</span>
                 </div>
               </div>

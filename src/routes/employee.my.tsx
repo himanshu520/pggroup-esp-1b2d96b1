@@ -3,7 +3,7 @@ import { EmployeeShell, PageHeader } from "@/components/employee-shell";
 import { useSession } from "@/lib/session";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { StatusBadge } from "@/components/status-badge";
+import { StatusBadge, BudgetBadge } from "@/components/status-badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -201,6 +201,7 @@ function SuggestionDetailsDialog({
           <div className="space-y-4">
             <div className="flex items-center gap-2 flex-wrap">
               <StatusBadge status={s.status} />
+              {s.budget_tier && <BudgetBadge tier={s.budget_tier} />}
               <span className="text-xs text-muted-foreground">
                 {t("submitted_on")} {new Date(s.created_at).toLocaleDateString()}
               </span>
