@@ -255,9 +255,6 @@ export function SuggestionDetail({ id }: { id: string }) {
     if (!remarks.trim()) {
       return toast.error("Please enter verification remarks");
     }
-    if (peVerificationFiles.length === 0) {
-      return toast.error("Please attach at least one verification image (mandatory)");
-    }
     if (peVerificationFiles.length > 3) {
       return toast.error("Maximum 3 verification images allowed");
     }
@@ -267,39 +264,37 @@ export function SuggestionDetail({ id }: { id: string }) {
     const attachmentIds: string[] = [];
     const uploadedNames: string[] = [];
     try {
-      for (const file of peVerificationFiles) {
-        const path = `${id}/pe-verification/${crypto.randomUUID()}-${file.name}`;
-        const { error: upErr } = await supabase.storage.from("suggestion-files").upload(path, file, { contentType: file.type });
-        if (upErr) {
-          toast.error(`Upload failed: ${file.name}`, { description: upErr.message });
-          continue;
+      if (peVerificationFiles.length > 0) {
+        for (const file of peVerificationFiles) {
+          const path = `${id}/pe-verification/${crypto.randomUUID()}-${file.name}`;
+          const { error: upErr } = await supabase.storage.from("suggestion-files").upload(path, file, { contentType: file.type });
+          if (upErr) {
+            toast.error(`Upload failed: ${file.name}`, { description: upErr.message });
+            continue;
+          }
+          const { data: attRow, error: attErr } = await supabase.from("attachments").insert({
+            suggestion_id: id,
+            file_path: path,
+            file_name: file.name,
+            content_type: file.type,
+            kind: "evidence",
+            uploaded_by: session?.userId,
+          }).select("id").single();
+          if (attErr || !attRow) {
+            toast.error(`Failed to record: ${file.name}`, { description: attErr?.message });
+            continue;
+          }
+          attachmentIds.push((attRow as any).id);
+          uploadedNames.push(file.name);
         }
-        const { data: attRow, error: attErr } = await supabase.from("attachments").insert({
-          suggestion_id: id,
-          file_path: path,
-          file_name: file.name,
-          content_type: file.type,
-          kind: "evidence",
-          uploaded_by: session?.userId,
-        }).select("id").single();
-        if (attErr || !attRow) {
-          toast.error(`Failed to record: ${file.name}`, { description: attErr?.message });
-          continue;
-        }
-        attachmentIds.push((attRow as any).id);
-        uploadedNames.push(file.name);
-      }
-      
-      if (attachmentIds.length === 0) {
-        throw new Error("No files were successfully uploaded.");
       }
 
       await verifyFn({ data: {
         suggestion_id: id,
         outcome,
         remarks,
-        attachment_ids: attachmentIds,
-        file_names: uploadedNames,
+        attachment_ids: attachmentIds.length > 0 ? attachmentIds : undefined,
+        file_names: uploadedNames.length > 0 ? uploadedNames : undefined,
       } });
 
       toast.success(outcome === "implemented" ? "Marked implemented" : "Marked fake closure");
@@ -675,7 +670,7 @@ export function SuggestionDetail({ id }: { id: string }) {
 
             {isPE && (status === "pe_verification" || status === "evidence_submitted") && (
               <div className="space-y-3">
-                <div className="text-xs text-muted-foreground font-semibold">PE — Final verification (Verification evidence & remarks are mandatory)</div>
+                <div className="text-xs text-muted-foreground font-semibold">PE — Final verification (Remarks are mandatory, verification images are optional)</div>
                 <Textarea placeholder="Verification remarks (mandatory)" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="max-w-lg" disabled={uploading || isPending} />
                 
                 <label

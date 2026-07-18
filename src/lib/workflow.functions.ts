@@ -311,8 +311,8 @@ export const peVerify = createServerFn({ method: "POST" })
     suggestion_id: z.string().uuid(),
     outcome: z.enum(["implemented","fake_closure"]),
     remarks: z.string().max(2000).optional(),
-    attachment_ids: z.array(z.string().uuid()).min(1, "At least one verification image is required").max(3),
-    file_names: z.array(z.string()).min(1).max(3),
+    attachment_ids: z.array(z.string().uuid()).max(3).optional(),
+    file_names: z.array(z.string()).max(3).optional(),
   }).parse(d))
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
