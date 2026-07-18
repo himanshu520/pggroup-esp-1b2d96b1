@@ -71,6 +71,7 @@ export function getRowColorForStatus(status: SuggestionStatus): string {
 export const ROLE_LABEL: Record<AppRole, string> = {
   super_admin: "Super Admin",
   corporate_admin: "Corporate Admin",
+  admin: "Admin",
   location_admin: "Location Admin",
   plant_admin: "Plant Admin",
   department_admin: "Department Admin",
@@ -81,7 +82,7 @@ export const ROLE_LABEL: Record<AppRole, string> = {
 };
 
 export const ADMIN_ROLES: AppRole[] = [
-  "super_admin","corporate_admin","location_admin","plant_admin",
+  "super_admin","corporate_admin","admin","location_admin","plant_admin",
   "department_admin","pe_user","dept_user","mgmt_viewer",
 ];
 

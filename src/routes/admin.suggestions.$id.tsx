@@ -757,11 +757,11 @@ export function SuggestionDetail({ id }: { id: string }) {
               <div className="space-y-4">
                 <div className="text-sm text-muted-foreground">This suggestion is closed — no further actions.</div>
                 
-                {session?.primaryRole === "super_admin" && status === "implemented" && (
+                {(session?.primaryRole === "super_admin" || session?.primaryRole === "admin") && status === "implemented" && (
                   <div className="rounded-lg border-2 border-amber-500 bg-amber-500/5 p-4 space-y-3 max-w-lg">
                     <div className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
                       <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                      Super Admin — Selection
+                      Best Suggestion Selection
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Feature this suggestion as the <strong>Best Suggestion of the Month</strong>.

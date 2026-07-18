@@ -43,11 +43,11 @@ export async function loadSession(): Promise<SessionProfile | null> {
   ]);
 
   const roles = (rolesRaw ?? []) as SessionProfile["roles"];
-  const adminRoles: AppRole[] = ["super_admin","corporate_admin","location_admin","plant_admin","department_admin","pe_user","dept_user","mgmt_viewer"];
+  const adminRoles: AppRole[] = ["super_admin","corporate_admin","admin","location_admin","plant_admin","department_admin","pe_user","dept_user","mgmt_viewer"];
   const isAdmin = roles.some((r) => adminRoles.includes(r.role));
   const isPE = roles.some((r) => r.role === "pe_user");
   // Ranked
-  const rank: AppRole[] = ["super_admin","corporate_admin","location_admin","plant_admin","department_admin","pe_user","dept_user","mgmt_viewer","employee"];
+  const rank: AppRole[] = ["super_admin","corporate_admin","admin","location_admin","plant_admin","department_admin","pe_user","dept_user","mgmt_viewer","employee"];
   const primaryRole = rank.find((r) => roles.some((x) => x.role === r)) ?? "employee";
 
   return {
@@ -83,14 +83,22 @@ export function useCanManage(): boolean {
 export function isLocationAccessible(locationId: string | null, roles: SessionProfile["roles"] | undefined): boolean {
   if (!roles) return false;
   if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin")) return true;
-  return roles.some((r) => r.location_id === locationId);
+  return roles.some((r) => {
+    if (r.location_id === locationId) return true;
+    // If they have admin role assigned to a plant, they can access the location of that plant
+    if (r.role === "admin" && r.plant_id) {
+      // In this check, locationId matches if they are in same location scope
+      return r.location_id === locationId;
+    }
+    return false;
+  });
 }
 
 export function isPlantAccessible(plantId: string | null, locationId: string | null, roles: SessionProfile["roles"] | undefined): boolean {
   if (!roles) return false;
   if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin")) return true;
   return roles.some((r) => {
-    if (r.role === "location_admin") return r.location_id === locationId;
+    if (r.role === "location_admin" || (r.role === "admin" && r.location_id && !r.plant_id)) return r.location_id === locationId;
     return r.plant_id === plantId;
   });
 }
@@ -99,8 +107,8 @@ export function isDeptAccessible(deptId: string | null, plantId: string | null, 
   if (!roles) return false;
   if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin")) return true;
   return roles.some((r) => {
-    if (r.role === "location_admin") return r.location_id === locationId;
-    if (r.role === "plant_admin" || r.role === "pe_user" || r.role === "mgmt_viewer") return r.plant_id === plantId;
+    if (r.role === "location_admin" || (r.role === "admin" && r.location_id && !r.plant_id)) return r.location_id === locationId;
+    if (r.role === "plant_admin" || r.role === "pe_user" || r.role === "mgmt_viewer" || r.role === "admin") return r.plant_id === plantId;
     return r.department_id === deptId;
   });
 }
@@ -109,8 +117,8 @@ export function isSuggestionAccessible(sug: { location_id: string | null; plant_
   if (!sug || !roles) return false;
   if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin")) return true;
   return roles.some((r) => {
-    if (r.role === "location_admin") return r.location_id === sug.location_id;
-    if (r.role === "plant_admin" || r.role === "pe_user" || r.role === "mgmt_viewer") {
+    if (r.role === "location_admin" || (r.role === "admin" && r.location_id && !r.plant_id)) return r.location_id === sug.location_id;
+    if (r.role === "plant_admin" || r.role === "pe_user" || r.role === "mgmt_viewer" || r.role === "admin") {
       return r.location_id === sug.location_id && r.plant_id === sug.plant_id;
     }
     return r.location_id === sug.location_id && r.plant_id === sug.plant_id && r.department_id === sug.current_department_id;

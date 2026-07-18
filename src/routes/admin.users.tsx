@@ -47,6 +47,7 @@ export const Route = createFileRoute("/admin/users")({
 const ROLES: AppRole[] = [
   "super_admin",
   "corporate_admin",
+  "admin",
   "location_admin",
   "plant_admin",
   "department_admin",

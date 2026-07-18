@@ -41,7 +41,7 @@ export function SuggestionsList() {
 
   const isPEOrAdmin = useMemo(() => {
     if (!sess?.roles) return false;
-    return sess.roles.some((r) => r.role === "pe_user" || r.role === "super_admin" || r.role === "corporate_admin");
+    return sess.roles.some((r) => r.role === "pe_user" || r.role === "super_admin" || r.role === "corporate_admin" || r.role === "admin");
   }, [sess?.roles]);
 
   const { data = [] } = useQuery({
@@ -220,7 +220,7 @@ function SuggestionPreviewDialog({ id, onClose }: { id: string | null; onClose: 
   const { data: sess } = useSession();
   const isPEOrAdmin = useMemo(() => {
     if (!sess?.roles) return false;
-    return sess.roles.some((r) => r.role === "pe_user" || r.role === "super_admin" || r.role === "corporate_admin");
+    return sess.roles.some((r) => r.role === "pe_user" || r.role === "super_admin" || r.role === "corporate_admin" || r.role === "admin");
   }, [sess?.roles]);
 
   const { data: sug, isLoading } = useQuery({

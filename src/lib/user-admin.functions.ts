@@ -5,6 +5,7 @@ import { z } from "zod";
 const ROLE = z.enum([
   "super_admin",
   "corporate_admin",
+  "admin",
   "location_admin",
   "plant_admin",
   "department_admin",
