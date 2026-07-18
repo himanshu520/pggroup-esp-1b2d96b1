@@ -27,6 +27,7 @@ import { SuggestionsList } from "./admin.suggestions.index";
 import { SuggestionDetail } from "./admin.suggestions.$id";
 import { WorkflowPage } from "./admin.workflow";
 import { UsersPage } from "./admin.users";
+import { LeaderboardView } from "@/components/leaderboard";
 
 type AdminSearch = { section?: string; id?: string };
 
@@ -45,6 +46,7 @@ const SECTION_TITLES: Record<string, string> = {
   audit: "Audit Logs — ESP",
   security: "Security — ESP Admin",
   settings: "Settings — ESP Admin",
+  leaderboard: "Performance Leaderboard — ESP",
 };
 
 export const Route = createFileRoute("/admin/")({
@@ -80,6 +82,7 @@ function AdminHome() {
     case "audit":       return <AuditPage />;
     case "security":    return <SecurityPage />;
     case "settings":    return <SettingsPage />;
+    case "leaderboard": return <LeaderboardView adminMode={true} />;
     default:            return <OverviewPage />;
   }
 }

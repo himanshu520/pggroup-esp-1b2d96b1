@@ -20,6 +20,7 @@ import { useState } from "react";
 import { Search, ExternalLink, Loader2, LayoutGrid, List } from "lucide-react";
 import { STATUS_LABEL, getRowColorForStatus, getHistoryActionText } from "@/lib/statuses";
 import { ExportMenu } from "@/components/export-menu";
+import { EmployeeBadges } from "@/components/employee-badges";
 
 export const Route = createFileRoute("/admin/suggestions/")({
   beforeLoad: () => { throw redirect({ to: "/admin", search: { section: "suggestions" } as any }); },
@@ -143,11 +144,13 @@ export function SuggestionsList() {
                 >
                   <td className="px-4 py-2.5 font-mono text-xs text-primary">{s.code}</td>
                   <td className="px-4 py-2.5 max-w-xs truncate">{s.title}</td>
-                  <td className="px-4 py-2.5 text-xs">
+                  <td className="px-4 py-2.5 text-xs font-medium">
                     {isPEOrAdmin ? (
-                      <>
-                        {s.employees?.name} <span className="text-muted-foreground">({s.employees?.employee_code})</span>
-                      </>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span>{s.employees?.name}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">({s.employees?.employee_code})</span>
+                        <EmployeeBadges employeeId={s.employee_id} />
+                      </div>
                     ) : (
                       "—"
                     )}
@@ -175,9 +178,12 @@ export function SuggestionsList() {
               <h3 className="font-semibold text-sm leading-tight line-clamp-2 flex-1">{s.title}</h3>
               
               <div className="flex flex-col gap-1 mt-1 text-xs text-muted-foreground">
-                <div className="truncate">
+                <div className="truncate flex items-center gap-1.5 flex-wrap">
                   {isPEOrAdmin ? (
-                    <span className="font-medium text-foreground/80">{s.employees?.name} <span className="font-normal opacity-70">({s.employees?.employee_code})</span></span>
+                    <>
+                      <span className="font-semibold text-foreground/80 truncate max-w-[120px]">{s.employees?.name}</span>
+                      <EmployeeBadges employeeId={s.employee_id} />
+                    </>
                   ) : "—"}
                 </div>
                 <div className="truncate">{s.current_departments?.name || s.departments?.name}</div>
@@ -264,7 +270,15 @@ function SuggestionPreviewDialog({ id, onClose }: { id: string | null; onClose: 
               <div className="rounded-lg border border-border bg-muted/20 p-4">
                 <div className="text-xs uppercase font-bold text-muted-foreground mb-3">Employee Information</div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                  <Meta label="Name" value={sug.employees?.name ?? "—"} />
+                  <Meta 
+                    label="Name" 
+                    value={
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span>{sug.employees?.name ?? "—"}</span>
+                        <EmployeeBadges employeeId={sug.employee_id} />
+                      </div>
+                    } 
+                  />
                   <Meta label="Employee ID" value={sug.employees?.employee_code ?? "—"} />
                   <Meta label="Email" value={sug.employees?.email ?? "—"} />
                   <Meta label="Mobile" value={sug.employees?.mobile ?? "—"} />

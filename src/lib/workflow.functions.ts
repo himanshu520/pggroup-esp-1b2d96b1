@@ -379,3 +379,204 @@ export const notifyNewSuggestion = createServerFn({ method: "POST" })
     });
     return { ok: true };
   });
+
+export const selectBestSuggestion = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      suggestion_id: z.string().uuid(),
+      month: z.number().int().min(1).max(12),
+      year: z.number().int(),
+      reason: z.string().max(1000).optional(),
+    }).parse(d)
+  )
+  .handler(async ({ context, data }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // 1. Enforce super_admin role
+    const { data: userRole } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "super_admin")
+      .maybeSingle();
+    if (!userRole) throw new Error("Permission denied: Super Admin only");
+
+    // 2. Fetch target suggestion and ensure status is 'implemented'
+    const { data: sug, error: sugErr } = await supabaseAdmin
+      .from("suggestions")
+      .select("id, status, title")
+      .eq("id", data.suggestion_id)
+      .single();
+    if (sugErr || !sug) throw new Error("Suggestion not found");
+    if (sug.status !== "implemented") {
+      throw new Error("Only successfully implemented suggestions can be selected as Best Suggestion of the Month.");
+    }
+
+    // 3. Remove any previous selection for the same month and year
+    await supabaseAdmin
+      .from("best_suggestions")
+      .delete()
+      .eq("month", data.month)
+      .eq("year", data.year);
+
+    // 4. Insert the new selection
+    const { error: insErr } = await supabaseAdmin
+      .from("best_suggestions")
+      .insert({
+        suggestion_id: data.suggestion_id,
+        month: data.month,
+        year: data.year,
+        selected_by: userId,
+        selection_reason: data.reason || null,
+      });
+    if (insErr) throw new Error("Failed to select suggestion: " + insErr.message);
+
+    // 5. Audit log
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_id: userId,
+      action: "suggestion.best_of_month",
+      entity_type: "suggestion",
+      entity_id: data.suggestion_id,
+      meta: { month: data.month, year: data.year, reason: data.reason },
+    });
+
+    return { ok: true };
+  });
+
+export const updateLeaderboardSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      key: z.string(),
+      value: z.any(),
+    }).parse(d)
+  )
+  .handler(async ({ context, data }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Enforce super_admin role
+    const { data: userRole } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "super_admin")
+      .maybeSingle();
+    if (!userRole) throw new Error("Permission denied: Super Admin only");
+
+    // Update settings
+    const { error: setErr } = await supabaseAdmin
+      .from("leaderboard_settings")
+      .upsert({
+        key: data.key,
+        value: data.value,
+        updated_at: new Date().toISOString(),
+      });
+    if (setErr) throw new Error("Failed to save settings: " + setErr.message);
+
+    // Audit log
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_id: userId,
+      action: "settings.leaderboard",
+      entity_type: "settings",
+      entity_id: null,
+      meta: { key: data.key, value: data.value },
+    });
+
+    return { ok: true };
+  });
+
+export const lockLeaderboardMonth = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      month: z.number().int().min(1).max(12),
+      year: z.number().int(),
+    }).parse(d)
+  )
+  .handler(async ({ context, data }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Enforce super_admin role
+    const { data: userRole } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "super_admin")
+      .maybeSingle();
+    if (!userRole) throw new Error("Permission denied: Super Admin only");
+
+    // Calculate dates for that month
+    const startDate = new Date(Date.UTC(data.year, data.month - 1, 1, 0, 0, 0)).toISOString();
+    const endDate = new Date(Date.UTC(data.year, data.month, 0, 23, 59, 59, 999)).toISOString();
+
+    // Fetch department leaderboard data
+    const { data: deptRows, error: deptErr } = await supabaseAdmin.rpc("get_department_leaderboard", {
+      p_start_date: startDate,
+      p_end_date: endDate,
+    });
+    if (deptErr) throw new Error("Failed to generate department leaderboard snapshot: " + deptErr.message);
+
+    // Fetch employee leaderboard data
+    const { data: empRows, error: empErr } = await supabaseAdmin.rpc("get_employee_leaderboard", {
+      p_start_date: startDate,
+      p_end_date: endDate,
+    });
+    if (empErr) throw new Error("Failed to generate employee leaderboard snapshot: " + empErr.message);
+
+    // Delete any existing snapshots for this month/year
+    await supabaseAdmin
+      .from("leaderboard_snapshots")
+      .delete()
+      .eq("year", data.year)
+      .eq("month", data.month);
+
+    // Insert new snapshots
+    const { error: snap1Err } = await supabaseAdmin
+      .from("leaderboard_snapshots")
+      .insert({
+        year: data.year,
+        month: data.month,
+        type: "department",
+        data: deptRows || [],
+        created_by: userId,
+      });
+    if (snap1Err) throw new Error("Failed to save department snapshot: " + snap1Err.message);
+
+    const { error: snap2Err } = await supabaseAdmin
+      .from("leaderboard_snapshots")
+      .insert({
+        year: data.year,
+        month: data.month,
+        type: "employee",
+        data: empRows || [],
+        created_by: userId,
+      });
+    if (snap2Err) throw new Error("Failed to save employee snapshot: " + snap2Err.message);
+
+    // Record month lock
+    const { error: lockErr } = await supabaseAdmin
+      .from("locked_leaderboards")
+      .upsert({
+        year: data.year,
+        month: data.month,
+        locked_at: new Date().toISOString(),
+        locked_by: userId,
+      });
+    if (lockErr) throw new Error("Failed to record month lock: " + lockErr.message);
+
+    // Audit log
+    await supabaseAdmin.from("audit_logs").insert({
+      actor_id: userId,
+      action: "leaderboard.lock_month",
+      entity_type: "leaderboard",
+      entity_id: null,
+      meta: { month: data.month, year: data.year },
+    });
+
+    return { ok: true };
+  });
+

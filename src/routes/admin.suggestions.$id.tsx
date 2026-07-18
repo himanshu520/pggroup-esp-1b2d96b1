@@ -12,12 +12,18 @@ import { useSession, isSuggestionAccessible } from "@/lib/session";
 import { STATUS_LABEL, getHistoryActionText } from "@/lib/statuses";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { peTransferSuggestion, peRejectSuggestion, deptDecide, deptStartImplementation, deptSubmitEvidence, peVerify, peRejectReturn } from "@/lib/workflow.functions";
+import { peTransferSuggestion, peRejectSuggestion, deptDecide, deptStartImplementation, deptSubmitEvidence, peVerify, peRejectReturn, selectBestSuggestion } from "@/lib/workflow.functions";
 import { toast } from "sonner";
-import { Send, ThumbsUp, ThumbsDown, PlayCircle, Upload, Check, AlertTriangle, Loader2, Paperclip, X, FileText, History } from "lucide-react";
+import { Send, ThumbsUp, ThumbsDown, PlayCircle, Upload, Check, AlertTriangle, Loader2, Paperclip, X, FileText, History, Star, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmployeeBadges } from "@/components/employee-badges";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
 
 export const Route = createFileRoute("/admin/suggestions/$id")({
   beforeLoad: ({ params }) => {
@@ -88,6 +94,11 @@ export function SuggestionDetail({ id }: { id: string }) {
   const startFn = useServerFn(deptStartImplementation);
   const evidenceFn = useServerFn(deptSubmitEvidence);
   const verifyFn = useServerFn(peVerify);
+  const selectBestFn = useServerFn(selectBestSuggestion);
+
+  const [bestMonth, setBestMonth] = useState(new Date().getMonth() + 1);
+  const [bestYear, setBestYear] = useState(new Date().getFullYear());
+  const [bestReason, setBestReason] = useState("");
 
   const [remarks, setRemarks] = useState("");
   const [targetDept, setTargetDept] = useState("");
@@ -313,18 +324,21 @@ export function SuggestionDetail({ id }: { id: string }) {
     }
   }
 
-  async function run(fn: () => Promise<any>, label: string) {
+
+  async function submitBestSuggestion() {
     if (isPending) return;
     setIsPending(true);
     try {
-      await fn();
-      toast.success(label);
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["suggestion", id] }),
-        qc.invalidateQueries({ queryKey: ["suggestion-history", id] })
-      ]);
-    } catch (e: any) { 
-      toast.error(e.message ?? "Action failed"); 
+      await selectBestFn({ data: {
+        suggestion_id: id,
+        month: bestMonth,
+        year: bestYear,
+        reason: bestReason || undefined
+      } });
+      toast.success("Successfully selected as Best Suggestion of the Month!");
+      setBestReason("");
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to mark as best suggestion");
     } finally {
       setIsPending(false);
     }
@@ -403,7 +417,18 @@ export function SuggestionDetail({ id }: { id: string }) {
         <div className="lg:col-span-2 space-y-4">
           <Card>
             <div className="grid sm:grid-cols-3 gap-3 text-sm">
-              {isPE && <Meta label="Employee" value={`${sug.employees?.name} (${sug.employees?.employee_code})`} />}
+              {isPE && (
+                <Meta 
+                  label="Employee" 
+                  value={
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span>{sug.employees?.name}</span>
+                      <span className="text-xs font-mono text-muted-foreground">({sug.employees?.employee_code})</span>
+                      <EmployeeBadges employeeId={sug.employee_id} />
+                    </div>
+                  } 
+                />
+              )}
               <Meta label="Category" value={sug.categories?.name} />
               <Meta label="Owner department" value={sug.current_departments?.name || sug.departments?.name} />
               <Meta label="Plant" value={sug.plants?.name} />
@@ -724,7 +749,58 @@ export function SuggestionDetail({ id }: { id: string }) {
             )}
 
             {(status === "implemented" || status === "closed" || status === "rejected") && (
-              <div className="text-sm text-muted-foreground">This suggestion is closed — no further actions.</div>
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground">This suggestion is closed — no further actions.</div>
+                
+                {session?.primaryRole === "super_admin" && status === "implemented" && (
+                  <div className="rounded-lg border-2 border-amber-500 bg-amber-500/5 p-4 space-y-3 max-w-lg">
+                    <div className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                      Super Admin — Selection
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Feature this suggestion as the <strong>Best Suggestion of the Month</strong>.
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <select 
+                          value={bestMonth} 
+                          onChange={(e) => setBestMonth(Number(e.target.value))}
+                          className="h-9 rounded border border-border bg-background px-2 text-xs font-semibold"
+                        >
+                          {MONTHS.map((m, idx) => (
+                            <option key={m} value={idx + 1}>{m}</option>
+                          ))}
+                        </select>
+                        <select 
+                          value={bestYear} 
+                          onChange={(e) => setBestYear(Number(e.target.value))}
+                          className="h-9 rounded border border-border bg-background px-2 text-xs font-semibold"
+                        >
+                          {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1].map((y) => (
+                            <option key={y} value={y}>{y}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <Textarea 
+                        placeholder="Reason/remarks for selection (optional)" 
+                        value={bestReason} 
+                        onChange={(e) => setBestReason(e.target.value)}
+                        className="text-xs h-16"
+                      />
+                      <Button 
+                        size="sm" 
+                        className="bg-amber-500 hover:bg-amber-600 text-white font-bold"
+                        onClick={submitBestSuggestion}
+                        disabled={isPending}
+                      >
+                        {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Trophy className="w-3.5 h-3.5 mr-1.5" />}
+                        Mark as Best Suggestion
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 

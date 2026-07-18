@@ -1,7 +1,7 @@
 import type { NavItem } from "@/components/app-shell";
 import {
   LayoutDashboard, FileStack, GitBranch, Building2, Factory, MapPin,
-  Users, Database, ScrollText, BarChart3, Settings, ShieldAlert, IdCard, Bell,
+  Users, Database, ScrollText, BarChart3, Settings, ShieldAlert, IdCard, Bell, Trophy,
 } from "lucide-react";
 
 // All admin sections live on a single URL: /admin. The active section is
@@ -14,6 +14,7 @@ export const ADMIN_NAV: Array<{ label?: string; items: NavItem[] }> = [
     { to: "/admin/notifications", label: "Notifications", icon: Bell },
   ]},
   { label: "Performance", items: [
+    { to: "/admin", section: "leaderboard", label: "Leaderboard", icon: Trophy },
     { to: "/admin", section: "departments", label: "Departments", icon: Building2 },
     { to: "/admin", section: "plants", label: "Plants", icon: Factory },
     { to: "/admin", section: "locations", label: "Locations", icon: MapPin },
