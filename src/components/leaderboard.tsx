@@ -249,8 +249,13 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
       // Dynamic score calculation
       const score = (implemented * (scoringRules.implemented ?? 1)) + (fake * (scoringRules.fake_closure ?? -2));
 
+      const plant = plants.find((p: any) => p.id === d.plant_id);
+      const location = locations.find((l: any) => l.id === d.location_id);
+
       return {
         ...d,
+        plant_name: plant?.name ?? "—",
+        location_name: location?.location ?? "—",
         total_suggestions: total,
         implemented_suggestions: implemented,
         fake_closures: fake,
@@ -262,7 +267,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
 
     // Sort descending by score
     return calculated.sort((a, b) => b.score - a.score);
-  }, [deptLeaderboardRaw, scoringRules, isGlobal, sess?.roles, departments, plants]);
+  }, [deptLeaderboardRaw, scoringRules, isGlobal, sess?.roles, departments, plants, locations]);
 
   // Calculate scores & badges for Employees
   const empLeaderboard = useMemo(() => {
@@ -638,15 +643,17 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
                 title={`Department Performance Leaderboard - ${MONTHS[selectedMonth - 1]} ${selectedYear}`}
                 subtitle={`Location: ${locationId}, Plant: ${plantId}`}
                 columns={[
-                  { key: "department_name", header: "Department" },
-                  { key: "total_suggestions", header: "Total Submissions" },
-                  { key: "approved_suggestions", header: "Approved" },
-                  { key: "implemented_suggestions", header: "Implemented" },
-                  { key: "fake_closures", header: "Fake Closures" },
-                  { key: "rejected_suggestions", header: "Rejected" },
-                  { key: "implementation_rate", header: "Implementation %", format: (r) => `${r.implementation_rate.toFixed(1)}%` },
-                  { key: "fake_closure_rate", header: "Fake Closure %", format: (r) => `${r.fake_closure_rate.toFixed(1)}%` },
-                  { key: "score", header: "Performance Score" },
+                  {key: "department_name", header: "Department"},
+                  {key: "plant_name", header: "Plant"},
+                  {key: "location_name", header: "Location"},
+                  {key: "total_suggestions", header: "Total Submissions"},
+                  {key: "approved_suggestions", header: "Approved"},
+                  {key: "implemented_suggestions", header: "Implemented"},
+                  {key: "fake_closures", header: "Fake Closures"},
+                  {key: "rejected_suggestions", header: "Rejected"},
+                  {key: "implementation_rate", header: "Implementation %", format: (r) => `${r.implementation_rate.toFixed(1)}%` },
+                  {key: "fake_closure_rate", header: "Fake Closure %", format: (r) => `${r.fake_closure_rate.toFixed(1)}%` },
+                  {key: "score", header: "Performance Score"},
                 ]}
               />
             </div>
@@ -657,6 +664,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
                   <tr className="text-left font-semibold text-muted-foreground">
                     <th className="px-4 py-3 text-center w-12">Rank</th>
                     <th className="px-4 py-3">Department Name</th>
+                    <th className="px-4 py-3">Plant & Location</th>
                     <th className="px-4 py-3 text-center">Total</th>
                     <th className="px-4 py-3 text-center">Approved</th>
                     <th className="px-4 py-3 text-center text-emerald-600 dark:text-emerald-400">Implemented</th>
@@ -670,11 +678,11 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
                 <tbody className="divide-y divide-border">
                   {isLoadingDept ? (
                     <tr>
-                      <td colSpan={10} className="text-center py-12 text-muted-foreground">Loading department data...</td>
+                      <td colSpan={11} className="text-center py-12 text-muted-foreground">Loading department data...</td>
                     </tr>
                   ) : filteredDepts.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="text-center py-12 text-muted-foreground">No departments match your filters.</td>
+                      <td colSpan={11} className="text-center py-12 text-muted-foreground">No departments match your filters.</td>
                     </tr>
                   ) : filteredDepts.map((d: any, idx: number) => {
                     const rank = idx + 1;
@@ -718,6 +726,10 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
                               )}
                             </div>
                           </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-muted-foreground">
+                          <div className="truncate max-w-[150px] font-medium text-foreground/80">{d.plant_name}</div>
+                          <div className="text-[10px] truncate max-w-[150px]">{d.location_name}</div>
                         </td>
                         <td className="px-4 py-3.5 text-center font-medium">{d.total_suggestions}</td>
                         <td className="px-4 py-3.5 text-center text-muted-foreground">{d.approved_suggestions}</td>
