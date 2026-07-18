@@ -8,7 +8,6 @@ export const EMPLOYEE_NAV: Array<{ label?: string; items: NavItem[] }> = [
     { to: "/employee", section: "submit", label: "Submit Suggestion", icon: PlusCircle },
     { to: "/employee", section: "my", label: "My Suggestions", icon: ListChecks },
     { to: "/employee", section: "track", label: "Track Suggestion", icon: Search },
-    { to: "/employee", section: "leaderboard", label: "Leaderboard", icon: Trophy },
     { to: "/employee/notifications", label: "Notifications", icon: Bell },
     { to: "/employee", section: "profile", label: "Profile", icon: UserCircle },
   ]},

@@ -4,7 +4,6 @@ import { MySuggestions } from "./employee.my";
 import { TrackPage } from "./employee.track";
 import { NotificationsPage } from "@/components/notifications-page";
 import { ProfilePage } from "./employee.profile";
-import { LeaderboardView } from "@/components/leaderboard";
 
 type EmployeeSearch = { section?: string; code?: string };
 
@@ -14,7 +13,6 @@ const SECTION_TITLES: Record<string, string> = {
   track: "Track suggestion — ESP",
   notifications: "Notifications — ESP",
   profile: "Profile — ESP",
-  leaderboard: "Performance Leaderboard — ESP",
 };
 
 export const Route = createFileRoute("/employee/")({
@@ -41,7 +39,6 @@ function EmployeeHome() {
     case "track":         return <TrackPage initialCode={code} />;
     case "notifications": return <NotificationsPage />;
     case "profile":       return <ProfilePage />;
-    case "leaderboard":   return <LeaderboardView adminMode={false} />;
     case "submit":
     default:              return <SubmitForm />;
   }
