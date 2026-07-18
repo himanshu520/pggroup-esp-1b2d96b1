@@ -45,7 +45,7 @@ export function SuggestionDetail({ id }: { id: string }) {
       return data;
     },
   });
-  const { data: history = [] } = useQuery({
+  const { data: history = [], isLoading: histLoading } = useQuery({
     enabled: validId,
     queryKey: ["suggestion-history", id],
     queryFn: async () => {
