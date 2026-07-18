@@ -103,6 +103,48 @@ export function SuggestionDetail({ id }: { id: string }) {
   const [showNotRelatedForm, setShowNotRelatedForm] = useState(false);
   const [suggestedDeptId, setSuggestedDeptId] = useState("");
 
+  // Find if this suggestion was returned to PE
+  const lastReturnHistory = [...history]
+    .reverse()
+    .find((h: any) => h.to_status === "pe_review" && (h.from_status === "dept_review" || h.from_status === "transferred"));
+
+  let returnFromDeptName = "";
+  let returnFromDeptId = "";
+  let returnSuggestedDeptId = "";
+  let returnSuggestedDeptName = "";
+  let returnRemarks = "";
+
+  if (lastReturnHistory) {
+    returnFromDeptId = lastReturnHistory.from_department_id;
+    returnFromDeptName = lastReturnHistory.from_dept?.name || "Unknown Department";
+    returnRemarks = lastReturnHistory.remarks || "";
+    if (lastReturnHistory.remarks?.startsWith("REJECT_SUGGESTED_DEPT:")) {
+      const match = lastReturnHistory.remarks.match(/^REJECT_SUGGESTED_DEPT:([^|]*)\|(.*)$/);
+      if (match) {
+        returnSuggestedDeptId = match[1];
+        returnRemarks = match[2];
+        const suggestedDept = departments.find((d: any) => d.id === returnSuggestedDeptId);
+        returnSuggestedDeptName = suggestedDept?.name || "Unknown Department";
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (sug) {
+      if (sug.budget_tier) {
+        setPeBudgetTier(sug.budget_tier);
+        setPeApproved(true);
+      }
+    }
+  }, [sug]);
+
+  // Pre-populate targetDept with the suggested department if it's a returned suggestion
+  useEffect(() => {
+    if (returnSuggestedDeptId) {
+      setTargetDept(returnSuggestedDeptId);
+    }
+  }, [returnSuggestedDeptId]);
+
   // Accepted evidence file types
   const ACCEPTED_EXT = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".mp4", ".mov"];
   const ACCEPTED_ATTR = "image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,video/mp4,video/quicktime";
@@ -270,47 +312,7 @@ export function SuggestionDetail({ id }: { id: string }) {
   ) || session?.primaryRole === "super_admin" || session?.primaryRole === "corporate_admin";
   const status = sug.status;
 
-  // Find if this suggestion was returned to PE
-  const lastReturnHistory = [...history]
-    .reverse()
-    .find((h: any) => h.to_status === "pe_review" && (h.from_status === "dept_review" || h.from_status === "transferred"));
 
-  let returnFromDeptName = "";
-  let returnFromDeptId = "";
-  let returnSuggestedDeptId = "";
-  let returnSuggestedDeptName = "";
-  let returnRemarks = "";
-
-  if (lastReturnHistory) {
-    returnFromDeptId = lastReturnHistory.from_department_id;
-    returnFromDeptName = lastReturnHistory.from_dept?.name || "Unknown Department";
-    returnRemarks = lastReturnHistory.remarks || "";
-    if (lastReturnHistory.remarks?.startsWith("REJECT_SUGGESTED_DEPT:")) {
-      const match = lastReturnHistory.remarks.match(/^REJECT_SUGGESTED_DEPT:([^|]*)\|(.*)$/);
-      if (match) {
-        returnSuggestedDeptId = match[1];
-        returnRemarks = match[2];
-        const suggestedDept = departments.find((d: any) => d.id === returnSuggestedDeptId);
-        returnSuggestedDeptName = suggestedDept?.name || "Unknown Department";
-      }
-    }
-  }
-
-  useEffect(() => {
-    if (sug) {
-      if (sug.budget_tier) {
-        setPeBudgetTier(sug.budget_tier);
-        setPeApproved(true);
-      }
-    }
-  }, [sug]);
-
-  // Pre-populate targetDept with the suggested department if it's a returned suggestion
-  useEffect(() => {
-    if (returnSuggestedDeptId) {
-      setTargetDept(returnSuggestedDeptId);
-    }
-  }, [returnSuggestedDeptId]);
 
   return (
     <AppShell navGroups={ADMIN_NAV} title="Admin Console">
