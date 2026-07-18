@@ -67,21 +67,12 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
       if (r.role === "super_admin" || r.role === "corporate_admin") {
         return;
       }
-      if (r.location_id) {
+      if (r.role === "location_admin" && r.location_id) {
         ids.add(r.location_id);
-      }
-      if (r.plant_id) {
-        const plant = plants.find((p: any) => p.id === r.plant_id);
-        if (plant?.location_id) ids.add(plant.location_id);
-      }
-      if (r.department_id) {
-        const dept = departments.find((d: any) => d.id === r.department_id);
-        const plant = plants.find((p: any) => p.id === dept?.plant_id);
-        if (plant?.location_id) ids.add(plant.location_id);
       }
     });
     return ids;
-  }, [sess?.roles, plants, departments]);
+  }, [sess?.roles]);
 
   const accessiblePlantIds = useMemo(() => {
     if (!sess?.roles) return new Set<string>();
@@ -90,7 +81,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
       if (r.role === "super_admin" || r.role === "corporate_admin") {
         return;
       }
-      if (r.location_id) {
+      if (r.role === "location_admin" && r.location_id) {
         // Add all plants in this location
         plants.forEach((p: any) => {
           if (p.location_id === r.location_id) ids.add(p.id);
