@@ -81,7 +81,6 @@ export function SubmitForm() {
     expected_saving: "",
     implementation_cost: "",
     priority: "medium" as Priority,
-    budget_tier: "" as "" | "no_cost" | "low_cost" | "investment",
     location_id: emp?.location_id ?? "",
     plant_id: emp?.plant_id ?? "",
     department_id: emp?.department_id ?? "",
@@ -161,7 +160,6 @@ export function SubmitForm() {
     if (submitting) return; // Prevent double submissions
     if (!emp) return toast.error("Employee record missing");
     if (!form.title.trim()) return toast.error("Please enter a title");
-    if (!form.suggested_method.trim()) return toast.error("Please describe your proposed solution");
     if (!form.location_id || !form.plant_id || !form.department_id) {
       return toast.error("Please select state, unit and department");
     }
@@ -173,8 +171,8 @@ export function SubmitForm() {
         category_id: form.category_id || null,
         problem: form.problem || null,
         current_method: form.current_method || null,
-        suggested_method: form.suggested_method,
-        expected_benefits: form.expected_benefits || null,
+        suggested_method: form.suggested_method.trim() || null,
+        expected_benefits: form.expected_benefits.trim() || null,
         expected_saving: form.expected_saving ? Number(form.expected_saving) : null,
         implementation_cost: form.implementation_cost ? Number(form.implementation_cost) : null,
         priority: form.priority,
@@ -230,7 +228,7 @@ export function SubmitForm() {
         onSubmit={(e) => { e.preventDefault(); submit(); }}
         className="space-y-5 pb-24"
       >
-        {/* Section: Classification & Budget */}
+        {/* Section: Classification */}
         <section className="rounded-xl border border-border bg-card">
           <SectionHeader
             tone="warning"
@@ -239,7 +237,7 @@ export function SubmitForm() {
             title={t("sec_2_title")}
             subtitle={t("sec_2_sub")}
           />
-          <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="p-4 sm:p-5 grid grid-cols-1 gap-5">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">{t("lbl_idea_category")} <span className="text-destructive">*</span></Label>
               <div className="text-[11px] text-muted-foreground">{t("hint_category")}</div>
@@ -249,57 +247,6 @@ export function SubmitForm() {
                   {categories.map((c) => <SelectItem key={c.id} value={c.id}>{t(c.name)}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">{t("lbl_implementation_budget")} <span className="text-destructive">*</span></Label>
-              <div className="text-[11px] text-muted-foreground">{t("hint_budget")}</div>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { id: "no_cost", label: t("budget_no_cost"), hint: t("budget_no_cost_hint"), color: "emerald" },
-                  { id: "low_cost", label: t("budget_low_cost"), hint: t("budget_low_cost_hint"), color: "amber" },
-                  { id: "investment", label: t("budget_investment"), hint: t("budget_investment_hint"), color: "red" },
-                ].map((b) => {
-                  const active = form.budget_tier === b.id;
-                  
-                  const colorMap = {
-                    emerald: {
-                      activeContainer: "border-emerald-600 bg-emerald-500/10 ring-1 ring-emerald-600 shadow-sm",
-                      hoverContainer: "hover:border-emerald-600/40",
-                      activeDot: "border-emerald-600 bg-emerald-600",
-                    },
-                    amber: {
-                      activeContainer: "border-amber-500 bg-amber-500/10 ring-1 ring-amber-500 shadow-sm",
-                      hoverContainer: "hover:border-amber-500/40",
-                      activeDot: "border-amber-500 bg-amber-500",
-                    },
-                    red: {
-                      activeContainer: "border-red-600 bg-red-500/10 ring-1 ring-red-600 shadow-sm",
-                      hoverContainer: "hover:border-red-600/40",
-                      activeDot: "border-red-600 bg-red-600",
-                    },
-                  };
-                  
-                  const c = colorMap[b.color as keyof typeof colorMap];
-
-                  return (
-                    <button
-                      key={b.id}
-                      type="button"
-                      onClick={() => setForm({ ...form, budget_tier: b.id as any })}
-                      className={cn(
-                        "text-left rounded-lg border p-2.5 transition-all",
-                        active ? c.activeContainer : `border-border bg-background ${c.hoverContainer}`
-                      )}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <div className={cn("w-3 h-3 rounded-full border-2 shrink-0 transition-colors", active ? c.activeDot : "border-muted-foreground/40")} />
-                        <div className="text-xs font-semibold">{b.label}</div>
-                      </div>
-                      <div className="text-[10px] text-muted-foreground mt-1 leading-tight">{b.hint}</div>
-                    </button>
-                  );
-                })}
-              </div>
             </div>
           </div>
         </section>
@@ -352,7 +299,6 @@ export function SubmitForm() {
               icon={<Wrench className="w-4 h-4" />}
               label={t("lbl_proposed_solution")}
               hint={t("hint_solution")}
-              required
             >
               <Textarea
                 rows={3}
@@ -370,7 +316,6 @@ export function SubmitForm() {
               icon={<TrendingUp className="w-4 h-4" />}
               label={t("lbl_expected_benefits")}
               hint={t("hint_benefits")}
-              required
             >
               <Textarea
                 rows={3}
@@ -501,7 +446,6 @@ export function SubmitForm() {
                   expected_saving: "",
                   implementation_cost: "",
                   priority: "medium",
-                  budget_tier: "",
                   location_id: emp?.location_id ?? "",
                   plant_id: emp?.plant_id ?? "",
                   department_id: emp?.department_id ?? "",

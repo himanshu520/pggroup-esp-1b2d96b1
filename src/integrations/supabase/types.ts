@@ -488,6 +488,7 @@ export type Database = {
           expected_saving: number | null
           id: string
           deleted_at: string | null
+          budget_tier: string | null
           implementation_cost: number | null
           location_id: string
           plant_id: string
@@ -513,6 +514,7 @@ export type Database = {
           expected_saving?: number | null
           id?: string
           deleted_at?: string | null
+          budget_tier?: string | null
           implementation_cost?: number | null
           location_id: string
           plant_id: string
@@ -538,6 +540,7 @@ export type Database = {
           expected_saving?: number | null
           id?: string
           deleted_at?: string | null
+          budget_tier?: string | null
           implementation_cost?: number | null
           location_id?: string
           plant_id?: string

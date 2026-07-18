@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSession, isSuggestionAccessible } from "@/lib/session";
@@ -90,6 +91,7 @@ export function SuggestionDetail({ id }: { id: string }) {
   const [dragOver, setDragOver] = useState(false);
   const [isPending, setIsPending] = useState(false);
   const [peApproved, setPeApproved] = useState(false);
+  const [peBudgetTier, setPeBudgetTier] = useState("");
 
   // Accepted evidence file types
   const ACCEPTED_EXT = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".mp4", ".mov"];
@@ -275,6 +277,17 @@ export function SuggestionDetail({ id }: { id: string }) {
               <Meta label="Owner department" value={sug.current_departments?.name || sug.departments?.name} />
               <Meta label="Plant" value={sug.plants?.name} />
               <Meta label="Location" value={sug.locations?.location} />
+              {sug.budget_tier && (
+                <Meta 
+                  label="Budget Tier" 
+                  value={
+                    sug.budget_tier === "no_cost" ? "No Cost" :
+                    sug.budget_tier === "low_cost" ? "Low Cost" :
+                    sug.budget_tier === "investment" ? "Investment" :
+                    sug.budget_tier
+                  } 
+                />
+              )}
             </div>
           </Card>
 
@@ -305,24 +318,51 @@ export function SuggestionDetail({ id }: { id: string }) {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    <div className="text-xs text-muted-foreground">Select department to transfer:</div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Select value={targetDept} onValueChange={setTargetDept} disabled={isPending}>
-                        <SelectTrigger className="w-64"><SelectValue placeholder="Select department" /></SelectTrigger>
-                        <SelectContent>{departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
-                      </Select>
-                      <Textarea placeholder="Remarks (optional)" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="min-h-[38px] max-w-md" disabled={isPending} />
-                      <div className="flex gap-2 w-full sm:w-auto">
-                        <Button disabled={isPending || !targetDept} onClick={() => run(() => transferFn({ data: { suggestion_id: id, target_department_id: targetDept, remarks } }), "Transferred to department")}>
-                          {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                          Transfer
-                        </Button>
-                        <Button variant="ghost" disabled={isPending} onClick={() => setPeApproved(false)}>
-                          Cancel
-                        </Button>
+                  <div className="space-y-3">
+                    {/* Implementation Budget Option */}
+                    <div className="space-y-1.5 max-w-md">
+                      <Label className="text-xs font-semibold">Implementation Budget <span className="text-destructive">*</span></Label>
+                      <div className="flex gap-2 items-center">
+                        <Select value={peBudgetTier} onValueChange={setPeBudgetTier} disabled={isPending}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select implementation budget tier" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="no_cost">No Cost (Method changes only)</SelectItem>
+                            <SelectItem value="low_cost">Low Cost (Minor expense)</SelectItem>
+                            <SelectItem value="investment">Investment (Budget required)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {!peBudgetTier && (
+                          <Button variant="ghost" disabled={isPending} onClick={() => { setPeApproved(false); setPeBudgetTier(""); }}>
+                            Cancel
+                          </Button>
+                        )}
                       </div>
                     </div>
+
+                    {/* Show department transfer ONLY after budget tier is selected */}
+                    {peBudgetTier && (
+                      <div className="space-y-2 pt-1 border-t border-border mt-3">
+                        <div className="text-xs text-muted-foreground">Select department to transfer:</div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Select value={targetDept} onValueChange={setTargetDept} disabled={isPending}>
+                            <SelectTrigger className="w-64"><SelectValue placeholder="Select department" /></SelectTrigger>
+                            <SelectContent>{departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
+                          </Select>
+                          <Textarea placeholder="Remarks (optional)" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="min-h-[38px] max-w-md" disabled={isPending} />
+                          <div className="flex gap-2 w-full sm:w-auto">
+                            <Button disabled={isPending || !targetDept} onClick={() => run(() => transferFn({ data: { suggestion_id: id, target_department_id: targetDept, remarks, budget_tier: peBudgetTier } }), "Transferred to department")}>
+                              {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                              Transfer
+                            </Button>
+                            <Button variant="ghost" disabled={isPending} onClick={() => { setPeApproved(false); setPeBudgetTier(""); }}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

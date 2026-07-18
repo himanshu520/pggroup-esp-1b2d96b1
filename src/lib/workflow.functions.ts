@@ -41,6 +41,7 @@ export const peTransferSuggestion = createServerFn({ method: "POST" })
       suggestion_id: z.string().uuid(),
       target_department_id: z.string().uuid(),
       remarks: z.string().max(2000).optional(),
+      budget_tier: z.string(),
     }).parse(d)
   )
   .handler(async ({ context, data }) => {
@@ -50,6 +51,7 @@ export const peTransferSuggestion = createServerFn({ method: "POST" })
     const { error: uErr } = await supabase.from("suggestions").update({
       current_department_id: data.target_department_id,
       status: "dept_review" satisfies SuggestionStatus,
+      budget_tier: data.budget_tier,
     }).eq("id", data.suggestion_id);
     if (uErr) throw new Error(uErr.message);
     await insertHistory(supabase, data.suggestion_id, sug.status, "dept_review", userId, data.remarks ?? null, sug.current_department_id, data.target_department_id);
