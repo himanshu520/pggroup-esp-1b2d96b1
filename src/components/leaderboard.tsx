@@ -59,58 +59,83 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
   const { data: plants = [] } = useQuery({ queryKey: ["plants"], queryFn: async () => (await supabase.from("plants").select("id,name,location_id")).data ?? [] });
   const { data: departments = [] } = useQuery({ queryKey: ["departments-all"], queryFn: async () => (await supabase.from("departments").select("id,name,plant_id")).data ?? [] });
 
-  // Allowed Locations list
-  const allowedLocations = useMemo(() => {
-    if (!sess?.roles) return [];
-    return locations.filter((l: any) => isLocationAccessible(l.id, sess.roles));
-  }, [locations, sess?.roles]);
-
-  // Allowed Plants list
-  const allowedPlants = useMemo(() => {
-    if (!sess?.roles) return [];
-    return plants.filter((p: any) => isPlantAccessible(p.id, p.location_id, sess.roles));
-  }, [plants, sess?.roles]);
-
-  // Allowed Departments list
-  const allowedDepartments = useMemo(() => {
-    if (!sess?.roles) return [];
-    return departments.filter((d: any) => {
-      const plant = plants.find((p: any) => p.id === d.plant_id);
-      return isDeptAccessible(d.id, d.plant_id, plant?.location_id ?? null, sess.roles);
+  // Find accessible locations and plants based on roles
+  const accessibleLocationIds = useMemo(() => {
+    if (!sess?.roles) return new Set<string>();
+    const ids = new Set<string>();
+    sess.roles.forEach((r) => {
+      if (r.role === "super_admin" || r.role === "corporate_admin") {
+        return;
+      }
+      if (r.location_id) {
+        ids.add(r.location_id);
+      }
+      if (r.plant_id) {
+        const plant = plants.find((p: any) => p.id === r.plant_id);
+        if (plant?.location_id) ids.add(plant.location_id);
+      }
+      if (r.department_id) {
+        const dept = departments.find((d: any) => d.id === r.department_id);
+        const plant = plants.find((p: any) => p.id === dept?.plant_id);
+        if (plant?.location_id) ids.add(plant.location_id);
+      }
     });
-  }, [departments, plants, sess?.roles]);
+    return ids;
+  }, [sess?.roles, plants, departments]);
 
-  // Filter plants by selected location (and filter by user allowed plants if not global)
+  const accessiblePlantIds = useMemo(() => {
+    if (!sess?.roles) return new Set<string>();
+    const ids = new Set<string>();
+    sess.roles.forEach((r) => {
+      if (r.role === "super_admin" || r.role === "corporate_admin") {
+        return;
+      }
+      if (r.location_id) {
+        // Add all plants in this location
+        plants.forEach((p: any) => {
+          if (p.location_id === r.location_id) ids.add(p.id);
+        });
+      }
+      if (r.plant_id) {
+        ids.add(r.plant_id);
+      }
+      if (r.department_id) {
+        const dept = departments.find((d: any) => d.id === r.department_id);
+        if (dept?.plant_id) ids.add(dept.plant_id);
+      }
+    });
+    return ids;
+  }, [sess?.roles, plants, departments]);
+
+  // Filter plants by selected location
   const filteredPlants = useMemo(() => {
-    const basePlants = isGlobal ? plants : allowedPlants;
-    if (locationId === "all") return basePlants;
-    return basePlants.filter((p: any) => p.location_id === locationId);
-  }, [plants, allowedPlants, locationId, isGlobal]);
+    if (locationId === "all") return plants;
+    return plants.filter((p: any) => p.location_id === locationId);
+  }, [plants, locationId]);
 
   // Sync plant selection if it goes out of scope
   useEffect(() => {
-    const basePlants = isGlobal ? plants : allowedPlants;
     if (plantId !== "all" && locationId !== "all") {
-      const isMatch = basePlants.some((p: any) => p.id === plantId && p.location_id === locationId);
+      const isMatch = plants.some((p: any) => p.id === plantId && p.location_id === locationId);
       if (!isMatch) setPlantId("all");
     }
-  }, [locationId, plantId, plants, allowedPlants, isGlobal]);
+  }, [locationId, plantId, plants]);
 
   // Sync default location and plant on load if not global
   useEffect(() => {
     if (sess?.roles && !isGlobal) {
-      if (allowedLocations.length > 0 && locationId === "all") {
-        if (allowedLocations.length === 1) {
-          setLocationId(allowedLocations[0].id);
+      if (accessibleLocationIds.size > 0 && locationId === "all") {
+        if (accessibleLocationIds.size === 1) {
+          setLocationId(Array.from(accessibleLocationIds)[0]);
         }
       }
-      if (allowedPlants.length > 0 && plantId === "all") {
-        if (allowedPlants.length === 1) {
-          setPlantId(allowedPlants[0].id);
+      if (accessiblePlantIds.size > 0 && plantId === "all") {
+        if (accessiblePlantIds.size === 1) {
+          setPlantId(Array.from(accessiblePlantIds)[0]);
         }
       }
     }
-  }, [sess?.roles, isGlobal, allowedLocations, allowedPlants, locationId, plantId]);
+  }, [sess?.roles, isGlobal, accessibleLocationIds, accessiblePlantIds, locationId, plantId]);
 
   // 1. Fetch Scoring Settings
   const { data: settings = {} } = useQuery({
@@ -232,9 +257,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
     // SECURE ACCESS FILTER
     if (!isGlobal && sess?.roles) {
       list = list.filter((d: any) => {
-        const deptInfo = departments.find((dept: any) => dept.id === d.department_id);
-        const plantInfo = plants.find((p: any) => p.id === deptInfo?.plant_id);
-        return isDeptAccessible(d.department_id, deptInfo?.plant_id ?? null, plantInfo?.location_id ?? null, sess.roles);
+        return accessiblePlantIds.has(d.plant_id) || accessibleLocationIds.has(d.location_id);
       });
     }
 
@@ -267,7 +290,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
 
     // Sort descending by score
     return calculated.sort((a, b) => b.score - a.score);
-  }, [deptLeaderboardRaw, scoringRules, isGlobal, sess?.roles, departments, plants, locations]);
+  }, [deptLeaderboardRaw, scoringRules, isGlobal, sess?.roles, departments, plants, locations, accessibleLocationIds, accessiblePlantIds]);
 
   // Calculate scores & badges for Employees
   const empLeaderboard = useMemo(() => {
@@ -276,7 +299,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
     // SECURE ACCESS FILTER
     if (!isGlobal && sess?.roles) {
       list = list.filter((e: any) => {
-        return isDeptAccessible(e.department_id, e.plant_id, e.location_id, sess.roles);
+        return accessiblePlantIds.has(e.plant_id) || accessibleLocationIds.has(e.location_id);
       });
     }
 
@@ -295,7 +318,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
 
     // Sort descending by score
     return calculated.sort((a, b) => b.score - a.score);
-  }, [empLeaderboardRaw, isGlobal, sess?.roles]);
+  }, [empLeaderboardRaw, isGlobal, sess?.roles, accessibleLocationIds, accessiblePlantIds]);
 
   const showBestSuggestion = useMemo(() => {
     if (!bestSuggestion) return false;
@@ -500,12 +523,8 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
             onChange={(e) => setLocationId(e.target.value)}
             className="w-full mt-1 h-9 rounded-md border border-input bg-background px-2.5 text-xs font-medium"
           >
-            {isGlobal ? (
-              <option value="all">All Locations</option>
-            ) : (
-              allowedLocations.length > 1 && <option value="all">All Accessible Locations</option>
-            )}
-            {allowedLocations.map((l: any) => (
+            <option value="all">All Locations</option>
+            {locations.map((l: any) => (
               <option key={l.id} value={l.id}>{l.location}</option>
             ))}
           </select>
@@ -518,11 +537,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
             onChange={(e) => setPlantId(e.target.value)}
             className="w-full mt-1 h-9 rounded-md border border-input bg-background px-2.5 text-xs font-medium"
           >
-            {isGlobal ? (
-              <option value="all">All Plants</option>
-            ) : (
-              filteredPlants.length > 1 && <option value="all">All Accessible Plants</option>
-            )}
+            <option value="all">All Plants</option>
             {filteredPlants.map((p: any) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
@@ -536,12 +551,8 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
             onChange={(e) => setDeptFilterId(e.target.value)}
             className="w-full mt-1 h-9 rounded-md border border-input bg-background px-2.5 text-xs font-medium"
           >
-            {isGlobal ? (
-              <option value="all">All Departments</option>
-            ) : (
-              allowedDepartments.length > 1 && <option value="all">All Accessible Departments</option>
-            )}
-            {allowedDepartments.map((d: any) => (
+            <option value="all">All Departments</option>
+            {departments.map((d: any) => (
               <option key={d.id} value={d.id}>{d.name}</option>
             ))}
           </select>
