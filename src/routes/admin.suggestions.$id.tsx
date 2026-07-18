@@ -102,6 +102,8 @@ export function SuggestionDetail({ id }: { id: string }) {
   const [peBudgetTier, setPeBudgetTier] = useState("");
   const [showNotRelatedForm, setShowNotRelatedForm] = useState(false);
   const [suggestedDeptId, setSuggestedDeptId] = useState("");
+  const [peVerificationFiles, setPeVerificationFiles] = useState<File[]>([]);
+  const [peDragOver, setPeDragOver] = useState(false);
 
   // Find if this suggestion was returned to PE
   const lastReturnHistory = [...history]
@@ -146,10 +148,10 @@ export function SuggestionDetail({ id }: { id: string }) {
   }, [returnSuggestedDeptId]);
 
   // Accepted evidence file types
-  const ACCEPTED_EXT = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".mp4", ".mov"];
-  const ACCEPTED_ATTR = "image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,video/mp4,video/quicktime";
+  const ACCEPTED_EXT = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+  const ACCEPTED_ATTR = "image/*";
   const MAX_FILE_MB = 20;
-  const MAX_FILES = 10;
+  const MAX_FILES = 3;
 
   function validateFiles(files: File[]): { valid: File[]; errors: string[] } {
     const errors: string[] = [];
@@ -233,6 +235,86 @@ export function SuggestionDetail({ id }: { id: string }) {
       toast.error("Failed to submit evidence", { description: e.message ?? "Unknown error" });
     } finally {
       setUploading(false);
+    }
+  }
+
+  function handlePeVerificationFiles(list: FileList | null) {
+    if (!list) return;
+    const { valid, errors } = validateFiles(Array.from(list));
+    errors.forEach((e) => toast.error("File rejected", { description: e }));
+    setPeVerificationFiles((prev) => {
+      const combined = [...prev, ...valid];
+      if (combined.length > 3) {
+        toast.warning("Only 3 files allowed", { description: "Extra files ignored." });
+      }
+      return combined.slice(0, 3);
+    });
+  }
+
+  async function peSubmitVerification(outcome: "implemented" | "fake_closure") {
+    if (!remarks.trim()) {
+      return toast.error("Please enter verification remarks");
+    }
+    if (peVerificationFiles.length === 0) {
+      return toast.error("Please attach at least one verification image (mandatory)");
+    }
+    if (peVerificationFiles.length > 3) {
+      return toast.error("Maximum 3 verification images allowed");
+    }
+
+    setUploading(true);
+    setIsPending(true);
+    const attachmentIds: string[] = [];
+    const uploadedNames: string[] = [];
+    try {
+      for (const file of peVerificationFiles) {
+        const path = `${id}/pe-verification/${crypto.randomUUID()}-${file.name}`;
+        const { error: upErr } = await supabase.storage.from("suggestion-files").upload(path, file, { contentType: file.type });
+        if (upErr) {
+          toast.error(`Upload failed: ${file.name}`, { description: upErr.message });
+          continue;
+        }
+        const { data: attRow, error: attErr } = await supabase.from("attachments").insert({
+          suggestion_id: id,
+          file_path: path,
+          file_name: file.name,
+          content_type: file.type,
+          kind: "evidence",
+          uploaded_by: session?.userId,
+        }).select("id").single();
+        if (attErr || !attRow) {
+          toast.error(`Failed to record: ${file.name}`, { description: attErr?.message });
+          continue;
+        }
+        attachmentIds.push((attRow as any).id);
+        uploadedNames.push(file.name);
+      }
+      
+      if (attachmentIds.length === 0) {
+        throw new Error("No files were successfully uploaded.");
+      }
+
+      await verifyFn({ data: {
+        suggestion_id: id,
+        outcome,
+        remarks,
+        attachment_ids: attachmentIds,
+        file_names: uploadedNames,
+      } });
+
+      toast.success(outcome === "implemented" ? "Marked implemented" : "Marked fake closure");
+      setPeVerificationFiles([]);
+      setRemarks("");
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["suggestion", id] }),
+        qc.invalidateQueries({ queryKey: ["suggestion-history", id] }),
+        qc.invalidateQueries({ queryKey: ["suggestion-evidence", id] })
+      ]);
+    } catch (e: any) {
+      toast.error("Failed to submit verification", { description: e.message ?? "Unknown error" });
+    } finally {
+      setUploading(false);
+      setIsPending(false);
     }
   }
 
@@ -564,9 +646,9 @@ export function SuggestionDetail({ id }: { id: string }) {
                 >
                   <input type="file" multiple accept={ACCEPTED_ATTR} className="hidden" onChange={(e) => handleEvidenceFiles(e.target.files)} disabled={uploading || isPending} />
                   <Paperclip className="w-6 h-6 mx-auto text-muted-foreground mb-1.5" />
-                  <div className="text-sm font-medium">Drag & drop files here, or click to browse</div>
-                  <div className="text-xs text-muted-foreground mt-1">Images, PDF, Word, Excel, PowerPoint, MP4/MOV, TXT, CSV</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">Max {MAX_FILES} files · up to {MAX_FILE_MB}MB each · {evidenceFiles.length}/{MAX_FILES} selected</div>
+                  <div className="text-sm font-medium">Drag & drop evidence images here, or click to browse</div>
+                  <div className="text-xs text-muted-foreground mt-1">Accepts images only (.jpg, .png, .webp, .gif)</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">Max {MAX_FILES} images · up to {MAX_FILE_MB}MB each · {evidenceFiles.length}/{MAX_FILES} selected</div>
                 </label>
                 {evidenceFiles.length > 0 && (
                   <ul className="max-w-2xl divide-y divide-border rounded-md border border-border">
@@ -592,16 +674,54 @@ export function SuggestionDetail({ id }: { id: string }) {
             )}
 
             {isPE && (status === "pe_verification" || status === "evidence_submitted") && (
-              <div className="space-y-2">
-                <div className="text-xs text-muted-foreground">PE — Final verification</div>
-                <Textarea placeholder="Verification remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="max-w-lg" disabled={isPending} />
+              <div className="space-y-3">
+                <div className="text-xs text-muted-foreground font-semibold">PE — Final verification (Verification evidence & remarks are mandatory)</div>
+                <Textarea placeholder="Verification remarks (mandatory)" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="max-w-lg" disabled={uploading || isPending} />
+                
+                <label
+                  onDragOver={(e) => { e.preventDefault(); setPeDragOver(true); }}
+                  onDragLeave={() => setPeDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setPeDragOver(false);
+                    if (!uploading && !isPending) handlePeVerificationFiles(e.dataTransfer.files);
+                  }}
+                  className={cn(
+                    "max-w-lg block border-2 border-dashed rounded-lg p-5 text-center transition-colors",
+                    (uploading || isPending) ? "bg-muted cursor-not-allowed border-muted-foreground/30" : peDragOver ? "border-primary bg-primary/5 cursor-pointer" : "border-border hover:border-primary/50 cursor-pointer",
+                  )}
+                >
+                  <input type="file" multiple accept="image/*" className="hidden" onChange={(e) => handlePeVerificationFiles(e.target.files)} disabled={uploading || isPending} />
+                  <Paperclip className="w-6 h-6 mx-auto text-muted-foreground mb-1.5" />
+                  <div className="text-sm font-medium">Drag & drop verification images here, or click to browse</div>
+                  <div className="text-xs text-muted-foreground mt-1">Accepts images only (.jpg, .png, .webp, .gif)</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">Max 3 images · up to {MAX_FILE_MB}MB each · {peVerificationFiles.length}/3 selected</div>
+                </label>
+                
+                {peVerificationFiles.length > 0 && (
+                  <ul className="max-w-lg divide-y divide-border rounded-md border border-border">
+                    {peVerificationFiles.map((f, i) => (
+                      <li key={i} className="flex items-center gap-3 px-3 py-2">
+                        <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm truncate">{f.name}</div>
+                          <div className="text-xs text-muted-foreground">{(f.size / 1024).toFixed(1)} KB</div>
+                        </div>
+                        <button type="button" className="p-1 hover:bg-muted rounded shrink-0" onClick={() => setPeVerificationFiles(peVerificationFiles.filter((_, j) => j !== i))} disabled={uploading || isPending}>
+                          <X className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                
                 <div className="flex gap-2">
-                  <Button disabled={isPending} onClick={() => run(() => verifyFn({ data: { suggestion_id: id, outcome: "implemented", remarks } }), "Marked implemented")}>
-                    {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  <Button disabled={uploading || isPending} onClick={() => peSubmitVerification("implemented")}>
+                    {uploading || isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                     Mark implemented
                   </Button>
-                  <Button variant="destructive" disabled={isPending} onClick={() => run(() => verifyFn({ data: { suggestion_id: id, outcome: "fake_closure", remarks } }), "Marked fake closure")}>
-                    {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
+                  <Button variant="destructive" disabled={uploading || isPending} onClick={() => peSubmitVerification("fake_closure")}>
+                    {uploading || isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
                     Fake closure
                   </Button>
                 </div>

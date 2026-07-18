@@ -229,8 +229,8 @@ export const deptSubmitEvidence = createServerFn({ method: "POST" })
     completion_date: z.string().optional(),
     actual_cost: z.number().nullable().optional(),
     benefits_achieved: z.string().optional(),
-    attachment_ids: z.array(z.string().uuid()).min(1, "At least one evidence file is required").max(10),
-    file_names: z.array(z.string()).min(1).max(10),
+    attachment_ids: z.array(z.string().uuid()).min(1, "At least one evidence file is required").max(3),
+    file_names: z.array(z.string()).min(1).max(3),
   }).parse(d))
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
@@ -311,24 +311,54 @@ export const peVerify = createServerFn({ method: "POST" })
     suggestion_id: z.string().uuid(),
     outcome: z.enum(["implemented","fake_closure"]),
     remarks: z.string().max(2000).optional(),
+    attachment_ids: z.array(z.string().uuid()).min(1, "At least one verification image is required").max(3),
+    file_names: z.array(z.string()).min(1).max(3),
   }).parse(d))
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: sug } = await supabase.from("suggestions").select("status").eq("id", data.suggestion_id).single();
     const { notifyForSuggestion } = await import("./notify.server");
+
+    // Fetch the latest evidence version to compute the next one
+    const { data: latest } = await supabase
+      .from("evidence")
+      .select("version")
+      .eq("suggestion_id", data.suggestion_id)
+      .order("version", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextVersion = ((latest as any)?.version ?? 0) + 1;
+
+    // Create a new evidence row for PE verification
+    const { data: evRow, error: evErr } = await supabaseAdmin.from("evidence").insert({
+      suggestion_id: data.suggestion_id,
+      remarks: `[PE Verification: ${data.outcome === "implemented" ? "Implemented" : "Fake Closure"}] ${data.remarks || ""}`,
+      submitted_by: userId,
+      version: nextVersion,
+    } as any).select("id").single();
+    if (evErr || !evRow) throw new Error(evErr?.message ?? "Failed to insert verification evidence");
+
+    // Link uploaded attachments to this new evidence row
+    if (data.attachment_ids && data.attachment_ids.length > 0) {
+      await supabaseAdmin.from("attachments")
+        .update({ evidence_id: (evRow as any).id } as any)
+        .in("id", data.attachment_ids);
+    }
+
     if (data.outcome === "implemented") {
-      await supabase.from("suggestions").update({
+      await supabaseAdmin.from("suggestions").update({
         status: "implemented" as SuggestionStatus,
         completed_at: new Date().toISOString(),
       }).eq("id", data.suggestion_id);
-      await insertHistory(supabase, data.suggestion_id, sug?.status ?? null, "implemented", userId, data.remarks ?? null);
+      await insertHistory(supabaseAdmin, data.suggestion_id, sug?.status ?? null, "implemented", userId, data.remarks ?? "Marked implemented");
       await notifyForSuggestion({ suggestion_id: data.suggestion_id, title: "Your suggestion is implemented 🎉", body: data.remarks ?? undefined, event_type: "verification", audience: ["submitter", "current_dept"] });
     } else {
       // Fake closure - return to concern department
-      await supabase.from("suggestions").update({
+      await supabaseAdmin.from("suggestions").update({
         status: "fake_closure" as SuggestionStatus,
       }).eq("id", data.suggestion_id);
-      await insertHistory(supabase, data.suggestion_id, sug?.status ?? null, "fake_closure", userId, data.remarks ?? null);
+      await insertHistory(supabaseAdmin, data.suggestion_id, sug?.status ?? null, "fake_closure", userId, data.remarks ?? "Marked fake closure");
       await notifyForSuggestion({ suggestion_id: data.suggestion_id, title: "Evidence flagged as fake closure — please re-check", body: data.remarks ?? undefined, event_type: "verification", audience: ["current_dept", "submitter"] });
     }
     return { ok: true };
