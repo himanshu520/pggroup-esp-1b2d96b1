@@ -67,12 +67,16 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
       if (r.role === "super_admin" || r.role === "corporate_admin") {
         return;
       }
-      if (r.role === "location_admin" && r.location_id) {
+      if ((r.role === "location_admin" || r.role === "admin") && r.location_id) {
         ids.add(r.location_id);
+      }
+      if (r.plant_id) {
+        const plant = plants.find((p: any) => p.id === r.plant_id);
+        if (plant?.location_id) ids.add(plant.location_id);
       }
     });
     return ids;
-  }, [sess?.roles]);
+  }, [sess?.roles, plants]);
 
   const accessiblePlantIds = useMemo(() => {
     if (!sess?.roles) return new Set<string>();
@@ -81,7 +85,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
       if (r.role === "super_admin" || r.role === "corporate_admin") {
         return;
       }
-      if (r.role === "location_admin" && r.location_id) {
+      if ((r.role === "location_admin" || r.role === "admin") && r.location_id) {
         // Add all plants in this location
         plants.forEach((p: any) => {
           if (p.location_id === r.location_id) ids.add(p.id);
@@ -272,6 +276,14 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
       });
     }
 
+    // Dropdown filters (Location and Plant)
+    if (locationId !== "all") {
+      list = list.filter((d: any) => d.location_id === locationId);
+    }
+    if (plantId !== "all") {
+      list = list.filter((d: any) => d.plant_id === plantId);
+    }
+
     const calculated = list.map((d: any) => {
       const total = Number(d.total_suggestions ?? 0);
       const implemented = Number(d.implemented_suggestions ?? 0);
@@ -304,7 +316,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
 
     // Sort descending by score
     return calculated.sort((a, b) => b.score - a.score);
-  }, [deptLeaderboardRaw, scoringRules, isGlobal, sess?.roles, departments, plants, locations, accessibleLocationIds, accessiblePlantIds]);
+  }, [deptLeaderboardRaw, scoringRules, isGlobal, sess?.roles, departments, plants, locations, accessibleLocationIds, accessiblePlantIds, locationId, plantId]);
 
   // Calculate scores & badges for Employees
   const empLeaderboard = useMemo(() => {
@@ -315,6 +327,17 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
       list = list.filter((e: any) => {
         return accessiblePlantIds.has(e.plant_id) || accessibleLocationIds.has(e.location_id);
       });
+    }
+
+    // Dropdown filters (Location, Plant, and Department)
+    if (locationId !== "all") {
+      list = list.filter((e: any) => e.location_id === locationId);
+    }
+    if (plantId !== "all") {
+      list = list.filter((e: any) => e.plant_id === plantId);
+    }
+    if (deptFilterId !== "all") {
+      list = list.filter((e: any) => e.department_id === deptFilterId);
     }
 
     const calculated = list.map((e: any) => {
@@ -332,7 +355,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
 
     // Sort descending by score
     return calculated.sort((a, b) => b.score - a.score);
-  }, [empLeaderboardRaw, isGlobal, sess?.roles, accessibleLocationIds, accessiblePlantIds]);
+  }, [empLeaderboardRaw, isGlobal, sess?.roles, accessibleLocationIds, accessiblePlantIds, locationId, plantId, deptFilterId]);
 
   const showBestSuggestion = useMemo(() => {
     if (!bestSuggestion) return false;
