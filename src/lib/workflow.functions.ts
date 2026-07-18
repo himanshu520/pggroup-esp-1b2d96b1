@@ -96,6 +96,54 @@ export const peRejectSuggestion = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// PE rejects a return claim and sends the suggestion back to the department that returned it
+export const peRejectReturn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      suggestion_id: z.string().uuid(),
+      remarks: z.string().max(2000).optional(),
+    }).parse(d)
+  )
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const { data: sug, error } = await supabase.from("suggestions").select("id,status,current_department_id").eq("id", data.suggestion_id).single();
+    if (error || !sug) throw new Error("Suggestion not found");
+
+    // Fetch the last history record where the suggestion was returned to PE
+    const { data: lastReturn } = await supabase
+      .from("suggestion_history")
+      .select("from_department_id")
+      .eq("suggestion_id", data.suggestion_id)
+      .eq("to_status", "pe_review" as SuggestionStatus)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const targetDeptId = lastReturn?.from_department_id || sug.current_department_id;
+    if (!targetDeptId) throw new Error("Could not find the department to return this suggestion to");
+
+    const { error: uErr } = await supabase.from("suggestions").update({
+      current_department_id: targetDeptId,
+      status: "dept_review" as SuggestionStatus,
+    }).eq("id", data.suggestion_id);
+    if (uErr) throw new Error(uErr.message);
+
+    await insertHistory(supabase, data.suggestion_id, sug.status, "dept_review", userId, data.remarks ?? "Return rejected by PE", null, targetDeptId);
+
+    const { notifyForSuggestion } = await import("./notify.server");
+    await notifyForSuggestion({
+      suggestion_id: data.suggestion_id,
+      title: "Returned suggestion sent back to your department",
+      body: data.remarks ?? undefined,
+      event_type: "transfer",
+      audience: ["target_dept", "submitter"],
+      target_department_id: targetDeptId,
+    });
+
+    return { ok: true };
+  });
+
 // Department approves (moves to evaluation/implementation) or rejects
 export const deptDecide = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

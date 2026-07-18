@@ -12,7 +12,7 @@ import { useSession, isSuggestionAccessible } from "@/lib/session";
 import { STATUS_LABEL, getHistoryActionText } from "@/lib/statuses";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { peTransferSuggestion, peRejectSuggestion, deptDecide, deptStartImplementation, deptSubmitEvidence, peVerify } from "@/lib/workflow.functions";
+import { peTransferSuggestion, peRejectSuggestion, deptDecide, deptStartImplementation, deptSubmitEvidence, peVerify, peRejectReturn } from "@/lib/workflow.functions";
 import { toast } from "sonner";
 import { Send, ThumbsUp, ThumbsDown, PlayCircle, Upload, Check, AlertTriangle, Loader2, Paperclip, X, FileText, History } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -83,6 +83,7 @@ export function SuggestionDetail({ id }: { id: string }) {
 
   const transferFn = useServerFn(peTransferSuggestion);
   const rejectPEFn = useServerFn(peRejectSuggestion);
+  const rejectReturnFn = useServerFn(peRejectReturn);
   const decideFn = useServerFn(deptDecide);
   const startFn = useServerFn(deptStartImplementation);
   const evidenceFn = useServerFn(deptSubmitEvidence);
@@ -99,6 +100,8 @@ export function SuggestionDetail({ id }: { id: string }) {
   const [isPending, setIsPending] = useState(false);
   const [peApproved, setPeApproved] = useState(false);
   const [peBudgetTier, setPeBudgetTier] = useState("");
+  const [showNotRelatedForm, setShowNotRelatedForm] = useState(false);
+  const [suggestedDeptId, setSuggestedDeptId] = useState("");
 
   // Accepted evidence file types
   const ACCEPTED_EXT = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv", ".mp4", ".mov"];
@@ -267,6 +270,48 @@ export function SuggestionDetail({ id }: { id: string }) {
   ) || session?.primaryRole === "super_admin" || session?.primaryRole === "corporate_admin";
   const status = sug.status;
 
+  // Find if this suggestion was returned to PE
+  const lastReturnHistory = [...history]
+    .reverse()
+    .find((h: any) => h.to_status === "pe_review" && (h.from_status === "dept_review" || h.from_status === "transferred"));
+
+  let returnFromDeptName = "";
+  let returnFromDeptId = "";
+  let returnSuggestedDeptId = "";
+  let returnSuggestedDeptName = "";
+  let returnRemarks = "";
+
+  if (lastReturnHistory) {
+    returnFromDeptId = lastReturnHistory.from_department_id;
+    returnFromDeptName = lastReturnHistory.from_dept?.name || "Unknown Department";
+    returnRemarks = lastReturnHistory.remarks || "";
+    if (lastReturnHistory.remarks?.startsWith("REJECT_SUGGESTED_DEPT:")) {
+      const match = lastReturnHistory.remarks.match(/^REJECT_SUGGESTED_DEPT:([^|]*)\|(.*)$/);
+      if (match) {
+        returnSuggestedDeptId = match[1];
+        returnRemarks = match[2];
+        const suggestedDept = departments.find((d: any) => d.id === returnSuggestedDeptId);
+        returnSuggestedDeptName = suggestedDept?.name || "Unknown Department";
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (sug) {
+      if (sug.budget_tier) {
+        setPeBudgetTier(sug.budget_tier);
+        setPeApproved(true);
+      }
+    }
+  }, [sug]);
+
+  // Pre-populate targetDept with the suggested department if it's a returned suggestion
+  useEffect(() => {
+    if (returnSuggestedDeptId) {
+      setTargetDept(returnSuggestedDeptId);
+    }
+  }, [returnSuggestedDeptId]);
+
   return (
     <AppShell navGroups={ADMIN_NAV} title="Admin Console">
       <PageHeader
@@ -310,18 +355,52 @@ export function SuggestionDetail({ id }: { id: string }) {
             {isPE && (status === "submitted" || status === "pe_review") && (
               <div className="space-y-3">
                 <div className="text-xs text-muted-foreground">PE — Initial Review</div>
+                
+                {lastReturnHistory && (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-2 max-w-xl">
+                    <div className="text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      Returned by {returnFromDeptName}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      <span className="font-semibold text-foreground">Reason: </span>
+                      {returnRemarks || "No remarks provided"}
+                    </div>
+                    {returnSuggestedDeptName && (
+                      <div className="text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground">Suggested Department: </span>
+                        {returnSuggestedDeptName}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {!peApproved ? (
                   <div className="space-y-2">
                     <Textarea placeholder="Remarks (optional)" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="max-w-lg" disabled={isPending} />
                     <div className="flex gap-2">
                       <Button disabled={isPending} onClick={() => setPeApproved(true)}>
-                        <ThumbsUp className="w-4 h-4" />
-                        Approve
+                        <ThumbsUp className="w-4 h-4 mr-1" />
+                        {lastReturnHistory ? "Approve Return" : "Approve"}
                       </Button>
-                      <Button variant="destructive" disabled={isPending} onClick={() => run(() => rejectPEFn({ data: { suggestion_id: id, remarks } }), "Rejected suggestion")}>
-                        {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
-                        Reject
-                      </Button>
+                      
+                      {lastReturnHistory ? (
+                        <Button variant="destructive" disabled={isPending} onClick={() => {
+                          if (!remarks.trim()) {
+                            toast.error("Please enter remarks/reason why you are rejecting the return");
+                            return;
+                          }
+                          run(() => rejectReturnFn({ data: { suggestion_id: id, remarks } }), "Returned suggestion to department");
+                        }}>
+                          {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4 mr-1" />}
+                          Reject Return (Send Back)
+                        </Button>
+                      ) : (
+                        <Button variant="destructive" disabled={isPending} onClick={() => run(() => rejectPEFn({ data: { suggestion_id: id, remarks } }), "Rejected suggestion")}>
+                          {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4 mr-1" />}
+                          Reject
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -376,35 +455,74 @@ export function SuggestionDetail({ id }: { id: string }) {
             )}
 
             {isCurrentDept && (status === "dept_review" || status === "transferred") && (
-              <div className="space-y-2">
-                <div className="text-xs text-muted-foreground">Department — Decide</div>
-                <Textarea placeholder="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="max-w-lg" disabled={isPending} />
-                <div className="flex flex-wrap gap-2">
-                  <Button disabled={isPending} onClick={() => run(() => decideFn({ data: { suggestion_id: id, decision: "approve", remarks } }), "Approved")}>
-                    {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsUp className="w-4 h-4" />}
-                    Approve
-                  </Button>
-                  <Button variant="destructive" disabled={isPending} onClick={() => {
-                    if (!remarks.trim()) {
-                      toast.error("Please enter remarks/reason for rejection");
-                      return;
-                    }
-                    run(() => decideFn({ data: { suggestion_id: id, decision: "reject", remarks } }), "Rejected");
-                  }}>
-                    {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
-                    Reject
-                  </Button>
-                  <Button variant="outline" className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30" disabled={isPending} onClick={() => {
-                    if (!remarks.trim()) {
-                      toast.error("Please enter remarks/reason why this suggestion is not related to your department");
-                      return;
-                    }
-                    run(() => decideFn({ data: { suggestion_id: id, decision: "not_related", remarks } }), "Returned to PE");
-                  }}>
-                    {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
-                    Not related to my department
-                  </Button>
-                </div>
+              <div className="space-y-3">
+                <div className="text-xs text-muted-foreground font-semibold">Department — Decide</div>
+                
+                {!showNotRelatedForm ? (
+                  <div className="space-y-2">
+                    <Textarea placeholder="Remarks" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="max-w-lg" disabled={isPending} />
+                    <div className="flex flex-wrap gap-2">
+                      <Button disabled={isPending} onClick={() => run(() => decideFn({ data: { suggestion_id: id, decision: "approve", remarks } }), "Approved")}>
+                        {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsUp className="w-4 h-4" />}
+                        Approve
+                      </Button>
+                      <Button variant="destructive" disabled={isPending} onClick={() => {
+                        if (!remarks.trim()) {
+                          toast.error("Please enter remarks/reason for rejection");
+                          return;
+                        }
+                        run(() => decideFn({ data: { suggestion_id: id, decision: "reject", remarks } }), "Rejected");
+                      }}>
+                        {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
+                        Reject
+                      </Button>
+                      <Button variant="outline" className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30" disabled={isPending} onClick={() => setShowNotRelatedForm(true)}>
+                        <X className="w-4 h-4 mr-1" />
+                        Not related to my department
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-border p-4 bg-muted/20 space-y-3 max-w-lg">
+                    <div className="text-xs font-semibold text-foreground">Return suggestion to PE (Not related)</div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-medium text-muted-foreground">Select suggested related department <span className="text-destructive">*</span></label>
+                      <Select value={suggestedDeptId} onValueChange={setSuggestedDeptId} disabled={isPending}>
+                        <SelectTrigger className="w-full bg-background"><SelectValue placeholder="Select suggested department" /></SelectTrigger>
+                        <SelectContent>
+                          {departments
+                            .filter((d: any) => d.id !== sug.current_department_id) // Exclude current department
+                            .map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-medium text-muted-foreground font-semibold">Remarks / Reason why this is not related <span className="text-destructive">*</span></label>
+                      <Textarea placeholder="Explain why this suggestion does not belong to your department..." value={remarks} onChange={(e) => setRemarks(e.target.value)} className="bg-background min-h-[80px]" disabled={isPending} />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="destructive" size="sm" disabled={isPending} onClick={() => {
+                        if (!suggestedDeptId) {
+                          toast.error("Please select a suggested related department");
+                          return;
+                        }
+                        if (!remarks.trim()) {
+                          toast.error("Please enter remarks/reason why this is not related");
+                          return;
+                        }
+                        const payloadRemarks = `REJECT_SUGGESTED_DEPT:${suggestedDeptId}|${remarks}`;
+                        run(() => decideFn({ data: { suggestion_id: id, decision: "not_related", remarks: payloadRemarks } }), "Returned to PE");
+                        setShowNotRelatedForm(false);
+                        setSuggestedDeptId("");
+                      }}>
+                        Submit to PE
+                      </Button>
+                      <Button variant="ghost" size="sm" disabled={isPending} onClick={() => { setShowNotRelatedForm(false); setSuggestedDeptId(""); }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
