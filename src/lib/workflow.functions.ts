@@ -33,6 +33,15 @@ async function insertHistory(
   });
 }
 
+async function requireAnyRole(supabase: any, userId: string, allowedRoles: string[]) {
+  const { data } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId);
+  const hasAllowed = (data ?? []).some((r: any) => allowedRoles.includes(r.role));
+  if (!hasAllowed) throw new Error("Permission denied: Unauthorized role.");
+}
+
 // PE transfers a submitted suggestion to a target department (concern department)
 export const peTransferSuggestion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -46,6 +55,7 @@ export const peTransferSuggestion = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    await requireAnyRole(supabase, userId, ["pe_user", "super_admin", "corporate_admin"]);
     const { data: sug, error } = await supabase.from("suggestions").select("id,status,current_department_id").eq("id", data.suggestion_id).single();
     if (error || !sug) throw new Error("Suggestion not found");
     const { error: uErr } = await supabase.from("suggestions").update({
@@ -78,6 +88,7 @@ export const peRejectSuggestion = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    await requireAnyRole(supabase, userId, ["pe_user", "super_admin", "corporate_admin"]);
     const { data: sug, error } = await supabase.from("suggestions").select("id,status").eq("id", data.suggestion_id).single();
     if (error || !sug) throw new Error("Suggestion not found");
     const { error: uErr } = await supabase.from("suggestions").update({
@@ -107,6 +118,7 @@ export const peRejectReturn = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    await requireAnyRole(supabase, userId, ["pe_user", "super_admin", "corporate_admin"]);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: sug, error } = await supabase.from("suggestions").select("id,status,current_department_id").eq("id", data.suggestion_id).single();
     if (error || !sug) throw new Error("Suggestion not found");
@@ -158,6 +170,7 @@ export const deptDecide = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    await requireAnyRole(supabase, userId, ["department_admin", "dept_user", "super_admin", "corporate_admin"]);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: sug } = await supabase.from("suggestions").select("status,current_department_id").eq("id", data.suggestion_id).single();
     if (!sug) throw new Error("Not found");
@@ -212,6 +225,7 @@ export const deptStartImplementation = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ suggestion_id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    await requireAnyRole(supabase, userId, ["department_admin", "dept_user", "super_admin", "corporate_admin"]);
     const { data: sug } = await supabase.from("suggestions").select("status").eq("id", data.suggestion_id).single();
     await supabase.from("suggestions").update({ status: "implementation" as SuggestionStatus }).eq("id", data.suggestion_id);
     await insertHistory(supabase, data.suggestion_id, sug?.status ?? null, "implementation", userId, null);
@@ -234,6 +248,7 @@ export const deptSubmitEvidence = createServerFn({ method: "POST" })
   }).parse(d))
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    await requireAnyRole(supabase, userId, ["department_admin", "dept_user", "super_admin", "corporate_admin"]);
     const { data: sug } = await supabase.from("suggestions").select("status").eq("id", data.suggestion_id).single();
 
     // Compute next version
@@ -316,6 +331,7 @@ export const peVerify = createServerFn({ method: "POST" })
   }).parse(d))
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
+    await requireAnyRole(supabase, userId, ["pe_user", "super_admin", "corporate_admin"]);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: sug } = await supabase.from("suggestions").select("status").eq("id", data.suggestion_id).single();
     const { notifyForSuggestion } = await import("./notify.server");
