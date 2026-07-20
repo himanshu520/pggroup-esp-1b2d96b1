@@ -960,9 +960,6 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
                       <span className="text-muted-foreground">
                         Implemented: {bestSuggestion.suggestions?.completed_at ? new Date(bestSuggestion.suggestions.completed_at).toLocaleDateString() : "—"}
                       </span>
-                      <span className="text-amber-500 font-semibold flex items-center gap-0.5">
-                        <Star className="w-3 h-3 fill-amber-500" /> Super Admin Selected
-                      </span>
                     </div>
                   </div>
 
