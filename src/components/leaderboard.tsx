@@ -946,7 +946,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
                 <div className="flex flex-col md:flex-row gap-6 md:items-start justify-between">
                   <div className="space-y-3 flex-1 min-w-0">
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs bg-amber-500 text-white font-bold shadow-sm">
-                      <Trophy className="w-3.5 h-3.5 animate-spin" />
+                      <Trophy className="w-3.5 h-3.5" />
                       Best Suggestion of the Month: {MONTHS[selectedMonth - 1]} {selectedYear}
                     </div>
 
