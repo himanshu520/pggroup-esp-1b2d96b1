@@ -199,7 +199,7 @@ export function SubmitForm() {
 
       await supabase.from("suggestion_history").insert({
         suggestion_id: inserted.id,
-        from_status: "submitted",
+        from_status: null,
         to_status: "pe_review",
         actor_id: session?.userId,
         remarks: "Submitted by employee",

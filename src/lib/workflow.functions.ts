@@ -58,13 +58,13 @@ export const peTransferSuggestion = createServerFn({ method: "POST" })
     await requireAnyRole(supabase, userId, ["pe_user", "super_admin", "corporate_admin"]);
     const { data: sug, error } = await supabase.from("suggestions").select("id,status,current_department_id").eq("id", data.suggestion_id).single();
     if (error || !sug) throw new Error("Suggestion not found");
+    await insertHistory(supabase, data.suggestion_id, sug.status, "dept_review", userId, data.remarks ?? null, sug.current_department_id, data.target_department_id);
     const { error: uErr } = await supabase.from("suggestions").update({
       current_department_id: data.target_department_id,
       status: "dept_review" satisfies SuggestionStatus,
       budget_tier: data.budget_tier,
     }).eq("id", data.suggestion_id);
     if (uErr) throw new Error(uErr.message);
-    await insertHistory(supabase, data.suggestion_id, sug.status, "dept_review", userId, data.remarks ?? null, sug.current_department_id, data.target_department_id);
     const { notifyForSuggestion } = await import("./notify.server");
     await notifyForSuggestion({
       suggestion_id: data.suggestion_id,
@@ -91,11 +91,11 @@ export const peRejectSuggestion = createServerFn({ method: "POST" })
     await requireAnyRole(supabase, userId, ["pe_user", "super_admin", "corporate_admin"]);
     const { data: sug, error } = await supabase.from("suggestions").select("id,status").eq("id", data.suggestion_id).single();
     if (error || !sug) throw new Error("Suggestion not found");
+    await insertHistory(supabase, data.suggestion_id, sug.status, "rejected", userId, data.remarks ?? null);
     const { error: uErr } = await supabase.from("suggestions").update({
       status: "rejected" satisfies SuggestionStatus,
     }).eq("id", data.suggestion_id);
     if (uErr) throw new Error(uErr.message);
-    await insertHistory(supabase, data.suggestion_id, sug.status, "rejected", userId, data.remarks ?? null);
     const { notifyForSuggestion } = await import("./notify.server");
     await notifyForSuggestion({
       suggestion_id: data.suggestion_id,
@@ -136,13 +136,13 @@ export const peRejectReturn = createServerFn({ method: "POST" })
     const targetDeptId = lastReturn?.from_department_id || sug.current_department_id;
     if (!targetDeptId) throw new Error("Could not find the department to return this suggestion to");
 
+    await insertHistory(supabaseAdmin, data.suggestion_id, sug.status, "dept_review", userId, data.remarks ?? "Return rejected by PE", null, targetDeptId);
+
     const { error: uErr } = await supabaseAdmin.from("suggestions").update({
       current_department_id: targetDeptId,
       status: "dept_review" as SuggestionStatus,
     }).eq("id", data.suggestion_id);
     if (uErr) throw new Error(uErr.message);
-
-    await insertHistory(supabaseAdmin, data.suggestion_id, sug.status, "dept_review", userId, data.remarks ?? "Return rejected by PE", null, targetDeptId);
 
     const { notifyForSuggestion } = await import("./notify.server");
     await notifyForSuggestion({
@@ -181,19 +181,19 @@ export const deptDecide = createServerFn({ method: "POST" })
     }
 
     if (data.decision === "approve") {
-      await supabaseAdmin.from("suggestions").update({ status: "approved" as SuggestionStatus }).eq("id", data.suggestion_id);
       await insertHistory(supabaseAdmin, data.suggestion_id, sug.status, "approved", userId, data.remarks ?? null);
+      await supabaseAdmin.from("suggestions").update({ status: "approved" as SuggestionStatus }).eq("id", data.suggestion_id);
       await notifyForSuggestion({ suggestion_id: data.suggestion_id, title: "Your suggestion was approved", body: data.remarks ?? undefined, event_type: "approve", audience: ["submitter", "pe"] });
     } else if (data.decision === "reject") {
-      await supabaseAdmin.from("suggestions").update({ status: "pe_review" as SuggestionStatus }).eq("id", data.suggestion_id);
       await insertHistory(supabaseAdmin, data.suggestion_id, sug.status, "pe_review", userId, data.remarks ?? null, sug.current_department_id);
+      await supabaseAdmin.from("suggestions").update({ status: "pe_review" as SuggestionStatus }).eq("id", data.suggestion_id);
       await notifyForSuggestion({ suggestion_id: data.suggestion_id, title: "Your suggestion was rejected by the department", body: data.remarks ?? undefined, event_type: "reject", audience: ["submitter", "pe"] });
     } else if (data.decision === "not_related") {
+      await insertHistory(supabaseAdmin, data.suggestion_id, sug.status, "pe_review", userId, data.remarks ?? "Not related to department", sug.current_department_id);
       await supabaseAdmin.from("suggestions").update({
         status: "pe_review" as SuggestionStatus,
         current_department_id: null,
       }).eq("id", data.suggestion_id);
-      await insertHistory(supabaseAdmin, data.suggestion_id, sug.status, "pe_review", userId, data.remarks ?? "Not related to department", sug.current_department_id);
       await notifyForSuggestion({
         suggestion_id: data.suggestion_id,
         title: "Suggestion returned to PE (Not related to department)",
@@ -203,11 +203,11 @@ export const deptDecide = createServerFn({ method: "POST" })
       });
     } else {
       if (!data.target_department_id) throw new Error("target_department_id required");
+      await insertHistory(supabaseAdmin, data.suggestion_id, sug.status, "transferred", userId, data.remarks ?? null, sug.current_department_id, data.target_department_id);
       await supabaseAdmin.from("suggestions").update({
         current_department_id: data.target_department_id,
         status: "transferred" as SuggestionStatus,
       }).eq("id", data.suggestion_id);
-      await insertHistory(supabaseAdmin, data.suggestion_id, sug.status, "transferred", userId, data.remarks ?? null, sug.current_department_id, data.target_department_id);
       await notifyForSuggestion({
         suggestion_id: data.suggestion_id,
         title: "Suggestion transferred to your department",
@@ -227,8 +227,8 @@ export const deptStartImplementation = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await requireAnyRole(supabase, userId, ["department_admin", "dept_user", "super_admin", "corporate_admin"]);
     const { data: sug } = await supabase.from("suggestions").select("status").eq("id", data.suggestion_id).single();
-    await supabase.from("suggestions").update({ status: "implementation" as SuggestionStatus }).eq("id", data.suggestion_id);
     await insertHistory(supabase, data.suggestion_id, sug?.status ?? null, "implementation", userId, null);
+    await supabase.from("suggestions").update({ status: "implementation" as SuggestionStatus }).eq("id", data.suggestion_id);
     const { notifyForSuggestion } = await import("./notify.server");
     await notifyForSuggestion({ suggestion_id: data.suggestion_id, title: "Implementation started", event_type: "transfer", audience: ["submitter", "pe"] });
     return { ok: true };
@@ -279,6 +279,15 @@ export const deptSubmitEvidence = createServerFn({ method: "POST" })
         .in("id", data.attachment_ids);
     }
 
+    await insertHistory(
+      supabase,
+      data.suggestion_id,
+      sug?.status ?? null,
+      "pe_verification",
+      userId,
+      `Evidence v${nextVersion} submitted${data.remarks ? ` — ${data.remarks}` : ""}${data.file_names?.length ? ` (${data.file_names.length} file${data.file_names.length > 1 ? "s" : ""})` : ""}`,
+    );
+
     await supabase.from("suggestions").update({
       status: "pe_verification" as SuggestionStatus,
       actual_cost: data.actual_cost ?? null,
@@ -300,14 +309,6 @@ export const deptSubmitEvidence = createServerFn({ method: "POST" })
       },
     });
 
-    await insertHistory(
-      supabase,
-      data.suggestion_id,
-      sug?.status ?? null,
-      "pe_verification",
-      userId,
-      `Evidence v${nextVersion} submitted${data.remarks ? ` — ${data.remarks}` : ""}${data.file_names?.length ? ` (${data.file_names.length} file${data.file_names.length > 1 ? "s" : ""})` : ""}`,
-    );
     const { notifyForSuggestion } = await import("./notify.server");
     await notifyForSuggestion({
       suggestion_id: data.suggestion_id,
@@ -363,18 +364,18 @@ export const peVerify = createServerFn({ method: "POST" })
     }
 
     if (data.outcome === "implemented") {
+      await insertHistory(supabaseAdmin, data.suggestion_id, sug?.status ?? null, "implemented", userId, data.remarks ?? "Marked implemented");
       await supabaseAdmin.from("suggestions").update({
         status: "implemented" as SuggestionStatus,
         completed_at: new Date().toISOString(),
       }).eq("id", data.suggestion_id);
-      await insertHistory(supabaseAdmin, data.suggestion_id, sug?.status ?? null, "implemented", userId, data.remarks ?? "Marked implemented");
       await notifyForSuggestion({ suggestion_id: data.suggestion_id, title: "Your suggestion is implemented 🎉", body: data.remarks ?? undefined, event_type: "verification", audience: ["submitter", "current_dept"] });
     } else {
       // Fake closure - return to concern department
+      await insertHistory(supabaseAdmin, data.suggestion_id, sug?.status ?? null, "fake_closure", userId, data.remarks ?? "Marked fake closure");
       await supabaseAdmin.from("suggestions").update({
         status: "fake_closure" as SuggestionStatus,
       }).eq("id", data.suggestion_id);
-      await insertHistory(supabaseAdmin, data.suggestion_id, sug?.status ?? null, "fake_closure", userId, data.remarks ?? "Marked fake closure");
       await notifyForSuggestion({ suggestion_id: data.suggestion_id, title: "Evidence flagged as fake closure — please re-check", body: data.remarks ?? undefined, event_type: "verification", audience: ["current_dept", "submitter"] });
     }
     return { ok: true };

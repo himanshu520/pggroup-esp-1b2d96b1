@@ -115,6 +115,9 @@ export function getHistoryActionText(h: {
       if (fromStatus === "dept_review" || fromStatus === "transferred") {
         return `Returned to PE Review (Rejected / Not related by ${fromDept || "department"})`;
       }
+      if (!fromStatus) {
+        return "Suggestion Submitted & Sent to PE Review";
+      }
       return "PE Review Pending";
     case "transferred":
     case "dept_review":
