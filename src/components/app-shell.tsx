@@ -175,8 +175,10 @@ function AppShellInner({
           .filter((g) => g.label !== "Administration" || session?.primaryRole === "super_admin")
           .map((g, gi) => (
           <div key={gi}>
-            {g.label && (!collapsible || !collapsed) && (
-              <div className="px-2.5 pb-2 text-[10px] font-bold uppercase tracking-wider text-sidebar-foreground/50">{g.label}</div>
+            {g.label && (
+              <div className={cn("px-2.5 pb-2 text-[10px] font-bold uppercase tracking-wider text-sidebar-foreground/50", collapsible && collapsed && "lg:hidden")}>
+                {g.label}
+              </div>
             )}
             <div className="space-y-1">
               {g.items.map((item) => {
@@ -192,7 +194,6 @@ function AppShellInner({
                   ? pathActive && (item.section ?? undefined) === (currentSection ?? undefined)
                   : pathActive;
                 const Icon = item.icon;
-                const showLabel = !collapsible || !collapsed;
                 return (
                   <Link
                     key={item.to + ":" + (item.section ?? "")}
@@ -207,7 +208,7 @@ function AppShellInner({
                     )}
                   >
                     <Icon className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
-                    {showLabel && <span className="truncate">{item.label}</span>}
+                    <span className={cn("truncate", collapsible && collapsed && "lg:hidden")}>{item.label}</span>
                   </Link>
                 );
               })}
