@@ -101,9 +101,23 @@ export function SuggestionDetail({ id }: { id: string }) {
   const verifyFn = useServerFn(peVerify);
   const selectBestFn = useServerFn(selectBestSuggestion);
 
+  const { data: existingBestList = [] } = useQuery({
+    enabled: validId,
+    queryKey: ["best-suggestion-for-id", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("best_suggestions" as any)
+        .select("*")
+        .eq("suggestion_id", id!);
+      return (data as any[]) ?? [];
+    },
+  });
+
+  const [bestCategory, setBestCategory] = useState<"month" | "year" | "foolproofing">("month");
   const [bestMonth, setBestMonth] = useState(new Date().getMonth() + 1);
   const [bestYear, setBestYear] = useState(new Date().getFullYear());
   const [bestReason, setBestReason] = useState("");
+  const [isEditingBest, setIsEditingBest] = useState(false);
 
   const [remarks, setRemarks] = useState("");
   const [targetDept, setTargetDept] = useState("");
@@ -330,20 +344,42 @@ export function SuggestionDetail({ id }: { id: string }) {
   }
 
 
-  async function submitBestSuggestion() {
+  function startEditBest(existing?: any) {
+    if (existing) {
+      setBestCategory(existing.category || "month");
+      setBestMonth(existing.month || new Date().getMonth() + 1);
+      setBestYear(existing.year || new Date().getFullYear());
+      setBestReason(existing.selection_reason || "");
+    }
+    setIsEditingBest(true);
+  }
+
+  async function handleBestSuggestionSubmit(remove = false) {
     if (isPending) return;
     setIsPending(true);
     try {
-      await selectBestFn({ data: {
-        suggestion_id: id,
-        month: bestMonth,
-        year: bestYear,
-        reason: bestReason || undefined
-      } });
-      toast.success("Successfully selected as Best Suggestion of the Month!");
-      setBestReason("");
+      await selectBestFn({
+        data: {
+          suggestion_id: id,
+          category: bestCategory,
+          month: bestMonth,
+          year: bestYear,
+          reason: bestReason || undefined,
+          remove,
+        },
+      });
+      if (remove) {
+        toast.success("Best Suggestion recognition removed");
+      } else {
+        toast.success("Best Suggestion selection saved successfully!");
+      }
+      setIsEditingBest(false);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["best-suggestion-for-id", id] }),
+        qc.invalidateQueries({ queryKey: ["best-suggestion-of-month"] }),
+      ]);
     } catch (e: any) {
-      toast.error(e.message ?? "Failed to mark as best suggestion");
+      toast.error(e.message ?? "Failed to save best suggestion");
     } finally {
       setIsPending(false);
     }
@@ -758,51 +794,138 @@ export function SuggestionDetail({ id }: { id: string }) {
                 <div className="text-sm text-muted-foreground">This suggestion is closed — no further actions.</div>
                 
                 {(session?.primaryRole === "super_admin" || session?.primaryRole === "admin") && status === "implemented" && (
-                  <div className="rounded-lg border-2 border-amber-500 bg-amber-500/5 p-4 space-y-3 max-w-lg">
-                    <div className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                      <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                      Best Suggestion Selection
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      Feature this suggestion as the <strong>Best Suggestion of the Month</strong>.
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <div className="flex gap-2">
-                        <select 
-                          value={bestMonth} 
-                          onChange={(e) => setBestMonth(Number(e.target.value))}
-                          className="h-9 rounded border border-border bg-background px-2 text-xs font-semibold"
-                        >
-                          {MONTHS.map((m, idx) => (
-                            <option key={m} value={idx + 1}>{m}</option>
-                          ))}
-                        </select>
-                        <select 
-                          value={bestYear} 
-                          onChange={(e) => setBestYear(Number(e.target.value))}
-                          className="h-9 rounded border border-border bg-background px-2 text-xs font-semibold"
-                        >
-                          {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1].map((y) => (
-                            <option key={y} value={y}>{y}</option>
-                          ))}
-                        </select>
+                  <div className="rounded-xl border-2 border-amber-500/60 bg-gradient-to-r from-amber-500/10 via-background to-amber-500/5 p-5 space-y-4 max-w-xl shadow-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                        <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+                        Recognition & Best Suggestion Selection
                       </div>
-                      <Textarea 
-                        placeholder="Reason/remarks for selection (optional)" 
-                        value={bestReason} 
-                        onChange={(e) => setBestReason(e.target.value)}
-                        className="text-xs h-16"
-                      />
-                      <Button 
-                        size="sm" 
-                        className="bg-amber-500 hover:bg-amber-600 text-white font-bold"
-                        onClick={submitBestSuggestion}
-                        disabled={isPending}
-                      >
-                        {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Trophy className="w-3.5 h-3.5 mr-1.5" />}
-                        Mark as Best Suggestion
-                      </Button>
+                      {existingBestList.length > 0 && !isEditingBest && (
+                        <Button size="sm" variant="outline" className="h-7 text-xs border-amber-500/50 hover:bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold" onClick={() => startEditBest(existingBestList[0])}>
+                          Edit Selection
+                        </Button>
+                      )}
                     </div>
+
+                    {existingBestList.length > 0 && !isEditingBest ? (
+                      <div className="space-y-3 border-t border-amber-500/20 pt-3">
+                        <div className="text-xs font-medium text-muted-foreground">This suggestion is selected for organizational recognition:</div>
+                        <div className="space-y-2">
+                          {existingBestList.map((item: any) => {
+                            const cat = item.category || "month";
+                            const catLabel = cat === "year" ? "Best Suggestion of the Year" : cat === "foolproofing" ? "Best Foolproofing Suggestion" : "Best Suggestion of the Month";
+                            const icon = cat === "year" ? <Trophy className="w-3.5 h-3.5" /> : cat === "foolproofing" ? <Check className="w-3.5 h-3.5" /> : <Star className="w-3.5 h-3.5" />;
+                            return (
+                              <div key={item.id} className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 space-y-1.5">
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-white shadow-sm">
+                                  {icon}
+                                  {catLabel}: {cat === "year" ? item.year : `${MONTHS[item.month - 1]} ${item.year}`}
+                                </div>
+                                {item.selection_reason && (
+                                  <div className="text-xs text-foreground/90 italic">
+                                    "{item.selection_reason}"
+                                  </div>
+                                )}
+                                <div className="text-[10px] text-muted-foreground pt-0.5">
+                                  Selected on {new Date(item.created_at).toLocaleDateString()}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 border-t border-amber-500/20 pt-3">
+                        <div className="text-xs text-muted-foreground">
+                          {existingBestList.length > 0 ? "Edit or update the recognition award for this suggestion:" : "Feature this suggestion under organizational recognition categories:"}
+                        </div>
+                        <div className="flex flex-col gap-3">
+                          <div className="space-y-1">
+                            <label className="text-xs font-semibold">Award Category</label>
+                            <select
+                              value={bestCategory}
+                              onChange={(e) => setBestCategory(e.target.value as any)}
+                              className="w-full h-9 rounded border border-border bg-background px-2.5 text-xs font-semibold"
+                            >
+                              <option value="month">🏆 Best Suggestion of the Month</option>
+                              <option value="year">🎖️ Best Suggestion of the Year</option>
+                              <option value="foolproofing">🛡️ Best Foolproofing Suggestion</option>
+                            </select>
+                          </div>
+
+                          <div className="flex gap-2">
+                            {bestCategory !== "year" && (
+                              <div className="flex-1 space-y-1">
+                                <label className="text-xs font-semibold">Month</label>
+                                <select
+                                  value={bestMonth}
+                                  onChange={(e) => setBestMonth(Number(e.target.value))}
+                                  className="w-full h-9 rounded border border-border bg-background px-2 text-xs font-semibold"
+                                >
+                                  {MONTHS.map((m, idx) => (
+                                    <option key={m} value={idx + 1}>{m}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+                            <div className="flex-1 space-y-1">
+                              <label className="text-xs font-semibold">Year</label>
+                              <select
+                                value={bestYear}
+                                onChange={(e) => setBestYear(Number(e.target.value))}
+                                className="w-full h-9 rounded border border-border bg-background px-2 text-xs font-semibold"
+                              >
+                                {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1].map((y) => (
+                                  <option key={y} value={y}>{y}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-xs font-semibold">Selection Reason / Remarks (Optional)</label>
+                            <Textarea
+                              placeholder="Reason/remarks for awarding this recognition"
+                              value={bestReason}
+                              onChange={(e) => setBestReason(e.target.value)}
+                              className="text-xs h-16"
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-1">
+                            <Button
+                              size="sm"
+                              className="bg-amber-500 hover:bg-amber-600 text-white font-bold"
+                              onClick={() => handleBestSuggestionSubmit(false)}
+                              disabled={isPending}
+                            >
+                              {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Trophy className="w-3.5 h-3.5 mr-1.5" />}
+                              {existingBestList.length > 0 ? "Update Selection" : "Save Selection"}
+                            </Button>
+                            {existingBestList.length > 0 && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleBestSuggestionSubmit(true)}
+                                  disabled={isPending}
+                                >
+                                  Remove Selection
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setIsEditingBest(false)}
+                                  disabled={isPending}
+                                >
+                                  Cancel
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

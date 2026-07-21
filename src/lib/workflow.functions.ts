@@ -402,9 +402,11 @@ export const selectBestSuggestion = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({
       suggestion_id: z.string().uuid(),
+      category: z.enum(["month", "year", "foolproofing"]).optional().default("month"),
       month: z.number().int().min(1).max(12),
       year: z.number().int(),
       reason: z.string().max(1000).optional(),
+      remove: z.boolean().optional(),
     }).parse(d)
   )
   .handler(async ({ context, data }) => {
@@ -429,21 +431,42 @@ export const selectBestSuggestion = createServerFn({ method: "POST" })
       .single();
     if (sugErr || !sug) throw new Error("Suggestion not found");
     if (sug.status !== "implemented") {
-      throw new Error("Only successfully implemented suggestions can be selected as Best Suggestion of the Month.");
+      throw new Error("Only successfully implemented suggestions can be selected as Best Suggestion.");
     }
 
-    // 3. Remove any previous selection for the same month and year
+    const category = data.category || "month";
+
+    // 3. Remove existing selection for this suggestion in this category OR for the targeted month/year in this category
     await supabaseAdmin
       .from("best_suggestions")
       .delete()
+      .eq("category", category)
       .eq("month", data.month)
       .eq("year", data.year);
+
+    await supabaseAdmin
+      .from("best_suggestions")
+      .delete()
+      .eq("suggestion_id", data.suggestion_id)
+      .eq("category", category);
+
+    if (data.remove) {
+      await supabaseAdmin.from("audit_logs").insert({
+        actor_id: userId,
+        action: "suggestion.best_removed",
+        entity_type: "suggestion",
+        entity_id: data.suggestion_id,
+        meta: { category, month: data.month, year: data.year },
+      });
+      return { ok: true, action: "removed" };
+    }
 
     // 4. Insert the new selection
     const { error: insErr } = await supabaseAdmin
       .from("best_suggestions")
       .insert({
         suggestion_id: data.suggestion_id,
+        category: category,
         month: data.month,
         year: data.year,
         selected_by: userId,
@@ -454,13 +477,13 @@ export const selectBestSuggestion = createServerFn({ method: "POST" })
     // 5. Audit log
     await supabaseAdmin.from("audit_logs").insert({
       actor_id: userId,
-      action: "suggestion.best_of_month",
+      action: `suggestion.best_${category}`,
       entity_type: "suggestion",
       entity_id: data.suggestion_id,
-      meta: { month: data.month, year: data.year, reason: data.reason },
+      meta: { category, month: data.month, year: data.year, reason: data.reason },
     });
 
-    return { ok: true };
+    return { ok: true, action: "saved" };
   });
 
 export const updateLeaderboardSettings = createServerFn({ method: "POST" })

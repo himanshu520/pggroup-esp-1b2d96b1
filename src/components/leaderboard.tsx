@@ -251,16 +251,25 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
     }
   });
 
-  // Fetch Best Suggestion of the Month selection
+  const [bestShowcaseCategory, setBestShowcaseCategory] = useState<"month" | "year" | "foolproofing">("month");
+
+  // Fetch Best Suggestion selection for category, year & month
   const { data: bestSuggestion = null } = useQuery({
-    queryKey: ["best-suggestion-of-month", selectedYear, selectedMonth],
+    queryKey: ["best-suggestion-of-month", bestShowcaseCategory, selectedYear, selectedMonth],
     queryFn: async () => {
-      const { data } = await supabase
+      let q = supabase
         .from("best_suggestions" as any)
         .select("*, suggestions(*, employees(*, departments(name), plants(name), locations(location)))")
-        .eq("year", selectedYear)
-        .eq("month", selectedMonth)
-        .maybeSingle();
+        .eq("year", selectedYear);
+
+      if (bestShowcaseCategory !== "year") {
+        q = q.eq("month", selectedMonth);
+      }
+
+      // If category column exists, filter by category or fallback
+      q = q.or(`category.eq.${bestShowcaseCategory},category.is.null`);
+
+      const { data } = await q.order("created_at", { ascending: false }).limit(1).maybeSingle();
       return data;
     }
   });
@@ -932,11 +941,39 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
         {/* BEST SUGGESTION SHOWCASE */}
         {activeTab === "best_suggestion" && (
           <div className="space-y-4">
-            <div className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
-              ⭐ Best Suggestion Showcase
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
+                ⭐ Best Suggestion Showcase
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Button
+                  size="sm"
+                  variant={bestShowcaseCategory === "month" ? "default" : "outline"}
+                  onClick={() => setBestShowcaseCategory("month")}
+                  className={cn("h-8 text-xs font-semibold gap-1.5", bestShowcaseCategory === "month" && "bg-amber-500 hover:bg-amber-600 text-white")}
+                >
+                  <Trophy className="w-3.5 h-3.5" /> Month
+                </Button>
+                <Button
+                  size="sm"
+                  variant={bestShowcaseCategory === "year" ? "default" : "outline"}
+                  onClick={() => setBestShowcaseCategory("year")}
+                  className={cn("h-8 text-xs font-semibold gap-1.5", bestShowcaseCategory === "year" && "bg-amber-500 hover:bg-amber-600 text-white")}
+                >
+                  <Medal className="w-3.5 h-3.5" /> Year
+                </Button>
+                <Button
+                  size="sm"
+                  variant={bestShowcaseCategory === "foolproofing" ? "default" : "outline"}
+                  onClick={() => setBestShowcaseCategory("foolproofing")}
+                  className={cn("h-8 text-xs font-semibold gap-1.5", bestShowcaseCategory === "foolproofing" && "bg-amber-500 hover:bg-amber-600 text-white")}
+                >
+                  <Award className="w-3.5 h-3.5" /> Foolproofing
+                </Button>
+              </div>
             </div>
 
-            {showBestSuggestion ? (
+            {bestSuggestion && bestSuggestion.suggestions ? (
               <div className="relative overflow-hidden rounded-xl border-2 border-amber-500 bg-gradient-to-r from-amber-500/10 via-background to-amber-500/5 p-6 md:p-8 shadow-md space-y-6">
                 {/* Visual Trophy background */}
                 <div className="absolute right-4 top-4 text-amber-500/10 pointer-events-none">
@@ -947,7 +984,11 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
                   <div className="space-y-3 flex-1 min-w-0">
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs bg-amber-500 text-white font-bold shadow-sm">
                       <Trophy className="w-3.5 h-3.5" />
-                      Best Suggestion of the Month: {MONTHS[selectedMonth - 1]} {selectedYear}
+                      {bestShowcaseCategory === "year"
+                        ? `Best Suggestion of the Year: ${selectedYear}`
+                        : bestShowcaseCategory === "foolproofing"
+                        ? `Best Foolproofing Suggestion: ${MONTHS[selectedMonth - 1]} ${selectedYear}`
+                        : `Best Suggestion of the Month: ${MONTHS[selectedMonth - 1]} ${selectedYear}`}
                     </div>
 
                     <h3 className="text-2xl font-bold text-foreground leading-tight tracking-tight break-words">
@@ -1015,7 +1056,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
                   <div className="space-y-0.5">
                     <div className="text-xs uppercase text-muted-foreground font-bold">Selection Reason</div>
                     <div className="text-xs text-muted-foreground italic">
-                      "{bestSuggestion.selection_reason || "Selected as the standout implemented idea of this month for organizational improvement."}"
+                      "{bestSuggestion.selection_reason || "Selected as the standout implemented idea for organizational improvement."}"
                     </div>
                   </div>
                 </div>
@@ -1023,9 +1064,13 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
             ) : (
               <div className="text-center py-16 border-2 border-dashed border-border rounded-xl bg-card/40">
                 <Trophy className="w-12 h-12 mx-auto text-muted-foreground mb-3 opacity-60" />
-                <h3 className="font-semibold text-lg">No Best Suggestion Chosen</h3>
+                <h3 className="font-semibold text-lg">No Winner Selected Yet</h3>
                 <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                  Super Admin has not selected a suggestion of the month for {MONTHS[selectedMonth - 1]} {selectedYear} yet.
+                  {bestShowcaseCategory === "year"
+                    ? `No Best Suggestion of the Year selected for ${selectedYear} yet.`
+                    : bestShowcaseCategory === "foolproofing"
+                    ? `No Best Foolproofing Suggestion selected for ${MONTHS[selectedMonth - 1]} ${selectedYear} yet.`
+                    : `No Best Suggestion of the Month selected for ${MONTHS[selectedMonth - 1]} ${selectedYear} yet.`}
                 </p>
               </div>
             )}
