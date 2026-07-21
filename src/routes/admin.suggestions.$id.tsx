@@ -793,7 +793,7 @@ export function SuggestionDetail({ id }: { id: string }) {
               <div className="space-y-4">
                 <div className="text-sm text-muted-foreground">This suggestion is closed — no further actions.</div>
                 
-                {(session?.primaryRole === "super_admin" || session?.primaryRole === "admin") && status === "implemented" && (
+                {(session?.primaryRole === "super_admin" || session?.primaryRole === "admin" || session?.roles?.some(r => ["super_admin", "corporate_admin", "admin", "pe_user", "location_admin"].includes(r))) && status === "implemented" && (
                   <div className="rounded-xl border-2 border-amber-500/60 bg-gradient-to-r from-amber-500/10 via-background to-amber-500/5 p-5 space-y-4 max-w-xl shadow-sm">
                     <div className="flex items-center justify-between gap-2">
                       <div className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
