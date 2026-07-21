@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ExportMenu } from "@/components/export-menu";
 import { EmployeeBadges } from "./employee-badges";
 import { lockLeaderboardMonth, updateLeaderboardSettings } from "@/lib/workflow.functions";
+import { cn } from "@/lib/utils";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -257,6 +258,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
   const { data: bestSuggestion = null } = useQuery({
     queryKey: ["best-suggestion-of-month", bestShowcaseCategory, selectedYear, selectedMonth],
     queryFn: async () => {
+      // 1. Try querying with category filter first
       let q = supabase
         .from("best_suggestions" as any)
         .select("*, suggestions(*, employees(*, departments(name), plants(name), locations(location)))")
@@ -266,11 +268,28 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
         q = q.eq("month", selectedMonth);
       }
 
-      // If category column exists, filter by category or fallback
-      q = q.or(`category.eq.${bestShowcaseCategory},category.is.null`);
+      const { data: catData, error: catError } = await q
+        .eq("category", bestShowcaseCategory)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      const { data } = await q.order("created_at", { ascending: false }).limit(1).maybeSingle();
-      return data;
+      if (!catError && catData) {
+        return catData;
+      }
+
+      // 2. Fallback query if category column is not in DB or no category match
+      let fallbackQ = supabase
+        .from("best_suggestions" as any)
+        .select("*, suggestions(*, employees(*, departments(name), plants(name), locations(location)))")
+        .eq("year", selectedYear);
+
+      if (bestShowcaseCategory !== "year") {
+        fallbackQ = fallbackQ.eq("month", selectedMonth);
+      }
+
+      const { data: fallbackData } = await fallbackQ.order("created_at", { ascending: false }).limit(1).maybeSingle();
+      return fallbackData;
     }
   });
 
