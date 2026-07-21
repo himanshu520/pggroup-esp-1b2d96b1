@@ -142,3 +142,38 @@ export function getHistoryActionText(h: {
       return STATUS_LABEL[toStatus] || toStatus;
   }
 }
+
+export function getEffectiveHistory(
+  history: any[] | null | undefined,
+  suggestion: { id?: string; created_at?: string; updated_at?: string; status?: SuggestionStatus; current_departments?: any; departments?: any } | null | undefined
+) {
+  if (history && history.length > 0) {
+    return history;
+  }
+  if (!suggestion || !suggestion.id || !suggestion.created_at) {
+    return [];
+  }
+
+  const fallbacks: any[] = [
+    {
+      id: `fallback-submitted-${suggestion.id}`,
+      created_at: suggestion.created_at,
+      to_status: "pe_review" as SuggestionStatus,
+      from_status: null,
+      remarks: "Submitted by employee",
+    },
+  ];
+
+  if (suggestion.status && suggestion.status !== "pe_review") {
+    fallbacks.push({
+      id: `fallback-current-${suggestion.id}`,
+      created_at: suggestion.updated_at || suggestion.created_at,
+      to_status: suggestion.status,
+      from_status: "pe_review" as SuggestionStatus,
+      to_dept: suggestion.current_departments || suggestion.departments,
+      remarks: `Current status: ${STATUS_LABEL[suggestion.status as keyof typeof STATUS_LABEL] || suggestion.status}`,
+    });
+  }
+
+  return fallbacks;
+}

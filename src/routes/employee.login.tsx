@@ -11,7 +11,7 @@ import { KeyRound, ArrowRight, Languages, Search, ArrowLeft, Globe, Loader2 } fr
 import { BrandLogos } from "@/components/brand-logos";
 import { useLang, useT } from "@/lib/i18n";
 import { StatusBadge } from "@/components/status-badge";
-import { STATUS_LABEL } from "@/lib/statuses";
+import { STATUS_LABEL, getHistoryActionText, getEffectiveHistory } from "@/lib/statuses";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/employee/login")({
@@ -595,20 +595,25 @@ function AnonymousTracker({ t, onBack }: { t: (typeof T)[Lang]; onBack: () => vo
 
           <div className="rounded-xl border border-border bg-muted/30 p-4">
             <h4 className="text-sm font-bold mb-4 text-foreground">{t.timeline}</h4>
-            <ol className="space-y-4 relative">
-              {history.map((h, i) => (
-                <li key={h.id} className="relative pl-6">
-                  <div className="absolute left-1.5 top-1.5 w-2 h-2 rounded-full bg-primary" />
-                  {i < history.length - 1 && <div className="absolute left-2.5 top-3.5 bottom-[-1.25rem] w-px bg-border" />}
-                  <div className="text-[10px] text-muted-foreground">{new Date(h.created_at).toLocaleString()}</div>
-                  <div className="text-xs font-semibold mt-0.5 text-foreground">
-                    {globalT(`status_${h.to_status}`) || STATUS_LABEL[h.to_status as keyof typeof STATUS_LABEL]}
-                  </div>
-                  {h.remarks && <div className="text-[11px] text-muted-foreground mt-0.5 italic">"{h.remarks}"</div>}
-                </li>
-              ))}
-              {history.length === 0 && <li className="text-xs text-muted-foreground">No activity yet.</li>}
-            </ol>
+            {(() => {
+              const effectiveHistory = getEffectiveHistory(history, result);
+              return (
+                <ol className="space-y-4 relative">
+                  {effectiveHistory.map((h, i) => (
+                    <li key={h.id} className="relative pl-6">
+                      <div className="absolute left-1.5 top-1.5 w-2 h-2 rounded-full bg-primary" />
+                      {i < effectiveHistory.length - 1 && <div className="absolute left-2.5 top-3.5 bottom-[-1.25rem] w-px bg-border" />}
+                      <div className="text-[10px] text-muted-foreground">{new Date(h.created_at).toLocaleString()}</div>
+                      <div className="text-xs font-semibold mt-0.5 text-foreground">
+                        {getHistoryActionText(h)}
+                      </div>
+                      {h.remarks && <div className="text-[11px] text-muted-foreground mt-0.5 italic">"{h.remarks}"</div>}
+                    </li>
+                  ))}
+                  {effectiveHistory.length === 0 && <li className="text-xs text-muted-foreground">No activity yet.</li>}
+                </ol>
+              );
+            })()}
           </div>
         </div>
       ) : null}

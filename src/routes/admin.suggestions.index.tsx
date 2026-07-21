@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { useState } from "react";
 import { Search, ExternalLink, Loader2, LayoutGrid, List } from "lucide-react";
-import { STATUS_LABEL, getRowColorForStatus, getHistoryActionText } from "@/lib/statuses";
+import { STATUS_LABEL, getRowColorForStatus, getHistoryActionText, getEffectiveHistory } from "@/lib/statuses";
 import { ExportMenu } from "@/components/export-menu";
 import { EmployeeBadges } from "@/components/employee-badges";
 
@@ -311,21 +311,26 @@ function SuggestionPreviewDialog({ id, onClose }: { id: string | null; onClose: 
 
             <div>
               <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Timeline</div>
-              <ol className="space-y-3">
-                {history.length === 0 ? (
-                  <li className="text-xs text-muted-foreground">No activity yet.</li>
-                ) : (
-                  history.map((h: any) => (
-                    <li key={h.id} className="relative pl-4 border-l-2 border-border">
-                      <div className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString()}</div>
-                      <div className="text-sm font-medium">
-                        {getHistoryActionText(h)}
-                      </div>
-                      {h.remarks && <div className="text-xs text-muted-foreground mt-0.5">{h.remarks}</div>}
-                    </li>
-                  ))
-                )}
-              </ol>
+              {(() => {
+                const effectiveHistory = getEffectiveHistory(history, sug);
+                return (
+                  <ol className="space-y-3">
+                    {effectiveHistory.length === 0 ? (
+                      <li className="text-xs text-muted-foreground">No activity yet.</li>
+                    ) : (
+                      effectiveHistory.map((h: any) => (
+                        <li key={h.id} className="relative pl-4 border-l-2 border-border">
+                          <div className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString()}</div>
+                          <div className="text-sm font-medium">
+                            {getHistoryActionText(h)}
+                          </div>
+                          {h.remarks && <div className="text-xs text-muted-foreground mt-0.5">{h.remarks}</div>}
+                        </li>
+                      ))
+                    )}
+                  </ol>
+                );
+              })()}
             </div>
           </div>
         )}

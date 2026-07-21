@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSession, isSuggestionAccessible } from "@/lib/session";
-import { STATUS_LABEL, getHistoryActionText } from "@/lib/statuses";
+import { STATUS_LABEL, getHistoryActionText, getEffectiveHistory } from "@/lib/statuses";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { peTransferSuggestion, peRejectSuggestion, deptDecide, deptStartImplementation, deptSubmitEvidence, peVerify, peRejectReturn, selectBestSuggestion } from "@/lib/workflow.functions";
@@ -864,18 +864,23 @@ export function SuggestionDetail({ id }: { id: string }) {
         {/* Timeline */}
         <div className="rounded-lg border border-border bg-card p-5">
           <div className="text-sm font-medium mb-3">Timeline</div>
-          <ol className="space-y-4 relative">
-            {history.map((h, i) => (
-              <li key={h.id} className="relative pl-6">
-                <div className="absolute left-1.5 top-1 w-2 h-2 rounded-full bg-primary" />
-                {i < history.length - 1 && <div className="absolute left-2 top-3 bottom-[-1rem] w-px bg-border" />}
-                <div className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString()}</div>
-                <div className="text-sm font-medium">{getHistoryActionText(h as any)}</div>
-                {h.remarks && <div className="text-xs text-muted-foreground mt-0.5">{h.remarks}</div>}
-              </li>
-            ))}
-            {history.length === 0 && <li className="text-xs text-muted-foreground">No activity yet.</li>}
-          </ol>
+          {(() => {
+            const effectiveHistory = getEffectiveHistory(history, sug);
+            return (
+              <ol className="space-y-4 relative">
+                {effectiveHistory.map((h: any, i: number) => (
+                  <li key={h.id} className="relative pl-6">
+                    <div className="absolute left-1.5 top-1 w-2 h-2 rounded-full bg-primary" />
+                    {i < effectiveHistory.length - 1 && <div className="absolute left-2 top-3 bottom-[-1rem] w-px bg-border" />}
+                    <div className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString()}</div>
+                    <div className="text-sm font-medium">{getHistoryActionText(h as any)}</div>
+                    {h.remarks && <div className="text-xs text-muted-foreground mt-0.5">{h.remarks}</div>}
+                  </li>
+                ))}
+                {effectiveHistory.length === 0 && <li className="text-xs text-muted-foreground">No activity yet.</li>}
+              </ol>
+            );
+          })()}
         </div>
       </div>
     </AppShell>

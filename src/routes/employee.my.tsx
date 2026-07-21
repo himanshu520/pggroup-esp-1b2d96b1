@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Search, LayoutGrid, List } from "lucide-react";
-import { STATUS_LABEL, getRowColorForStatus, getHistoryActionText } from "@/lib/statuses";
+import { STATUS_LABEL, getRowColorForStatus, getHistoryActionText, getEffectiveHistory } from "@/lib/statuses";
 import { useT } from "@/lib/i18n";
 import {
   Dialog,
@@ -185,7 +185,7 @@ function SuggestionDetailsDialog({
   });
 
   const s = data?.s as any;
-  const history = data?.h ?? [];
+  const history = getEffectiveHistory(data?.h, s);
 
   return (
     <Dialog open={!!suggestionId} onOpenChange={(o) => !o && onClose()}>
