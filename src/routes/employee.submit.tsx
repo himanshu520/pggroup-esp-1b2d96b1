@@ -269,7 +269,7 @@ export function SubmitForm() {
                 value={form.title}
                 maxLength={200}
                 onChange={(e) => setForm({ ...form, title: enforceWordLimit(e.target.value, 50) })}
-                className="h-11"
+                className="h-11 text-base sm:text-sm"
               />
               <div className="text-[10px] text-right text-muted-foreground">
                 {getWordCount(form.title)} / 50 {t("words") || "words"}
@@ -288,6 +288,7 @@ export function SubmitForm() {
                 placeholder={t("ph_problem")}
                 value={form.problem}
                 onChange={(e) => setForm({ ...form, problem: enforceWordLimit(e.target.value, 100) })}
+                className="text-base sm:text-sm"
               />
               <div className="text-[10px] text-right text-muted-foreground mt-1">
                 {getWordCount(form.problem)} / 100 {t("words") || "words"}
@@ -305,6 +306,7 @@ export function SubmitForm() {
                 placeholder={t("ph_solution")}
                 value={form.suggested_method}
                 onChange={(e) => setForm({ ...form, suggested_method: enforceWordLimit(e.target.value, 100) })}
+                className="text-base sm:text-sm"
               />
               <div className="text-[10px] text-right text-muted-foreground mt-1">
                 {getWordCount(form.suggested_method)} / 100 {t("words") || "words"}
@@ -322,6 +324,7 @@ export function SubmitForm() {
                 placeholder={t("ph_benefits")}
                 value={form.expected_benefits}
                 onChange={(e) => setForm({ ...form, expected_benefits: enforceWordLimit(e.target.value, 100) })}
+                className="text-base sm:text-sm"
               />
               <div className="text-[10px] text-right text-muted-foreground mt-1">
                 {getWordCount(form.expected_benefits)} / 100 {t("words") || "words"}
@@ -339,15 +342,15 @@ export function SubmitForm() {
             title={t("sec_1_title")}
             subtitle={t("sec_1_sub")}
           />
-          <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="p-3.5 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
             <RefField label={t("lbl_full_name")} required>
-              <Input value={emp?.name ?? ""} disabled className="h-11 bg-accent/40 border-accent" />
+              <Input value={emp?.name ?? ""} disabled className="h-11 text-base sm:text-sm bg-accent/40 border-accent" />
             </RefField>
             <RefField label={t("lbl_employee_id")} required>
-              <Input value={emp?.employee_code ?? ""} disabled className="h-11 bg-accent/40 border-accent" />
+              <Input value={emp?.employee_code ?? ""} disabled className="h-11 text-base sm:text-sm bg-accent/40 border-accent" />
             </RefField>
             <RefField label={t("lbl_email_address")}>
-              <Input value={emp?.email ?? ""} disabled className="h-11 bg-accent/40 border-accent" />
+              <Input value={emp?.email ?? ""} disabled className="h-11 text-base sm:text-sm bg-accent/40 border-accent truncate" />
             </RefField>
             <RefField label={t("lbl_mobile_number")} required>
               <Input
@@ -356,7 +359,7 @@ export function SubmitForm() {
                 placeholder="—"
                 value={form.mobile}
                 disabled
-                className="h-11 bg-accent/40 border-accent cursor-not-allowed"
+                className="h-11 text-base sm:text-sm bg-accent/40 border-accent cursor-not-allowed"
               />
             </RefField>
             <div className="sm:col-span-2 space-y-1.5">
@@ -364,7 +367,7 @@ export function SubmitForm() {
                 <Label className="text-xs font-bold uppercase tracking-wide">{t("lbl_gender")}</Label>
                 <span className="text-destructive">*</span>
               </div>
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="grid grid-cols-3 gap-1.5 sm:gap-3">
                 {(["male", "female", "other"] as const).map((g) => {
                   const active = form.gender === g;
                   const genderLabel = g === "male" ? t("gender_male") : g === "female" ? t("gender_female") : t("gender_other");
@@ -374,19 +377,19 @@ export function SubmitForm() {
                       type="button"
                       disabled
                       className={cn(
-                        "flex items-center justify-center gap-2 rounded-lg border h-11 px-2 sm:px-3 text-sm font-medium capitalize transition-all cursor-not-allowed opacity-60",
+                        "flex items-center justify-center gap-1 sm:gap-2 rounded-lg border h-11 px-1.5 sm:px-3 text-xs sm:text-sm font-medium capitalize transition-all cursor-not-allowed opacity-60 min-w-0 truncate",
                         active
                           ? "border-primary bg-primary/5 ring-1 ring-primary text-primary opacity-100 font-bold"
                           : "border-accent bg-accent/40 text-foreground",
                       )}
                     >
                       <span className={cn(
-                        "grid place-items-center w-4 h-4 rounded-full border-2 shrink-0",
+                        "grid place-items-center w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 shrink-0",
                         active ? "border-primary" : "border-muted-foreground/40",
                       )}>
-                        {active && <span className="w-2 h-2 rounded-full bg-primary" />}
+                        {active && <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-primary" />}
                       </span>
-                      {genderLabel}
+                      <span className="truncate">{genderLabel}</span>
                     </button>
                   );
                 })}
@@ -400,7 +403,7 @@ export function SubmitForm() {
                   setForm((f) => ({ ...f, location_id: v, plant_id: "", department_id: "" }));
                 }}
               >
-                <SelectTrigger className={cn("h-11 border-accent", !hasMultiplePlants && "bg-accent/40 cursor-not-allowed")}><SelectValue placeholder={t("opt_select_state")} /></SelectTrigger>
+                <SelectTrigger className={cn("h-11 text-base sm:text-sm border-accent", !hasMultiplePlants && "bg-accent/40 cursor-not-allowed")}><SelectValue placeholder={t("opt_select_state")} /></SelectTrigger>
                 <SelectContent>{visibleLocations.map((l) => <SelectItem key={l.id} value={l.id}>{l.location}</SelectItem>)}</SelectContent>
               </Select>
             </RefField>
@@ -412,7 +415,7 @@ export function SubmitForm() {
                   setForm((f) => ({ ...f, plant_id: v, department_id: "" }));
                 }}
               >
-                <SelectTrigger className={cn("h-11 border-accent", (!hasMultiplePlants || !form.location_id) && "bg-accent/40 cursor-not-allowed")}><SelectValue placeholder={t("opt_select_plant")} /></SelectTrigger>
+                <SelectTrigger className={cn("h-11 text-base sm:text-sm border-accent", (!hasMultiplePlants || !form.location_id) && "bg-accent/40 cursor-not-allowed")}><SelectValue placeholder={t("opt_select_plant")} /></SelectTrigger>
                 <SelectContent>{visiblePlants.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
               </Select>
             </RefField>
@@ -422,7 +425,7 @@ export function SubmitForm() {
                 disabled={!hasMultiplePlants || !form.plant_id}
                 onValueChange={(v) => setForm((f) => ({ ...f, department_id: v }))}
               >
-                <SelectTrigger className={cn("h-11 border-accent", (!hasMultiplePlants || !form.plant_id) && "bg-accent/40 cursor-not-allowed")}><SelectValue placeholder={t("opt_select_dept")} /></SelectTrigger>
+                <SelectTrigger className={cn("h-11 text-base sm:text-sm border-accent", (!hasMultiplePlants || !form.plant_id) && "bg-accent/40 cursor-not-allowed")}><SelectValue placeholder={t("opt_select_dept")} /></SelectTrigger>
                 <SelectContent>{visibleDepartments.map((d) => <SelectItem key={d.id} value={d.id}>{d.name} {d.code ? `(${d.code})` : ""}</SelectItem>)}</SelectContent>
               </Select>
             </RefField>
@@ -430,8 +433,8 @@ export function SubmitForm() {
         </section>
 
         {/* Sticky submit bar (mobile-friendly) */}
-        <div className="fixed bottom-0 left-0 right-0 lg:left-64 bg-background/95 backdrop-blur border-t border-border p-3 sm:p-4 z-20">
-          <div className="max-w-[1500px] mx-auto flex items-center justify-end gap-2">
+        <div className="fixed bottom-0 left-0 right-0 lg:left-64 bg-background/95 backdrop-blur border-t border-border p-3 sm:p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] z-20 shadow-lg">
+          <div className="max-w-[1500px] mx-auto flex items-center justify-end gap-2.5 w-full">
             <Button
               type="button"
               variant="outline"
@@ -454,14 +457,14 @@ export function SubmitForm() {
                 });
                 setFiles([]);
               }}
-              className="h-11 px-4"
+              className="h-11 px-3 sm:px-4 flex-1 sm:flex-initial text-xs sm:text-sm"
             >
               {t("btn_reset_form")}
             </Button>
             <Button
               type="submit"
               disabled={submitting}
-              className="h-11 px-6 bg-success hover:bg-success/90 text-success-foreground"
+              className="h-11 px-4 sm:px-6 flex-1 sm:flex-initial text-xs sm:text-sm font-semibold bg-success hover:bg-success/90 text-success-foreground"
             >
               {submitting ? (t("submitting") || "Submitting…") : t("btn_submit_suggestion")}
             </Button>

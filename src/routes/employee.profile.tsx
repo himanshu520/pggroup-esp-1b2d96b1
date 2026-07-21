@@ -96,7 +96,7 @@ export function ProfilePage() {
             </label>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 flex-1 w-full text-left">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 flex-1 w-full text-left">
             <Row label={t("profile_emp_id")} value={e?.employee_code} />
             <Row label={t("profile_name")} value={e?.name} />
             <Row label={t("profile_email")} value={e?.email} />
@@ -133,9 +133,9 @@ export function ProfilePage() {
 
 function Row({ label, value }: { label: string; value?: string | null }) {
   return (
-    <div>
+    <div className="min-w-0">
       <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="mt-0.5 text-sm">{value ?? "—"}</div>
+      <div className="mt-0.5 text-sm break-all sm:break-normal">{value ?? "—"}</div>
     </div>
   );
 }

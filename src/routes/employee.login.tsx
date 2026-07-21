@@ -327,7 +327,7 @@ function EmployeeFlow({
           placeholder="e.g. EMP00123"
           value={empCode}
           onChange={(e) => setEmpCode(e.target.value)}
-          className="h-12 bg-muted/40"
+          className="h-12 text-base sm:text-sm bg-muted/40"
           autoFocus
         />
       </div>
@@ -449,11 +449,11 @@ function OtpStage({
           <span className="font-medium text-foreground">{phone}</span>
         </p>
       </div>
-      <div className="flex justify-center">
+      <div className="flex justify-center w-full max-w-full overflow-x-auto py-1">
         <InputOTP maxLength={6} value={otp} onChange={setOtp}>
-          <InputOTPGroup>
+          <InputOTPGroup className="gap-1 sm:gap-2">
             {[0, 1, 2, 3, 4, 5].map((i) => (
-              <InputOTPSlot key={i} index={i} />
+              <InputOTPSlot key={i} index={i} className="w-9 h-11 sm:w-11 sm:h-12 text-base sm:text-lg" />
             ))}
           </InputOTPGroup>
         </InputOTP>
