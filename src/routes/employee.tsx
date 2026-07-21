@@ -7,14 +7,30 @@ import { EmployeeShell } from "@/components/employee-shell";
 export const Route = createFileRoute("/employee")({
   ssr: false,
   beforeLoad: async ({ location }) => {
-    // Public: /employee/login
-    if (location.pathname === "/employee/login" || location.pathname.startsWith("/employee/login/")) {
-      return;
-    }
+    const isLoginPath =
+      location.pathname === "/employee/login" || location.pathname.startsWith("/employee/login/");
+
     const { data } = await supabase.auth.getSession();
-    if (!data.session) throw redirect({ to: "/employee/login" });
+    if (!data.session) {
+      if (isLoginPath) return;
+      throw redirect({ to: "/employee/login" });
+    }
+
     const s = await loadSession();
-    if (!s) throw redirect({ to: "/employee/login" });
+    if (!s) {
+      if (isLoginPath) return;
+      throw redirect({ to: "/employee/login" });
+    }
+
+    // Admins are strictly routed to /admin dashboard
+    if (s.isAdmin) {
+      throw redirect({ to: "/admin" });
+    }
+
+    // Logged-in employees visiting /employee/login are redirected to employee home
+    if (isLoginPath) {
+      throw redirect({ to: "/employee" });
+    }
   },
   component: EmployeeLayout,
 });

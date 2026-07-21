@@ -1,9 +1,10 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link, redirect } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { linkAuthUserToEmployee, sendCustomOtp, verifyAdminOtp } from "@/lib/auth.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { loadSession } from "@/lib/session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -12,6 +13,14 @@ import { BrandLogos } from "@/components/brand-logos";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  beforeLoad: async () => {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return;
+    const s = await loadSession();
+    if (!s) return;
+    if (s.isAdmin) throw redirect({ to: "/admin" });
+    throw redirect({ to: "/employee" });
+  },
   head: () => ({
     meta: [
       { title: "Employee Suggestion Portal — ESP" },
