@@ -440,19 +440,36 @@ export const selectBestSuggestion = createServerFn({ method: "POST" })
 
     const category = data.category || "month";
 
-    // 3. Remove existing selection for this suggestion in this category OR for the targeted month/year in this category
-    await supabaseAdmin
+    // 3. Try to delete with category, fallback to without category if column missing
+    const { error: delErr1 } = await supabaseAdmin
       .from("best_suggestions")
       .delete()
       .eq("category", category)
       .eq("month", data.month)
       .eq("year", data.year);
 
-    await supabaseAdmin
+    if (delErr1 && (delErr1.message.includes("category") || delErr1.message.includes("schema cache"))) {
+      // Fallback: delete without category
+      await supabaseAdmin
+        .from("best_suggestions")
+        .delete()
+        .eq("month", data.month)
+        .eq("year", data.year);
+    }
+
+    const { error: delErr2 } = await supabaseAdmin
       .from("best_suggestions")
       .delete()
       .eq("suggestion_id", data.suggestion_id)
       .eq("category", category);
+
+    if (delErr2 && (delErr2.message.includes("category") || delErr2.message.includes("schema cache"))) {
+      // Fallback: delete without category
+      await supabaseAdmin
+        .from("best_suggestions")
+        .delete()
+        .eq("suggestion_id", data.suggestion_id);
+    }
 
     if (data.remove) {
       await supabaseAdmin.from("audit_logs").insert({
@@ -466,17 +483,29 @@ export const selectBestSuggestion = createServerFn({ method: "POST" })
     }
 
     // 4. Insert the new selection
+    const payload = {
+      suggestion_id: data.suggestion_id,
+      month: data.month,
+      year: data.year,
+      selected_by: userId,
+      selection_reason: data.reason || null,
+    };
+
     const { error: insErr } = await supabaseAdmin
       .from("best_suggestions")
-      .insert({
-        suggestion_id: data.suggestion_id,
-        category: category,
-        month: data.month,
-        year: data.year,
-        selected_by: userId,
-        selection_reason: data.reason || null,
-      });
-    if (insErr) throw new Error("Failed to select suggestion: " + insErr.message);
+      .insert({ ...payload, category: category });
+
+    if (insErr) {
+      if (insErr.message.includes("category") || insErr.message.includes("schema cache")) {
+        // Fallback: insert without category
+        const { error: fallbackErr } = await supabaseAdmin
+          .from("best_suggestions")
+          .insert(payload);
+        if (fallbackErr) throw new Error("Failed to select suggestion (fallback): " + fallbackErr.message);
+      } else {
+        throw new Error("Failed to select suggestion: " + insErr.message);
+      }
+    }
 
     // 5. Audit log
     await supabaseAdmin.from("audit_logs").insert({
