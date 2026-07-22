@@ -27,6 +27,21 @@ const getDeptDisplay = (dept: any) => {
   return dept.name + (dept.code ? ` (${dept.code})` : "");
 };
 
+const getBestSuggestionIndicator = (bestSuggestions: any) => {
+  if (!bestSuggestions) return null;
+  const item = Array.isArray(bestSuggestions) ? bestSuggestions[0] : bestSuggestions;
+  if (!item) return null;
+  
+  if (item.category === "month") {
+    return { color: "text-emerald-500 fill-emerald-500", title: "Best Suggestion of the Month" };
+  } else if (item.category === "year") {
+    return { color: "text-amber-500 fill-amber-500", title: "Best Suggestion of the Year" };
+  } else if (item.category === "foolproofing") {
+    return { color: "text-blue-500 fill-blue-500", title: "Best Foolproofing Suggestion" };
+  }
+  return { color: "text-amber-500 fill-amber-500", title: "Best Suggestion" };
+};
+
 export const Route = createFileRoute("/admin/suggestions/")({
   beforeLoad: () => { throw redirect({ to: "/admin", search: { section: "suggestions" } as any }); },
   component: () => null,
@@ -152,7 +167,10 @@ export function SuggestionsList() {
                   <td className="px-4 py-2.5 font-mono text-xs text-primary">{s.code}</td>
                   <td className="px-4 py-2.5 max-w-xs truncate">
                     <div className="flex items-center gap-1.5">
-                      {(Array.isArray(s.best_suggestions) ? s.best_suggestions.length > 0 : !!s.best_suggestions) && <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" title="Best Suggestion" />}
+                      {(() => {
+                        const ind = getBestSuggestionIndicator(s.best_suggestions);
+                        return ind ? <Trophy className={`w-3.5 h-3.5 shrink-0 ${ind.color}`} title={ind.title} /> : null;
+                      })()}
                       <span className="truncate">{s.title}</span>
                     </div>
                   </td>
@@ -188,7 +206,10 @@ export function SuggestionsList() {
                 <span className="text-[10px] text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</span>
               </div>
               <h3 className="font-semibold text-sm leading-tight line-clamp-2 flex-1">
-                {(Array.isArray(s.best_suggestions) ? s.best_suggestions.length > 0 : !!s.best_suggestions) && <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500 inline mr-1.5 align-text-bottom" title="Best Suggestion" />}
+                {(() => {
+                  const ind = getBestSuggestionIndicator(s.best_suggestions);
+                  return ind ? <Trophy className={`w-3.5 h-3.5 inline mr-1.5 align-text-bottom ${ind.color}`} title={ind.title} /> : null;
+                })()}
                 {s.title}
               </h3>
               
