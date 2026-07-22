@@ -161,6 +161,28 @@ export function SuggestionDetail({ id }: { id: string }) {
     }
   }
 
+  async function run(action: () => Promise<any>, successMessage: string) {
+    if (isPending) return;
+    setIsPending(true);
+    try {
+      await action();
+      toast.success(successMessage);
+      setRemarks("");
+      setTargetDept("");
+      setPeApproved(false);
+      setShowNotRelatedForm(false);
+      setSuggestedDeptId("");
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["suggestion", id] }),
+        qc.invalidateQueries({ queryKey: ["suggestion-history", id] })
+      ]);
+    } catch (e: any) {
+      toast.error(e.message ?? "An error occurred");
+    } finally {
+      setIsPending(false);
+    }
+  }
+
   useEffect(() => {
     if (sug) {
       if (sug.budget_tier) {
