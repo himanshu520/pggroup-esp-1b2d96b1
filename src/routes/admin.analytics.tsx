@@ -31,7 +31,7 @@ export function AnalyticsPage() {
     queryFn: async () =>
       (await supabase
         .from("suggestions")
-        .select("id,status,priority,category_id,created_at,expected_saving,actual_cost,department_id,current_department_id,departments!suggestions_department_id_fkey(name),current_departments:departments!suggestions_current_department_id_fkey(name),location_id,plant_id,suggestion_history(status)")
+        .select("id,status,priority,category_id,created_at,expected_saving,actual_cost,department_id,current_department_id,departments!suggestions_department_id_fkey(name),current_departments:departments!suggestions_current_department_id_fkey(name),location_id,plant_id,suggestion_history(to_status)")
         .limit(10000)).data ?? [],
   });
   const { data: categories = [] } = useQuery({
@@ -71,7 +71,7 @@ export function AnalyticsPage() {
   const fakeClosuresRows = useMemo(() => {
     const statsMap = new Map<string, number>();
     for (const s of accessibleSugs as any[]) {
-      const isFake = s.status === "fake_closure" || (s.suggestion_history && s.suggestion_history.some((h: any) => h.status === "fake_closure"));
+      const isFake = s.status === "fake_closure" || (s.suggestion_history && s.suggestion_history.some((h: any) => h.to_status === "fake_closure"));
       if (isFake) {
         const deptName = s.current_departments?.name || s.departments?.name || "Unknown";
         statsMap.set(deptName, (statsMap.get(deptName) || 0) + 1);
