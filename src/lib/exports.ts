@@ -12,7 +12,11 @@ export type ExportColumn<T> = {
 function timestamp() {
   const d = new Date();
   const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  let hours = d.getHours();
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12 || 12;
+  return `${pad(d.getDate())}-${months[d.getMonth()]}-${d.getFullYear()}_${pad(hours)}-${pad(d.getMinutes())}${ampm}`;
 }
 
 function download(blob: Blob, filename: string) {
@@ -38,7 +42,11 @@ function toRows<T>(data: T[], cols: ExportColumn<T>[]): Record<string, string | 
 export function exportCSV<T>(data: T[], cols: ExportColumn<T>[], name: string) {
   const rows = toRows(data, cols);
   const ws = XLSX.utils.json_to_sheet(rows, { header: cols.map((c) => c.header) });
-  const csv = XLSX.utils.sheet_to_csv(ws);
+  let csv = XLSX.utils.sheet_to_csv(ws);
+  
+  const headerText = `"Report: ${name}"\n"Downloaded On: ${new Date().toLocaleString()}"\n\n`;
+  csv = headerText + csv;
+
   download(new Blob([csv], { type: "text/csv;charset=utf-8" }), `${name}_${timestamp()}.csv`);
 }
 
@@ -49,7 +57,14 @@ export function exportXLSX<T>(
   sheetName = "Report",
 ) {
   const rows = toRows(data, cols);
-  const ws = XLSX.utils.json_to_sheet(rows, { header: cols.map((c) => c.header) });
+  const ws = XLSX.utils.json_to_sheet(rows, { header: cols.map((c) => c.header), origin: "A3" });
+  
+  // Add title and date at the top
+  XLSX.utils.sheet_add_aoa(ws, [
+    [`Report: ${name}`],
+    [`Downloaded On: ${new Date().toLocaleString()}`],
+  ], { origin: "A1" });
+
   // Auto width
   const colWidths = cols.map((c) => ({
     wch: Math.min(60, Math.max(c.header.length + 2, ...rows.map((r) => String(r[c.header] ?? "").length + 2))),
