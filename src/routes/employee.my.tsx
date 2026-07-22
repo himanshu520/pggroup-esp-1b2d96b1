@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Search, LayoutGrid, List } from "lucide-react";
+import { Search, LayoutGrid, List, Trophy } from "lucide-react";
 import { STATUS_LABEL, getRowColorForStatus, getHistoryActionText, getEffectiveHistory } from "@/lib/statuses";
 import { useT } from "@/lib/i18n";
 import {
@@ -36,7 +36,7 @@ export function MySuggestions() {
   const { data = [], isLoading, refetch } = useQuery({
     queryKey: ["my-suggestions", session?.employee?.id],
     enabled: !!session?.employee?.id,
-    queryFn: async () => (await supabase.from("suggestions").select("*, categories(name)").eq("employee_id", session!.employee!.id).order("created_at", { ascending: false })).data ?? [],
+    queryFn: async () => (await supabase.from("suggestions").select("*, categories(name), best_suggestions(category)").eq("employee_id", session!.employee!.id).order("created_at", { ascending: false })).data ?? [],
   });
 
   const TERMINAL = new Set(["approved","implemented","rejected","closed"]);
@@ -106,7 +106,10 @@ export function MySuggestions() {
               <div className="flex items-start justify-between gap-3 w-full mb-3">
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-mono font-semibold text-primary">{s.code}</div>
-                  <div className="mt-1 font-semibold text-sm line-clamp-2 leading-tight">{s.title}</div>
+                  <div className="mt-1 font-semibold text-sm line-clamp-2 leading-tight">
+                    {s.best_suggestions?.length > 0 && <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500 inline mr-1.5 align-text-bottom" />}
+                    {s.title}
+                  </div>
                   <div className="text-[10px] text-muted-foreground mt-1 truncate">{s.categories?.name ?? "—"} · {new Date(s.created_at).toLocaleDateString()}</div>
                 </div>
               </div>
@@ -134,7 +137,12 @@ export function MySuggestions() {
                   onClick={() => setSelectedId(s.id)}
                 >
                   <td className="px-4 py-2.5 font-mono text-xs text-primary w-24">{s.code}</td>
-                  <td className="px-4 py-2.5 max-w-[200px] sm:max-w-xs truncate font-medium">{s.title}</td>
+                  <td className="px-4 py-2.5 max-w-[200px] sm:max-w-xs truncate font-medium">
+                    <div className="flex items-center gap-1.5">
+                      {s.best_suggestions?.length > 0 && <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" title="Best Suggestion" />}
+                      <span className="truncate">{s.title}</span>
+                    </div>
+                  </td>
                   <td className="px-4 py-2.5 text-xs text-muted-foreground truncate max-w-[120px]">{s.categories?.name ?? "—"}</td>
                   <td className="px-4 py-2.5 w-32"><StatusBadge status={s.status} /></td>
                   <td className="px-4 py-2.5 text-muted-foreground text-xs w-24 hidden md:table-cell">{new Date(s.created_at).toLocaleDateString()}</td>

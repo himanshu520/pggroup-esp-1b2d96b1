@@ -958,7 +958,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
                   size="sm"
                   variant={bestShowcaseCategory === "month" ? "default" : "outline"}
                   onClick={() => setBestShowcaseCategory("month")}
-                  className={cn("h-8 text-xs font-semibold gap-1.5", bestShowcaseCategory === "month" && "bg-amber-500 hover:bg-amber-600 text-white")}
+                  className={cn("h-8 text-xs font-semibold gap-1.5", bestShowcaseCategory === "month" && "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500")}
                 >
                   <Trophy className="w-3.5 h-3.5" /> Month
                 </Button>
@@ -966,7 +966,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
                   size="sm"
                   variant={bestShowcaseCategory === "year" ? "default" : "outline"}
                   onClick={() => setBestShowcaseCategory("year")}
-                  className={cn("h-8 text-xs font-semibold gap-1.5", bestShowcaseCategory === "year" && "bg-amber-500 hover:bg-amber-600 text-white")}
+                  className={cn("h-8 text-xs font-semibold gap-1.5", bestShowcaseCategory === "year" && "bg-amber-500 hover:bg-amber-600 text-white border-amber-500")}
                 >
                   <Medal className="w-3.5 h-3.5" /> Year
                 </Button>
@@ -974,7 +974,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
                   size="sm"
                   variant={bestShowcaseCategory === "foolproofing" ? "default" : "outline"}
                   onClick={() => setBestShowcaseCategory("foolproofing")}
-                  className={cn("h-8 text-xs font-semibold gap-1.5", bestShowcaseCategory === "foolproofing" && "bg-amber-500 hover:bg-amber-600 text-white")}
+                  className={cn("h-8 text-xs font-semibold gap-1.5", bestShowcaseCategory === "foolproofing" && "bg-blue-500 hover:bg-blue-600 text-white border-blue-500")}
                 >
                   <Award className="w-3.5 h-3.5" /> Foolproofing
                 </Button>
@@ -982,15 +982,26 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
             </div>
 
             {bestSuggestion && bestSuggestion.suggestions ? (
-              <div className="relative overflow-hidden rounded-xl border-2 border-amber-500 bg-gradient-to-r from-amber-500/10 via-background to-amber-500/5 p-6 md:p-8 shadow-md space-y-6">
+              <div className={cn(
+                "relative overflow-hidden rounded-xl border-2 p-6 md:p-8 shadow-md space-y-6",
+                bestShowcaseCategory === "month" ? "border-emerald-500 bg-gradient-to-r from-emerald-500/10 via-background to-emerald-500/5" :
+                bestShowcaseCategory === "year" ? "border-amber-500 bg-gradient-to-r from-amber-500/10 via-background to-amber-500/5" :
+                "border-blue-500 bg-gradient-to-r from-blue-500/10 via-background to-blue-500/5"
+              )}>
                 {/* Visual Trophy background */}
-                <div className="absolute right-4 top-4 text-amber-500/10 pointer-events-none">
+                <div className={cn("absolute right-4 top-4 pointer-events-none",
+                  bestShowcaseCategory === "month" ? "text-emerald-500/10" :
+                  bestShowcaseCategory === "year" ? "text-amber-500/10" : "text-blue-500/10"
+                )}>
                   <Trophy className="w-48 h-48 rotate-12" />
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-6 md:items-start justify-between">
                   <div className="space-y-3 flex-1 min-w-0">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs bg-amber-500 text-white font-bold shadow-sm">
+                    <div className={cn("inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs text-white font-bold shadow-sm",
+                      bestShowcaseCategory === "month" ? "bg-emerald-500" :
+                      bestShowcaseCategory === "year" ? "bg-amber-500" : "bg-blue-500"
+                    )}>
                       <Trophy className="w-3.5 h-3.5" />
                       {bestShowcaseCategory === "year"
                         ? `Best Suggestion of the Year: ${selectedYear}`
@@ -1013,15 +1024,25 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
                   </div>
 
                   {/* Profile info cards */}
-                  <div className="flex items-center gap-3 bg-card border border-amber-500/30 p-4 rounded-lg shadow-sm shrink-0 md:max-w-xs">
+                  <div className={cn("flex items-center gap-3 bg-card border p-4 rounded-lg shadow-sm shrink-0 md:max-w-xs",
+                    bestShowcaseCategory === "month" ? "border-emerald-500/30" :
+                    bestShowcaseCategory === "year" ? "border-amber-500/30" : "border-blue-500/30"
+                  )}>
                     {bestSuggestion.suggestions?.employees?.avatar_url ? (
                       <img 
                         src={bestSuggestion.suggestions.employees.avatar_url} 
                         alt={bestSuggestion.suggestions.employees.name} 
-                        className="w-12 h-12 rounded-full object-cover border border-amber-500/30" 
+                        className={cn("w-12 h-12 rounded-full object-cover border",
+                          bestShowcaseCategory === "month" ? "border-emerald-500/30" :
+                          bestShowcaseCategory === "year" ? "border-amber-500/30" : "border-blue-500/30"
+                        )} 
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-lg border border-amber-500/20">
+                      <div className={cn("w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg border",
+                        bestShowcaseCategory === "month" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                        bestShowcaseCategory === "year" ? "bg-amber-500/10 text-amber-600 border-amber-500/20" : 
+                        "bg-blue-500/10 text-blue-600 border-blue-500/20"
+                      )}>
                         {bestSuggestion.suggestions?.employees?.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase() || "EE"}
                       </div>
                     )}
@@ -1033,7 +1054,10 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4 border-t border-amber-500/20 pt-6 text-sm">
+                <div className={cn("grid md:grid-cols-2 gap-4 border-t pt-6 text-sm",
+                  bestShowcaseCategory === "month" ? "border-emerald-500/20" :
+                  bestShowcaseCategory === "year" ? "border-amber-500/20" : "border-blue-500/20"
+                )}>
                   <div className="space-y-1">
                     <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Problem Statement</div>
                     <div className="text-foreground/90 whitespace-pre-wrap bg-card/40 p-3 rounded border border-border/60">
@@ -1048,7 +1072,10 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
                   </div>
                 </div>
 
-                <div className="grid sm:grid-cols-3 gap-4 border-t border-amber-500/20 pt-6">
+                <div className={cn("grid sm:grid-cols-3 gap-4 border-t pt-6",
+                  bestShowcaseCategory === "month" ? "border-emerald-500/20" :
+                  bestShowcaseCategory === "year" ? "border-amber-500/20" : "border-blue-500/20"
+                )}>
                   <div className="space-y-0.5">
                     <div className="text-xs uppercase text-muted-foreground font-bold">Expected Savings</div>
                     <div className="font-bold text-lg text-emerald-600 dark:text-emerald-400">

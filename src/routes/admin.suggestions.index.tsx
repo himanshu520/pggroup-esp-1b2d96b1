@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useState } from "react";
-import { Search, ExternalLink, Loader2, LayoutGrid, List } from "lucide-react";
+import { Search, ExternalLink, Loader2, LayoutGrid, List, Star, Trophy, Medal, Award } from "lucide-react";
 import { STATUS_LABEL, getRowColorForStatus, getHistoryActionText, getEffectiveHistory } from "@/lib/statuses";
 import { ExportMenu } from "@/components/export-menu";
 import { EmployeeBadges } from "@/components/employee-badges";
@@ -47,7 +47,7 @@ export function SuggestionsList() {
   const { data = [] } = useQuery({
     queryKey: ["admin-suggestions", status],
     queryFn: async () => {
-      let query = supabase.from("suggestions").select("*, employees(name, employee_code), categories(name), departments!suggestions_department_id_fkey(name, code), current_departments:departments!suggestions_current_department_id_fkey(name, code), plants(name)").order("created_at", { ascending: false }).limit(500);
+      let query = supabase.from("suggestions").select("*, employees(name, employee_code), categories(name), departments!suggestions_department_id_fkey(name, code), current_departments:departments!suggestions_current_department_id_fkey(name, code), plants(name), best_suggestions(category)").order("created_at", { ascending: false }).limit(500);
       if (status === "under_review") {
         query = query.not("status", "in", "(approved,implemented,rejected,closed)");
       } else if (status) {
@@ -150,7 +150,12 @@ export function SuggestionsList() {
                   onClick={() => setPreviewId(s.id)}
                 >
                   <td className="px-4 py-2.5 font-mono text-xs text-primary">{s.code}</td>
-                  <td className="px-4 py-2.5 max-w-xs truncate">{s.title}</td>
+                  <td className="px-4 py-2.5 max-w-xs truncate">
+                    <div className="flex items-center gap-1.5">
+                      {s.best_suggestions?.length > 0 && <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" title="Best Suggestion" />}
+                      <span className="truncate">{s.title}</span>
+                    </div>
+                  </td>
                   <td className="px-4 py-2.5 text-xs font-medium">
                     {isPEOrAdmin ? (
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -182,7 +187,10 @@ export function SuggestionsList() {
                 <span className="font-mono text-xs font-semibold text-primary">{s.code}</span>
                 <span className="text-[10px] text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</span>
               </div>
-              <h3 className="font-semibold text-sm leading-tight line-clamp-2 flex-1">{s.title}</h3>
+              <h3 className="font-semibold text-sm leading-tight line-clamp-2 flex-1">
+                {s.best_suggestions?.length > 0 && <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500 inline mr-1.5 align-text-bottom" title="Best Suggestion" />}
+                {s.title}
+              </h3>
               
               <div className="flex flex-col gap-1 mt-1 text-xs text-muted-foreground">
                 <div className="truncate flex items-center gap-1.5 flex-wrap">
