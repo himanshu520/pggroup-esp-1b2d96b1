@@ -55,14 +55,6 @@ export function EmployeeBadges({ employeeId, className = "" }: { employeeId?: st
           <Flame className="w-3 h-3 animate-pulse" /> Continuous
         </span>
       )}
-      {badge.badge_winner && (
-        <span 
-          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20" 
-          title="Best Suggestion Winner"
-        >
-          <Sparkles className="w-3 h-3" /> Best Idea
-        </span>
-      )}
     </span>
   );
 }
