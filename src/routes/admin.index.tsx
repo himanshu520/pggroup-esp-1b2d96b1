@@ -95,7 +95,7 @@ function OverviewPage() {
 
   const { data: sugs = [] } = useQuery({
     queryKey: ["admin-suggestions-overview-export"],
-    queryFn: async () => (await supabase.from("suggestions").select("id, title, status, priority, created_at, department_id, current_department_id, plant_id, location_id, category_id, expected_saving, employees(name), departments!suggestions_department_id_fkey(name), current_departments:departments!suggestions_current_department_id_fkey(name)").order("created_at", { ascending: false }).limit(5000)).data ?? [],
+    queryFn: async () => (await supabase.from("suggestions").select("id, code, title, status, priority, created_at, completed_at, actual_cost, department_id, current_department_id, plant_id, location_id, category_id, expected_saving, employees(name, employee_code), departments!suggestions_department_id_fkey(name), current_departments:departments!suggestions_current_department_id_fkey(name), categories(name), plants(name)").order("created_at", { ascending: false }).limit(5000)).data ?? [],
   });
   const { data: depts = [] } = useQuery({ queryKey: ["depts"], queryFn: async () => (await supabase.from("departments").select("id,name")).data ?? [] });
   const { data: locations = [] } = useQuery({ queryKey: ["locs"], queryFn: async () => (await supabase.from("locations").select("id,location")).data ?? [] });
@@ -254,19 +254,19 @@ function OverviewPage() {
 
         const suggestionsData = filtered.map((s: any) => ({
           ...s,
-          department_name: s.current_departments?.name || s.departments?.name || "Unknown",
-          employee_name: s.employees?.name || "Unknown",
-          category_name: categories.find((c: any) => c.id === s.category_id)?.name || "Unknown",
         }));
 
         const suggestionsCols = [
-          { key: "id", header: "ID" },
+          { key: "code", header: "Code" },
           { key: "title", header: "Title" },
-          { key: "status", header: "Status", format: (r: any) => STATUS_LABEL[r.status as SuggestionStatus] || r.status },
-          { key: "department_name", header: "Department" },
-          { key: "employee_name", header: "Employee" },
-          { key: "category_name", header: "Category" },
-          { key: "created_at", header: "Submitted Date", format: (r: any) => new Date(r.created_at).toLocaleDateString() },
+          { key: "employee", header: "Employee", format: (s: any) => `${s.employees?.name} (${s.employees?.employee_code})` },
+          { key: "department", header: "Department", format: (s: any) => s.current_departments?.name || s.departments?.name || "Unknown" },
+          { key: "plant", header: "Plant", format: (s: any) => s.plants?.name ?? "" },
+          { key: "category", header: "Category", format: (s: any) => s.categories?.name ?? "" },
+          { key: "status", header: "Status", format: (s: any) => STATUS_LABEL[s.status as SuggestionStatus] ?? s.status },
+          { key: "actual_cost", header: "Actual cost", format: (s: any) => Number(s.actual_cost ?? 0) },
+          { key: "created_at", header: "Created", format: (s: any) => new Date(s.created_at).toLocaleDateString() },
+          { key: "completed_at", header: "Completed", format: (s: any) => (s.completed_at ? new Date(s.completed_at).toLocaleDateString() : "") },
         ];
 
         const deptStatsMap = new Map<string, { total: number; implemented: number }>();
