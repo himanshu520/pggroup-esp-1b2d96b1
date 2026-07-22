@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { EmployeeShell, PageHeader } from "@/components/employee-shell";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,12 @@ export function TrackPage({ initialCode }: { initialCode?: string }) {
   const [result, setResult] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const t = useT();
+
+  useEffect(() => {
+    if (initialCode) {
+      search();
+    }
+  }, [initialCode]);
 
   async function search() {
     if (!code.trim()) return;

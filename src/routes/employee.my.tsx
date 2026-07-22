@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, Link } from "@tanstack/react-router";
 import { EmployeeShell, PageHeader } from "@/components/employee-shell";
 import { useSession } from "@/lib/session";
 import { useQuery } from "@tanstack/react-query";
@@ -234,6 +234,10 @@ function SuggestionDetailsDialog({
               <span className="text-xs text-muted-foreground">
                 {t("submitted_on")} {new Date(s.created_at).toLocaleDateString()}
               </span>
+              <div className="flex-1" />
+              <Button size="sm" variant="outline" asChild>
+                <Link to="/employee" search={{ section: "track", code: s.code }}>Track Suggestion</Link>
+              </Button>
             </div>
 
             <div className="grid sm:grid-cols-3 gap-3 text-sm border-t border-border pt-3">
