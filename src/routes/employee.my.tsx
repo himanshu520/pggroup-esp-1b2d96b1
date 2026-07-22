@@ -107,7 +107,7 @@ export function MySuggestions() {
                 <div className="min-w-0 flex-1">
                   <div className="text-xs font-mono font-semibold text-primary">{s.code}</div>
                   <div className="mt-1 font-semibold text-sm line-clamp-2 leading-tight">
-                    {s.best_suggestions?.length > 0 && <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500 inline mr-1.5 align-text-bottom" />}
+                    {(Array.isArray(s.best_suggestions) ? s.best_suggestions.length > 0 : !!s.best_suggestions) && <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500 inline mr-1.5 align-text-bottom" />}
                     {s.title}
                   </div>
                   <div className="text-[10px] text-muted-foreground mt-1 truncate">{s.categories?.name ?? "—"} · {new Date(s.created_at).toLocaleDateString()}</div>
@@ -139,7 +139,7 @@ export function MySuggestions() {
                   <td className="px-4 py-2.5 font-mono text-xs text-primary w-24">{s.code}</td>
                   <td className="px-4 py-2.5 max-w-[200px] sm:max-w-xs truncate font-medium">
                     <div className="flex items-center gap-1.5">
-                      {s.best_suggestions?.length > 0 && <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" title="Best Suggestion" />}
+                      {(Array.isArray(s.best_suggestions) ? s.best_suggestions.length > 0 : !!s.best_suggestions) && <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" title="Best Suggestion" />}
                       <span className="truncate">{s.title}</span>
                     </div>
                   </td>

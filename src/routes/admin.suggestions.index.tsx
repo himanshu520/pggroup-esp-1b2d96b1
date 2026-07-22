@@ -152,7 +152,7 @@ export function SuggestionsList() {
                   <td className="px-4 py-2.5 font-mono text-xs text-primary">{s.code}</td>
                   <td className="px-4 py-2.5 max-w-xs truncate">
                     <div className="flex items-center gap-1.5">
-                      {s.best_suggestions?.length > 0 && <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" title="Best Suggestion" />}
+                      {(Array.isArray(s.best_suggestions) ? s.best_suggestions.length > 0 : !!s.best_suggestions) && <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" title="Best Suggestion" />}
                       <span className="truncate">{s.title}</span>
                     </div>
                   </td>
@@ -188,7 +188,7 @@ export function SuggestionsList() {
                 <span className="text-[10px] text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</span>
               </div>
               <h3 className="font-semibold text-sm leading-tight line-clamp-2 flex-1">
-                {s.best_suggestions?.length > 0 && <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500 inline mr-1.5 align-text-bottom" title="Best Suggestion" />}
+                {(Array.isArray(s.best_suggestions) ? s.best_suggestions.length > 0 : !!s.best_suggestions) && <Trophy className="w-3.5 h-3.5 text-amber-500 fill-amber-500 inline mr-1.5 align-text-bottom" title="Best Suggestion" />}
                 {s.title}
               </h3>
               
