@@ -258,7 +258,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
   const { data: bestSuggestion = null } = useQuery({
     queryKey: ["best-suggestion-of-month", bestShowcaseCategory, selectedYear, selectedMonth],
     queryFn: async () => {
-      // 1. Try querying with category filter first
+      // Only query with category filter
       let q = supabase
         .from("best_suggestions" as any)
         .select("*, suggestions(*, employees(*, departments(name), plants(name), locations(location)))")
@@ -269,27 +269,16 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
       }
 
       const { data: catData, error: catError } = await q
-        .eq("category", bestShowcaseCategory)
+        .or(`category.eq.${bestShowcaseCategory},category.is.null`)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (!catError && catData) {
-        return catData;
+      if (catError) {
+        console.error("Error fetching best suggestion:", catError);
+        return null;
       }
-
-      // 2. Fallback query if category column is not in DB or no category match
-      let fallbackQ = supabase
-        .from("best_suggestions" as any)
-        .select("*, suggestions(*, employees(*, departments(name), plants(name), locations(location)))")
-        .eq("year", selectedYear);
-
-      if (bestShowcaseCategory !== "year") {
-        fallbackQ = fallbackQ.eq("month", selectedMonth);
-      }
-
-      const { data: fallbackData } = await fallbackQ.order("created_at", { ascending: false }).limit(1).maybeSingle();
-      return fallbackData;
+      return catData;
     }
   });
 
