@@ -330,9 +330,11 @@ function AppShellInner({
               <DropdownMenuItem onClick={() => setProfileOpen(true)} className="cursor-pointer">
                 <User className="w-4 h-4 mr-2" /> My Profile
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLang(lang === "en" ? "hi" : "en")} className="cursor-pointer">
-                <Globe className="w-4 h-4 mr-2" /> {lang === "en" ? "Change to हिन्दी" : "Change to English"}
-              </DropdownMenuItem>
+              {!loc.pathname.startsWith("/admin") && (
+                <DropdownMenuItem onClick={() => setLang(lang === "en" ? "hi" : "en")} className="cursor-pointer">
+                  <Globe className="w-4 h-4 mr-2" /> {lang === "en" ? "Change to हिन्दी" : "Change to English"}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
           <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
