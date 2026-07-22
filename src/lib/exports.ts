@@ -120,3 +120,47 @@ export function exportAny<T>(
   if (format === "csv") return exportCSV(data, cols, name);
   return exportPDF(data, cols, name, pdfOpts);
 }
+
+export function exportOverviewMultiSheetXLSX(
+  summaryData: any[],
+  suggestionsData: any[],
+  suggestionsCols: ExportColumn<any>[],
+  performanceData: any[],
+  performanceCols: ExportColumn<any>[],
+  name: string
+) {
+  const wb = XLSX.utils.book_new();
+  const summaryCols: ExportColumn<any>[] = [
+    { key: "metric", header: "Metric" },
+    { key: "value", header: "Value" },
+  ];
+
+  // 1. Summary Sheet
+  const wsSummary = XLSX.utils.json_to_sheet(toRows(summaryData, summaryCols), { header: summaryCols.map(c => c.header), origin: "A3" });
+  XLSX.utils.sheet_add_aoa(wsSummary, [[`Overview Summary`], [`Downloaded On: ${new Date().toLocaleString()}`]], { origin: "A1" });
+  const summaryColWidths = summaryCols.map((c) => ({
+    wch: Math.min(60, Math.max(c.header.length + 2, ...toRows(summaryData, summaryCols).map((r) => String(r[c.header] ?? "").length + 2))),
+  }));
+  (wsSummary as any)["!cols"] = summaryColWidths;
+  XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+  // 2. Suggestions Sheet
+  const wsSug = XLSX.utils.json_to_sheet(toRows(suggestionsData, suggestionsCols), { header: suggestionsCols.map(c => c.header), origin: "A3" });
+  XLSX.utils.sheet_add_aoa(wsSug, [[`Suggestions Data`], [`Downloaded On: ${new Date().toLocaleString()}`]], { origin: "A1" });
+  const sugColWidths = suggestionsCols.map((c) => ({
+    wch: Math.min(60, Math.max(c.header.length + 2, ...toRows(suggestionsData, suggestionsCols).map((r) => String(r[c.header] ?? "").length + 2))),
+  }));
+  (wsSug as any)["!cols"] = sugColWidths;
+  XLSX.utils.book_append_sheet(wb, wsSug, "Suggestions");
+
+  // 3. Performance Sheet
+  const wsPerf = XLSX.utils.json_to_sheet(toRows(performanceData, performanceCols), { header: performanceCols.map(c => c.header), origin: "A3" });
+  XLSX.utils.sheet_add_aoa(wsPerf, [[`Department Performance`], [`Downloaded On: ${new Date().toLocaleString()}`]], { origin: "A1" });
+  const perfColWidths = performanceCols.map((c) => ({
+    wch: Math.min(60, Math.max(c.header.length + 2, ...toRows(performanceData, performanceCols).map((r) => String(r[c.header] ?? "").length + 2))),
+  }));
+  (wsPerf as any)["!cols"] = perfColWidths;
+  XLSX.utils.book_append_sheet(wb, wsPerf, "Performance");
+
+  XLSX.writeFile(wb, `${name}_${timestamp()}.xlsx`);
+}

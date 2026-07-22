@@ -17,6 +17,7 @@ export function ExportMenu<T>({
   subtitle,
   label = "Export",
   disabled,
+  customExport,
 }: {
   data: T[];
   columns: ExportColumn<T>[];
@@ -25,9 +26,15 @@ export function ExportMenu<T>({
   subtitle?: string;
   label?: ReactNode;
   disabled?: boolean;
+  customExport?: (format: ExportFormat) => void;
 }) {
-  const run = (format: ExportFormat) =>
-    exportAny(format, data, columns, filename, { title: title ?? filename, subtitle });
+  const run = (format: ExportFormat) => {
+    if (customExport) {
+      customExport(format);
+    } else {
+      exportAny(format, data, columns, filename, { title: title ?? filename, subtitle });
+    }
+  };
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

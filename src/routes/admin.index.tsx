@@ -94,9 +94,10 @@ function OverviewPage() {
   const { data: sess } = useSession();
 
   const { data: sugs = [] } = useQuery({
-    queryKey: ["admin-suggestions-all"],
-    queryFn: async () => (await supabase.from("suggestions").select("id, status, priority, created_at, department_id, current_department_id, plant_id, location_id, category_id, expected_saving").order("created_at", { ascending: false }).limit(5000)).data ?? [],
+    queryKey: ["admin-suggestions-overview-export"],
+    queryFn: async () => (await supabase.from("suggestions").select("id, title, status, priority, created_at, department_id, current_department_id, plant_id, location_id, category_id, expected_saving, employees(name), departments!suggestions_department_id_fkey(name), current_departments:departments!suggestions_current_department_id_fkey(name)").order("created_at", { ascending: false }).limit(5000)).data ?? [],
   });
+  const { data: depts = [] } = useQuery({ queryKey: ["depts"], queryFn: async () => (await supabase.from("departments").select("id,name")).data ?? [] });
   const { data: locations = [] } = useQuery({ queryKey: ["locs"], queryFn: async () => (await supabase.from("locations").select("id,location")).data ?? [] });
   const { data: plants = [] } = useQuery({ queryKey: ["plants"], queryFn: async () => (await supabase.from("plants").select("id,name,location_id")).data ?? [] });
   const { data: categories = [] } = useQuery({ queryKey: ["cats"], queryFn: async () => (await supabase.from("categories").select("id,name")).data ?? [] });
@@ -239,6 +240,66 @@ function OverviewPage() {
     return availablePlants.filter((p: any) => isPlantAccessible(p.id, p.location_id, sess.roles));
   }, [availablePlants, sess?.roles]);
 
+  const handleCustomExport = (format: "xlsx" | "csv" | "pdf") => {
+    import("@/lib/exports").then((mod) => {
+      if (format === "xlsx") {
+        const summaryData = [
+          { metric: "Total Suggestions", value: total },
+          { metric: "Under Review", value: by(["submitted", "pe_review", "transferred", "dept_review", "evidence_submitted", "pe_verification", "fake_closure", "reopened"]) },
+          { metric: "Approved", value: by(["approved", "evaluation", "implementation", "evidence_pending"]) },
+          { metric: "Implemented", value: by(["implemented", "closed"]) },
+          { metric: "Rejected", value: by(["rejected"]) },
+          { metric: "Implementation Rate", value: `${implRate}%` },
+        ];
+
+        const suggestionsData = filtered.map((s: any) => ({
+          ...s,
+          department_name: s.current_departments?.name || s.departments?.name || "Unknown",
+          employee_name: s.employees?.name || "Unknown",
+          category_name: categories.find((c: any) => c.id === s.category_id)?.name || "Unknown",
+        }));
+
+        const suggestionsCols = [
+          { key: "id", header: "ID" },
+          { key: "title", header: "Title" },
+          { key: "status", header: "Status", format: (r: any) => STATUS_LABEL[r.status as SuggestionStatus] || r.status },
+          { key: "department_name", header: "Department" },
+          { key: "employee_name", header: "Employee" },
+          { key: "category_name", header: "Category" },
+          { key: "created_at", header: "Submitted Date", format: (r: any) => new Date(r.created_at).toLocaleDateString() },
+        ];
+
+        const deptStatsMap = new Map<string, { total: number; implemented: number }>();
+        for (const s of filtered as any[]) {
+          const deptName = s.current_departments?.name || s.departments?.name || "Unknown";
+          const current = deptStatsMap.get(deptName) || { total: 0, implemented: 0 };
+          current.total++;
+          if (s.status === "implemented" || s.status === "closed") current.implemented++;
+          deptStatsMap.set(deptName, current);
+        }
+        const performanceData = Array.from(deptStatsMap.entries()).map(([name, { total, implemented }]) => ({
+          department: name,
+          total,
+          implemented,
+          pending: total - implemented,
+          rate: total ? Math.round((implemented / total) * 100) + "%" : "0%",
+        })).sort((a, b) => b.total - a.total);
+
+        const performanceCols = [
+          { key: "department", header: "Department" },
+          { key: "total", header: "Total Ideas" },
+          { key: "implemented", header: "Implemented" },
+          { key: "pending", header: "Pending/Rejected" },
+          { key: "rate", header: "Impl. Rate" },
+        ];
+
+        mod.exportOverviewMultiSheetXLSX(summaryData, suggestionsData, suggestionsCols as any, performanceData, performanceCols, "overview_analytics");
+      } else {
+        mod.exportAny(format, exportRows, [{ key: "status", header: "Status" }, { key: "count", header: "Count" }], "overview_analytics", { title: "Overview Analytics" });
+      }
+    });
+  };
+
   return (
     <AppShell navGroups={ADMIN_NAV} title="Enterprise Portal">
       <PageHeader
@@ -268,6 +329,7 @@ function OverviewPage() {
               columns={[{ key: "status", header: "Status" }, { key: "count", header: "Count" }]}
               filename="overview_analytics"
               title="Overview Analytics"
+              customExport={handleCustomExport}
             />
           </div>
         }
