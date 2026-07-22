@@ -235,7 +235,7 @@ function SuggestionDetailsDialog({
                 {t("submitted_on")} {new Date(s.created_at).toLocaleDateString()}
               </span>
               <div className="flex-1" />
-              <Button size="sm" variant="outline" asChild>
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
                 <Link to="/employee" search={{ section: "track", code: s.code }}>Track Suggestion</Link>
               </Button>
             </div>
