@@ -310,6 +310,9 @@ export function SuggestionDetail({ id }: { id: string }) {
     if (peVerificationFiles.length > 3) {
       return toast.error("Maximum 3 verification images allowed");
     }
+    if (peVerificationFiles.length === 0) {
+      return toast.error("Please upload at least one evidence image to verify");
+    }
 
     setUploading(true);
     setIsPending(true);
