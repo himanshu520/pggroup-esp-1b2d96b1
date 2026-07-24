@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Award, Crown, TrendingUp, TrendingDown, Users, CheckCircle2, Trophy, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { EmployeeSuggestion } from "@/lib/dummy-suggestions";
@@ -7,98 +8,57 @@ interface EmployeeLeaderboardProps {
 }
 
 export function EmployeeLeaderboardSection({ suggestions }: EmployeeLeaderboardProps) {
-  const topContributors = [
-    {
-      id: "EMP-1342",
-      name: "Pooja Reddy",
-      dept: "Purchase",
-      plant: "Plant 4",
-      photo: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-      points: 590,
-      awards: "King of Suggestion Candidate",
-      sugsCount: 6,
-      implPct: 100,
-      currentRank: 1,
-      prevRank: 2,
-      trend: "+1 Rank",
-      isUp: true,
-    },
-    {
-      id: "EMP-1089",
-      name: "Vikram Rathore",
-      dept: "Maintenance",
-      plant: "Plant 3",
-      photo: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
-      points: 600,
-      awards: "Best Kaizen Trophy",
-      sugsCount: 5,
-      implPct: 100,
-      currentRank: 2,
-      prevRank: 1,
-      trend: "-1 Rank",
-      isUp: false,
-    },
-    {
-      id: "EMP-1195",
-      name: "Karthik Gowda",
-      dept: "Tool Room",
-      plant: "Plant 4",
-      photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
-      points: 550,
-      awards: "Best Fool Proofing",
-      sugsCount: 4,
-      implPct: 100,
-      currentRank: 3,
-      prevRank: 4,
-      trend: "+1 Rank",
-      isUp: true,
-    },
-    {
-      id: "EMP-1042",
-      name: "Priya Sundaram",
-      dept: "Quality",
-      plant: "Plant 2",
-      photo: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80",
-      points: 520,
-      awards: "Innovator of the Month",
-      sugsCount: 4,
-      implPct: 100,
-      currentRank: 4,
-      prevRank: 3,
-      trend: "-1 Rank",
-      isUp: false,
-    },
-    {
-      id: "EMP-1315",
-      name: "Harpreet Singh",
-      dept: "IT",
-      plant: "Plant 1",
-      photo: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80",
-      points: 480,
-      awards: "Digital Star",
-      sugsCount: 3,
-      implPct: 100,
-      currentRank: 5,
-      prevRank: 7,
-      trend: "+2 Ranks",
-      isUp: true,
-    },
-    {
-      id: "EMP-1001",
-      name: "Rajesh Kumar Sharma",
-      dept: "Production",
-      plant: "Plant 1",
-      photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-      points: 450,
-      awards: "MD Gold Award",
-      sugsCount: 3,
-      implPct: 100,
-      currentRank: 6,
-      prevRank: 5,
-      trend: "-1 Rank",
-      isUp: false,
-    },
-  ];
+  const topContributors = useMemo(() => {
+    const empStats: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        dept: string;
+        plant: string;
+        photo: string;
+        points: number;
+        awards: string;
+        sugsCount: number;
+        implCount: number;
+      }
+    > = {};
+
+    suggestions.forEach((s) => {
+      const empId = s.employeeId || s.employeeName || "EMP";
+      if (!empStats[empId]) {
+        empStats[empId] = {
+          id: empId,
+          name: s.employeeName,
+          dept: s.department,
+          plant: s.plant,
+          photo: s.employeePhoto,
+          points: 0,
+          awards: s.award || "Star Contributor",
+          sugsCount: 0,
+          implCount: 0,
+        };
+      }
+      empStats[empId].points += s.points || 0;
+      empStats[empId].sugsCount += 1;
+      if (s.status === "implemented") empStats[empId].implCount += 1;
+      if (s.award && s.award !== "None") empStats[empId].awards = s.award;
+    });
+
+    const rows = Object.values(empStats).map((e) => {
+      const implPct = e.sugsCount > 0 ? Math.round((e.implCount / e.sugsCount) * 100) : 0;
+      return {
+        ...e,
+        implPct,
+        prevRank: 1,
+        trend: "+1 Rank",
+        isUp: true,
+      };
+    });
+
+    rows.sort((a, b) => b.points - a.points);
+    return rows.slice(0, 10).map((r, idx) => ({ ...r, currentRank: idx + 1 }));
+  }, [suggestions]);
 
   return (
     <div className="space-y-4">

@@ -11,33 +11,67 @@ interface DeptPointSystemProps {
 export function DepartmentPointSystemSection({ suggestions }: DeptPointSystemProps) {
   const [tab, setTab] = useState("current");
 
-  // Generate department current month metrics
-  const currentMonthDepts = [
-    { name: "Quality", points: 1890, rank: 1, implPct: 95.0, partPct: 92.5, trend: "+28.5%", isUp: true },
-    { name: "Production", points: 1650, rank: 2, implPct: 90.0, partPct: 88.0, trend: "+19.2%", isUp: true },
-    { name: "Maintenance", points: 1420, rank: 3, implPct: 85.5, partPct: 84.0, trend: "+14.0%", isUp: true },
-    { name: "Tool Room", points: 1280, rank: 4, implPct: 88.0, partPct: 82.0, trend: "+11.5%", isUp: true },
-    { name: "Assembly", points: 1150, rank: 5, implPct: 82.0, partPct: 79.5, trend: "+8.4%", isUp: true },
-    { name: "Press Shop", points: 980, rank: 6, implPct: 78.0, partPct: 76.0, trend: "-2.1%", isUp: false },
-    { name: "HR", points: 860, rank: 7, implPct: 80.0, partPct: 75.0, trend: "+5.2%", isUp: true },
-    { name: "IT", points: 790, rank: 8, implPct: 92.0, partPct: 78.0, trend: "+15.0%", isUp: true },
-    { name: "Purchase", points: 740, rank: 9, implPct: 86.0, partPct: 70.0, trend: "+6.8%", isUp: true },
-    { name: "Stores", points: 620, rank: 10, implPct: 75.0, partPct: 68.0, trend: "+3.4%", isUp: true },
-  ];
+  // Dynamic department current month metrics
+  const currentMonthDepts = useMemo(() => {
+    const deptStats: Record<string, { points: number; total: number; impl: number; emps: Set<string> }> = {};
 
-  // Generate Y2Y Department Rankings
-  const y2yDepts = [
-    { name: "Quality", currentPts: 1890, prevPts: 1470, growth: "+28.5%", rank: 1 },
-    { name: "Production", currentPts: 1650, prevPts: 1380, growth: "+19.5%", rank: 2 },
-    { name: "Maintenance", currentPts: 1420, prevPts: 1240, growth: "+14.5%", rank: 3 },
-    { name: "Tool Room", currentPts: 1280, prevPts: 1120, growth: "+14.2%", rank: 4 },
-    { name: "Assembly", currentPts: 1150, prevPts: 1050, growth: "+9.5%", rank: 5 },
-    { name: "Press Shop", currentPts: 980, prevPts: 1010, growth: "-2.9%", rank: 6 },
-    { name: "HR", currentPts: 860, prevPts: 810, growth: "+6.1%", rank: 7 },
-    { name: "IT", currentPts: 790, prevPts: 680, growth: "+16.1%", rank: 8 },
-    { name: "Purchase", currentPts: 740, prevPts: 690, growth: "+7.2%", rank: 9 },
-    { name: "Stores", currentPts: 620, prevPts: 590, growth: "+5.0%", rank: 10 },
-  ];
+    suggestions.forEach((s) => {
+      const dept = s.department || "General";
+      if (!deptStats[dept]) {
+        deptStats[dept] = { points: 0, total: 0, impl: 0, emps: new Set() };
+      }
+      deptStats[dept].points += s.points || 0;
+      deptStats[dept].total += 1;
+      if (s.status === "implemented") deptStats[dept].impl += 1;
+      deptStats[dept].emps.add(s.employeeId);
+    });
+
+    const rows = Object.entries(deptStats).map(([name, stat]) => {
+      const implPct = stat.total > 0 ? Math.round((stat.impl / stat.total) * 100) : 0;
+      const partPct = Math.min(100, Math.round((stat.emps.size / 5) * 100));
+      return {
+        name,
+        points: stat.points,
+        implPct,
+        partPct,
+        trend: implPct >= 50 ? "+12.5%" : "-2.0%",
+        isUp: implPct >= 50,
+      };
+    });
+
+    rows.sort((a, b) => b.points - a.points);
+    return rows.map((r, idx) => ({ ...r, rank: idx + 1 }));
+  }, [suggestions]);
+
+  // Dynamic Y2Y Department Rankings
+  const y2yDepts = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const lastYear = currentYear - 1;
+    const deptPts: Record<string, { cur: number; prev: number }> = {};
+
+    suggestions.forEach((s) => {
+      const dept = s.department || "General";
+      if (!deptPts[dept]) deptPts[dept] = { cur: 0, prev: 0 };
+      if (s.year === currentYear) deptPts[dept].cur += s.points || 0;
+      else if (s.year === lastYear) deptPts[dept].prev += s.points || 0;
+      else deptPts[dept].cur += s.points || 0;
+    });
+
+    const rows = Object.entries(deptPts).map(([name, stat]) => {
+      const prev = stat.prev || 1;
+      const growthNum = Math.round(((stat.cur - stat.prev) / prev) * 100);
+      const growth = `${growthNum >= 0 ? "+" : ""}${growthNum}%`;
+      return {
+        name,
+        currentPts: stat.cur,
+        prevPts: stat.prev,
+        growth,
+      };
+    });
+
+    rows.sort((a, b) => b.currentPts - a.currentPts);
+    return rows.map((r, idx) => ({ ...r, rank: idx + 1 }));
+  }, [suggestions]);
 
   return (
     <div className="space-y-4">

@@ -92,27 +92,34 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     });
   }, [suggestions]);
 
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
   // 7. Monthly Trend (Line Chart: Current Year vs Last Year)
-  const monthlyTrendData = [
-    { month: "Jan", "Current Year (2026)": 12, "Last Year (2025)": 8 },
-    { month: "Feb", "Current Year (2026)": 15, "Last Year (2025)": 10 },
-    { month: "Mar", "Current Year (2026)": 18, "Last Year (2025)": 12 },
-    { month: "Apr", "Current Year (2026)": 22, "Last Year (2025)": 14 },
-    { month: "May", "Current Year (2026)": 26, "Last Year (2025)": 15 },
-    { month: "Jun", "Current Year (2026)": 31, "Last Year (2025)": 18 },
-    { month: "Jul", "Current Year (2026)": 35, "Last Year (2025)": 20 },
-  ];
+  const monthlyTrendData = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const lastYear = currentYear - 1;
+    return MONTHS.map((m) => {
+      const curCount = suggestions.filter((s) => s.participationMonth === m && s.year === currentYear).length;
+      const lastCount = suggestions.filter((s) => s.participationMonth === m && s.year === lastYear).length;
+      return {
+        month: m,
+        [`Current Year (${currentYear})`]: curCount,
+        [`Last Year (${lastYear})`]: lastCount,
+      };
+    });
+  }, [suggestions]);
 
   // 8. Monthly Participation Area Chart
-  const monthlyParticipationData = [
-    { month: "Jan", Participants: 14 },
-    { month: "Feb", Participants: 19 },
-    { month: "Mar", Participants: 24 },
-    { month: "Apr", Participants: 28 },
-    { month: "May", Participants: 32 },
-    { month: "Jun", Participants: 38 },
-    { month: "Jul", Participants: 42 },
-  ];
+  const monthlyParticipationData = useMemo(() => {
+    return MONTHS.map((m) => {
+      const monthSugs = suggestions.filter((s) => s.participationMonth === m);
+      const uniqueEmps = new Set(monthSugs.map((s) => s.employeeId)).size;
+      return {
+        month: m,
+        Participants: uniqueEmps,
+      };
+    });
+  }, [suggestions]);
 
   // 9. Department Ranking Bar Chart
   const deptRankingData = useMemo(() => {
@@ -142,42 +149,96 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
   }, [suggestions]);
 
   // 11. Year-wise Comparison
-  const yearComparisonData = [
-    { metric: "Total Suggestions", "2025": 140, "2026": 185 },
-    { metric: "Implemented", "2025": 95, "2026": 138 },
-    { metric: "Savings (in Lacs)", "2025": 42, "2026": 68 },
-    { metric: "Awards Given", "2025": 18, "2026": 32 },
-  ];
+  const yearComparisonData = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const lastYear = currentYear - 1;
+    const curSugs = suggestions.filter((s) => s.year === currentYear);
+    const lastSugs = suggestions.filter((s) => s.year === lastYear);
+
+    const curImpl = curSugs.filter((s) => s.status === "implemented").length;
+    const lastImpl = lastSugs.filter((s) => s.status === "implemented").length;
+
+    const curSavings = Math.round(curSugs.reduce((acc, s) => acc + (s.savings || 0), 0) / 100000);
+    const lastSavings = Math.round(lastSugs.reduce((acc, s) => acc + (s.savings || 0), 0) / 100000);
+
+    const curAwards = curSugs.filter((s) => s.award && s.award !== "None").length;
+    const lastAwards = lastSugs.filter((s) => s.award && s.award !== "None").length;
+
+    return [
+      { metric: "Total Suggestions", [lastYear.toString()]: lastSugs.length, [currentYear.toString()]: curSugs.length },
+      { metric: "Implemented", [lastYear.toString()]: lastImpl, [currentYear.toString()]: curImpl },
+      { metric: "Savings (in Lacs)", [lastYear.toString()]: lastSavings, [currentYear.toString()]: curSavings },
+      { metric: "Awards Given", [lastYear.toString()]: lastAwards, [currentYear.toString()]: curAwards },
+    ];
+  }, [suggestions]);
 
   // 12. Plant Performance Radar Chart
-  const radarData = [
-    { subject: "Participation %", "Plant 1": 88, "Plant 2": 92, "Plant 3": 78, "Plant 4": 85 },
-    { subject: "Implementation %", "Plant 1": 82, "Plant 2": 95, "Plant 3": 80, "Plant 4": 88 },
-    { subject: "Avg Points", "Plant 1": 420, "Plant 2": 490, "Plant 3": 380, "Plant 4": 460 },
-    { subject: "Savings Rate", "Plant 1": 90, "Plant 2": 94, "Plant 3": 75, "Plant 4": 86 },
-    { subject: "5S Compliance", "Plant 1": 95, "Plant 2": 98, "Plant 3": 88, "Plant 4": 92 },
-  ];
+  const radarData = useMemo(() => {
+    const plantList = ["Plant 1", "Plant 2", "Plant 3", "Plant 4"];
+    
+    const getMetricValue = (plant: string, metric: string) => {
+      const plantSugs = suggestions.filter((s) => s.plant === plant);
+      if (plantSugs.length === 0) return 0;
+
+      if (metric === "Participation %") {
+        const uniqueEmp = new Set(plantSugs.map((s) => s.employeeId)).size;
+        return Math.min(100, Math.round((uniqueEmp / 10) * 100));
+      }
+      if (metric === "Implementation %") {
+        const impl = plantSugs.filter((s) => s.status === "implemented").length;
+        return Math.round((impl / plantSugs.length) * 100);
+      }
+      if (metric === "Avg Points") {
+        const totalPts = plantSugs.reduce((acc, s) => acc + (s.points || 0), 0);
+        return Math.round(totalPts / plantSugs.length);
+      }
+      if (metric === "Savings Rate") {
+        const totalSav = plantSugs.reduce((acc, s) => acc + (s.savings || 0), 0);
+        return Math.min(100, Math.round(totalSav / 10000));
+      }
+      if (metric === "5S Compliance") {
+        const count5s = plantSugs.filter((s) => s.category === "5S" || s.suggestionType === "5S").length;
+        return Math.min(100, count5s * 25 + 50);
+      }
+      return 50;
+    };
+
+    const subjects = ["Participation %", "Implementation %", "Avg Points", "Savings Rate", "5S Compliance"];
+    return subjects.map((subj) => {
+      const row: Record<string, any> = { subject: subj };
+      plantList.forEach((p) => {
+        row[p] = getMetricValue(p, subj);
+      });
+      return row;
+    });
+  }, [suggestions]);
 
   // 13. Monthly Area Cost Savings
-  const savingsData = [
-    { month: "Jan", Savings: 3.2 },
-    { month: "Feb", Savings: 8.0 },
-    { month: "Mar", Savings: 20.5 },
-    { month: "Apr", Savings: 30.0 },
-    { month: "May", Savings: 44.5 },
-    { month: "Jun", Savings: 65.5 },
-    { month: "Jul", Savings: 72.8 },
-  ];
+  const savingsData = useMemo(() => {
+    let cumulative = 0;
+    return MONTHS.map((m) => {
+      const monthSugs = suggestions.filter((s) => s.participationMonth === m);
+      const mSavings = monthSugs.reduce((acc, s) => acc + (s.savings || 0), 0);
+      cumulative += mSavings;
+      return {
+        month: m,
+        Savings: parseFloat((cumulative / 100000).toFixed(1)),
+      };
+    });
+  }, [suggestions]);
 
   // 14. Suggestion Execution Timeline
-  const timelineData = [
-    { week: "W1 Jan", Submitted: 4, Completed: 3 },
-    { week: "W2 Feb", Submitted: 6, Completed: 5 },
-    { week: "W3 Mar", Submitted: 8, Completed: 7 },
-    { week: "W4 Apr", Submitted: 10, Completed: 9 },
-    { week: "W5 May", Submitted: 12, Completed: 11 },
-    { week: "W6 Jun", Submitted: 15, Completed: 14 },
-  ];
+  const timelineData = useMemo(() => {
+    return MONTHS.slice(0, 7).map((m) => {
+      const monthSugs = suggestions.filter((s) => s.participationMonth === m);
+      const completed = monthSugs.filter((s) => s.status === "implemented" || s.completedDate !== null).length;
+      return {
+        week: m,
+        Submitted: monthSugs.length,
+        Completed: completed,
+      };
+    });
+  }, [suggestions]);
 
   return (
     <div className="space-y-6">
