@@ -6,14 +6,46 @@ interface DashboardHighlightsProps {
 }
 
 export function DashboardHighlightsSection({ suggestions }: DashboardHighlightsProps) {
+  const defaultSug: EmployeeSuggestion = {
+    id: "none",
+    code: "-",
+    employeeName: "Pending Submissions",
+    employeeId: "N/A",
+    gender: "Male",
+    employeePhoto: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+    department: "Organization",
+    plant: "Main Plant",
+    state: "India",
+    location: "Corporate",
+    category: "Kaizen",
+    suggestionTitle: "Awaiting New Employee Suggestions",
+    description: "Submit new suggestions from the employee portal to earn recognition.",
+    costType: "No Cost",
+    status: "pending",
+    implementationStatus: "Pending Review",
+    priority: "Medium",
+    suggestionType: "Kaizen",
+    reviewer: "Committee",
+    createdDate: new Date().toISOString().split("T")[0],
+    completedDate: null,
+    points: 0,
+    award: "Nominee",
+    beforeImage: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80",
+    afterImage: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=600&auto=format&fit=crop&q=80",
+    remarks: "No suggestions recorded yet.",
+    participationMonth: "Jul",
+    year: 2026,
+    savings: 0,
+  };
+
   // Find Best Suggestion of the Month
-  const bestSug = suggestions.find((s) => s.award.includes("King") || s.points >= 550) || suggestions[0];
+  const bestSug = suggestions.find((s) => s.award?.includes("King") || s.points >= 400) || suggestions[0] || defaultSug;
 
   // Find Best Fool Proofing
-  const bestFoolProofing = suggestions.find((s) => s.category === "Fool Proofing") || suggestions[0];
+  const bestFoolProofing = suggestions.find((s) => s.category === "Fool Proofing") || suggestions[0] || defaultSug;
 
   // King of Suggestion Champion
-  const kingOfSug = suggestions.find((s) => s.employeeName === "Pooja Reddy" || s.points >= 590) || suggestions[1];
+  const kingOfSug = suggestions.find((s) => s.points >= 400) || suggestions[0] || defaultSug;
 
   return (
     <div className="space-y-4">

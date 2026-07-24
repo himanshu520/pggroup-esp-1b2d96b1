@@ -29,7 +29,7 @@ import { WorkflowPage } from "./admin.workflow";
 import { UsersPage } from "./admin.users";
 import { LeaderboardView } from "@/components/leaderboard";
 import { FilterDrawer } from "@/components/filter-drawer";
-import { DUMMY_SUGGESTIONS, filterSuggestions, type DashboardFilters } from "@/lib/dummy-suggestions";
+import { filterSuggestions, mapDatabaseSuggestionsToUI, type DashboardFilters } from "@/lib/dummy-suggestions";
 import { KPICardsSection } from "@/components/dashboard/kpi-cards";
 import { DashboardChartsSection } from "@/components/dashboard/dashboard-charts";
 import { DashboardHighlightsSection } from "@/components/dashboard/dashboard-highlights";
@@ -117,10 +117,15 @@ function OverviewPage() {
       ).data ?? [],
   });
 
-  // Filter realistic preloaded dummy dataset according to Filter Drawer selection
+  // Map live database records from Supabase
+  const mappedSuggestions = useMemo(() => {
+    return mapDatabaseSuggestionsToUI(sugs);
+  }, [sugs]);
+
+  // Filter live database suggestions according to Filter Drawer selection
   const filteredSuggestions = useMemo(() => {
-    return filterSuggestions(DUMMY_SUGGESTIONS, filters);
-  }, [filters]);
+    return filterSuggestions(mappedSuggestions, filters);
+  }, [mappedSuggestions, filters]);
 
   const activeFilterCount = Object.values(filters).filter((v) => v && v !== "all").length;
 
@@ -141,7 +146,7 @@ function OverviewPage() {
         {activeFilterCount > 0 && (
           <div className="flex items-center justify-between px-4 py-2 rounded-lg bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
             <span>
-              Active Filter Panel: Showing {filteredSuggestions.length} of {DUMMY_SUGGESTIONS.length} suggestions ({activeFilterCount} criteria applied)
+              Active Filter Panel: Showing {filteredSuggestions.length} of {mappedSuggestions.length} database suggestions ({activeFilterCount} criteria applied)
             </span>
             <Button variant="ghost" size="sm" onClick={() => setFilters({})} className="h-6 px-2 text-xs font-bold hover:bg-primary/20">
               Clear All Filters
