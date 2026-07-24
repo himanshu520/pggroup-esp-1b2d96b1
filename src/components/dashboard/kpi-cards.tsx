@@ -60,13 +60,30 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
     // Participation % (assuming 50 total workforce baseline)
     const participationPct = Math.min(100, Math.round((activeEmployees / 35) * 100));
 
-    // Department counts to get best department
+    // Dynamic Date calculations
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const lastYear = currentYear - 1;
+    const todayStr = now.toISOString().split("T")[0];
+    const monthShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][now.getMonth()];
+    const prevMonthShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][(now.getMonth() + 11) % 12];
+
+    const todaySugs = suggestions.filter((s) => s.createdDate === todayStr).length;
+    const monthSugs = suggestions.filter((s) => s.year === currentYear && s.participationMonth === monthShort).length;
+    const prevMonthSugs = suggestions.filter((s) => s.year === currentYear && s.participationMonth === prevMonthShort).length;
+    const currentYearSugs = suggestions.filter((s) => s.year === currentYear).length;
+    const lastYearSugs = suggestions.filter((s) => s.year === lastYear).length;
+
+    // MoM Improvement
+    const momImprovement = prevMonthSugs > 0 ? Math.round(((monthSugs - prevMonthSugs) / prevMonthSugs) * 100) : 0;
+
+    // Best Dept
     const deptCounts: Record<string, number> = {};
     suggestions.forEach((s) => {
       deptCounts[s.department] = (deptCounts[s.department] || 0) + 1;
     });
     const bestDeptEntry = Object.entries(deptCounts).sort((a, b) => b[1] - a[1])[0];
-    const bestDept = bestDeptEntry ? bestDeptEntry[0] : "Production";
+    const bestDept = bestDeptEntry ? bestDeptEntry[0] : "Awaiting Data";
 
     // Avg Implementation Time
     const implSugs = suggestions.filter((s) => s.completedDate && s.createdDate);
@@ -78,13 +95,7 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
               return acc + diffMs / (1000 * 60 * 60 * 24);
             }, 0) / implSugs.length
           )
-        : 12;
-
-    // Time-based calculations
-    const todaySugs = suggestions.filter((s) => s.createdDate === "2026-07-18" || s.createdDate.startsWith("2026-07")).length || 3;
-    const monthSugs = suggestions.filter((s) => s.participationMonth === "Jul" || s.createdDate.startsWith("2026-07")).length || 6;
-    const currentYearSugs = suggestions.filter((s) => s.year === 2026).length;
-    const lastYearSugs = 18; // Benchmark comparison
+        : 0;
 
     return {
       todaySugs,
@@ -95,7 +106,7 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
       fakeClosures,
       rejectedDropped,
       bestDept,
-      momImprovement: 14.8,
+      momImprovement,
       totalImplemented: implemented,
       pendingExecution,
       underReview,
