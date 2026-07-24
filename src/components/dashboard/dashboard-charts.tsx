@@ -31,31 +31,37 @@ interface DashboardChartsProps {
 const COLORS = ["#0066FF", "#FF6B00", "#00B8D9", "#36B37E", "#6554C0", "#FFAB00", "#FF5630", "#0052CC"];
 
 export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
-  // 1. State-wise Suggestions (Multi-Bar Breakdown: Implemented, Under Review, Pending)
-  const stateData = useMemo(() => {
-    const stateStats: Record<string, { implemented: number; underReview: number; pending: number; total: number }> = {};
+  // 1. Suggestion State / Status Breakdown (Pending, Under Review, Approved, Implemented, Rejected)
+  const statusStateData = useMemo(() => {
+    const statusCounts: Record<string, number> = {
+      "Pending": 0,
+      "Under Review": 0,
+      "Approved": 0,
+      "Implemented": 0,
+      "Rejected / Dropped": 0,
+    };
+
     suggestions.forEach((s) => {
-      const st = s.state || "Unassigned";
-      if (!stateStats[st]) {
-        stateStats[st] = { implemented: 0, underReview: 0, pending: 0, total: 0 };
-      }
-      stateStats[st].total += 1;
       if (s.status === "implemented") {
-        stateStats[st].implemented += 1;
+        statusCounts["Implemented"] += 1;
       } else if (s.status === "under_review") {
-        stateStats[st].underReview += 1;
+        statusCounts["Under Review"] += 1;
+      } else if (s.status === "approved") {
+        statusCounts["Approved"] += 1;
+      } else if (s.status === "rejected" || s.status === "dropped") {
+        statusCounts["Rejected / Dropped"] += 1;
       } else {
-        stateStats[st].pending += 1;
+        statusCounts["Pending"] += 1;
       }
     });
 
-    return Object.entries(stateStats).map(([state, stat]) => ({
-      state,
-      Implemented: stat.implemented,
-      "Under Review": stat.underReview,
-      Pending: stat.pending,
-      Total: stat.total,
-    }));
+    return [
+      { state: "Pending", count: statusCounts["Pending"], fill: "#F59E0B" },
+      { state: "Under Review", count: statusCounts["Under Review"], fill: "#3B82F6" },
+      { state: "Approved", count: statusCounts["Approved"], fill: "#8B5CF6" },
+      { state: "Implemented", count: statusCounts["Implemented"], fill: "#10B981" },
+      { state: "Rejected / Dropped", count: statusCounts["Rejected / Dropped"], fill: "#EF4444" },
+    ];
   }, [suggestions]);
 
   // 2. Plant-wise Distribution (Donut Chart)
@@ -271,25 +277,26 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
 
       {/* Grid Row 1: State-Wise & Plant-Wise */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Chart 1: State-wise Suggestions */}
+        {/* Chart 1: Suggestion State / Status Distribution */}
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-blue-500" /> State-wise Suggestions
+              <Layers className="w-4 h-4 text-blue-500" /> Suggestion State / Status Breakdown
             </span>
-            <span className="text-[11px] text-muted-foreground">Geographic Distribution</span>
+            <span className="text-[11px] text-muted-foreground">Workflow Stages</span>
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stateData}>
+              <BarChart data={statusStateData}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                 <XAxis dataKey="state" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
-                <Legend wrapperStyle={{ fontSize: "11px" }} />
-                <Bar dataKey="Implemented" fill="#10B981" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Under Review" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Pending" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+                  {statusStateData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
