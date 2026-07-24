@@ -31,13 +31,31 @@ interface DashboardChartsProps {
 const COLORS = ["#0066FF", "#FF6B00", "#00B8D9", "#36B37E", "#6554C0", "#FFAB00", "#FF5630", "#0052CC"];
 
 export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
-  // 1. State-wise Suggestions (Bar Chart)
+  // 1. State-wise Suggestions (Multi-Bar Breakdown: Implemented, Under Review, Pending)
   const stateData = useMemo(() => {
-    const counts: Record<string, number> = {};
+    const stateStats: Record<string, { implemented: number; underReview: number; pending: number; total: number }> = {};
     suggestions.forEach((s) => {
-      counts[s.state] = (counts[s.state] || 0) + 1;
+      const st = s.state || "Unassigned";
+      if (!stateStats[st]) {
+        stateStats[st] = { implemented: 0, underReview: 0, pending: 0, total: 0 };
+      }
+      stateStats[st].total += 1;
+      if (s.status === "implemented") {
+        stateStats[st].implemented += 1;
+      } else if (s.status === "under_review") {
+        stateStats[st].underReview += 1;
+      } else {
+        stateStats[st].pending += 1;
+      }
     });
-    return Object.entries(counts).map(([state, count]) => ({ state, count }));
+
+    return Object.entries(stateStats).map(([state, stat]) => ({
+      state,
+      Implemented: stat.implemented,
+      "Under Review": stat.underReview,
+      Pending: stat.pending,
+      Total: stat.total,
+    }));
   }, [suggestions]);
 
   // 2. Plant-wise Distribution (Donut Chart)
@@ -268,7 +286,10 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                 <XAxis dataKey="state" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
-                <Bar dataKey="count" fill="#0066FF" radius={[6, 6, 0, 0]} />
+                <Legend wrapperStyle={{ fontSize: "11px" }} />
+                <Bar dataKey="Implemented" fill="#10B981" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Under Review" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Pending" fill="#F59E0B" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
