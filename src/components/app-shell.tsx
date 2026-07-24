@@ -54,6 +54,7 @@ export function AppShell(props: {
   title: string;
   children: ReactNode;
   collapsible?: boolean;
+  filterSlot?: ReactNode;
 }) {
   const nested = useContext(AppShellContext);
   if (nested) return <>{props.children}</>;
@@ -69,11 +70,13 @@ function AppShellInner({
   title,
   children,
   collapsible = true,
+  filterSlot,
 }: {
   navGroups: Array<{ label?: string; items: NavItem[] }>;
   title: string;
   children: ReactNode;
   collapsible?: boolean;
+  filterSlot?: ReactNode;
 }) {
   const { data: session } = useSession();
   const loc = useLocation();
@@ -91,13 +94,12 @@ function AppShellInner({
   const deptName = getSessionDeptDisplay(session?.employee?.departments) || getSessionDeptDisplay(firstRole?.departments);
   const qc = useQueryClient();
   const [mobileOpen, setMobileOpen] = useState(false);
-  // Persist collapsed state across route changes (AppShell remounts per route)
+  // Persist collapsed state across route changes (default: hidden/collapsed)
   const [collapsed, setCollapsed] = useState<boolean>(() => {
-    if (typeof window === "undefined") return collapsible;
+    if (typeof window === "undefined") return true;
     const v = window.localStorage.getItem("esp:sidebar-collapsed");
-    if (v === "1") return true;
     if (v === "0") return false;
-    return collapsible;
+    return true;
   });
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -151,7 +153,7 @@ function AppShellInner({
       className={cn(
         "shrink-0 bg-sidebar border-r border-sidebar-border flex flex-col w-64",
         "lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)]",
-        "fixed inset-y-0 left-0 z-50 h-screen transition-all duration-200",
+        "fixed inset-y-0 left-0 z-50 h-screen transition-all duration-300 ease-in-out",
         mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         collapsible && collapsed && "lg:w-16",
       )}
@@ -311,7 +313,8 @@ function AppShellInner({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
+          {filterSlot}
           <NotificationBell />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
