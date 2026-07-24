@@ -106,40 +106,48 @@ export function DepartmentPointSystemSection({ suggestions }: DeptPointSystemPro
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {currentMonthDepts.map((d) => (
-                  <tr key={d.name} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3 px-4 font-bold">
-                      {d.rank === 1 ? (
-                        <Badge className="bg-amber-500 text-white font-black"><Crown className="w-3 h-3 mr-1" /> #1</Badge>
-                      ) : d.rank === 2 ? (
-                        <Badge className="bg-slate-400 text-white font-black">#2</Badge>
-                      ) : d.rank === 3 ? (
-                        <Badge className="bg-amber-700 text-white font-black">#3</Badge>
-                      ) : (
-                        <span className="text-slate-600 dark:text-slate-400 pl-2">#{d.rank}</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-primary" /> {d.name}
-                    </td>
-                    <td className="py-3 px-4 font-extrabold text-primary">{d.points} Pts</td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-24 bg-slate-200 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-                          <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${d.implPct}%` }} />
-                        </div>
-                        <span className="font-semibold">{d.implPct}%</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 font-semibold">{d.partPct}%</td>
-                    <td className="py-3 px-4 font-bold">
-                      <span className={`inline-flex items-center gap-1 ${d.isUp ? "text-emerald-600" : "text-rose-600"}`}>
-                        {d.isUp ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                        {d.trend}
-                      </span>
+                {currentMonthDepts.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-muted-foreground text-xs">
+                      No department data available for current selection.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  currentMonthDepts.map((d) => (
+                    <tr key={d.name} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 px-4 font-bold">
+                        {d.rank === 1 ? (
+                          <Badge className="bg-amber-500 text-white font-black"><Crown className="w-3 h-3 mr-1" /> #1</Badge>
+                        ) : d.rank === 2 ? (
+                          <Badge className="bg-slate-400 text-white font-black">#2</Badge>
+                        ) : d.rank === 3 ? (
+                          <Badge className="bg-amber-700 text-white font-black">#3</Badge>
+                        ) : (
+                          <span className="text-slate-600 dark:text-slate-400 pl-2">#{d.rank}</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-primary" /> {d.name}
+                      </td>
+                      <td className="py-3 px-4 font-extrabold text-primary">{d.points} Pts</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-24 bg-slate-200 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
+                            <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${d.implPct}%` }} />
+                          </div>
+                          <span className="font-semibold">{d.implPct}%</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 font-semibold">{d.partPct}%</td>
+                      <td className="py-3 px-4 font-bold">
+                        <span className={`inline-flex items-center gap-1 ${d.isUp ? "text-emerald-600" : "text-rose-600"}`}>
+                          {d.isUp ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                          {d.trend}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

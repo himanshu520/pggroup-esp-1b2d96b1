@@ -84,7 +84,7 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
       employeeName: s.employees?.name || "Employee",
       employeeId: s.employees?.employee_code || "EMP",
       gender: (s.employees?.gender as "Male" | "Female" | "Others") || "Male",
-      employeePhoto: s.employees?.avatar_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      employeePhoto: s.employees?.avatar_url || "",
       department: s.current_departments?.name || s.departments?.name || "General",
       plant: s.plants?.name || "Plant 1",
       state: s.plants?.locations?.state || s.locations?.state || "Haryana",

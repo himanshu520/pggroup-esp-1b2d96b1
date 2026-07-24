@@ -87,50 +87,64 @@ export function EmployeeLeaderboardSection({ suggestions }: EmployeeLeaderboardP
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {topContributors.map((emp) => (
-                <tr key={emp.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                  <td className="py-3 px-4 font-bold">
-                    {emp.currentRank === 1 ? (
-                      <Badge className="bg-amber-500 text-white font-black"><Crown className="w-3 h-3 mr-1" /> #1</Badge>
-                    ) : emp.currentRank === 2 ? (
-                      <Badge className="bg-slate-400 text-white font-black">#2</Badge>
-                    ) : emp.currentRank === 3 ? (
-                      <Badge className="bg-amber-700 text-white font-black">#3</Badge>
-                    ) : (
-                      <span className="text-slate-600 dark:text-slate-400 pl-2">#{emp.currentRank}</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4 font-bold text-slate-900 dark:text-slate-100">
-                    <div className="flex items-center gap-3">
-                      <img src={emp.photo} alt={emp.name} className="w-9 h-9 rounded-full object-cover border border-slate-200" />
-                      <div>
-                        <span className="block font-bold">{emp.name}</span>
-                        <span className="text-[10px] text-muted-foreground font-normal">{emp.id}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="font-semibold text-slate-700 dark:text-slate-300 block">{emp.dept}</span>
-                    <span className="text-[10px] text-muted-foreground">{emp.plant}</span>
-                  </td>
-                  <td className="py-3 px-4 font-black text-primary">{emp.points} Pts</td>
-                  <td className="py-3 px-4 font-semibold">{emp.sugsCount} Ideas</td>
-                  <td className="py-3 px-4">
-                    <span className="font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full text-[11px]">
-                      {emp.implPct}%
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" /> {emp.awards}
-                  </td>
-                  <td className="py-3 px-4 font-bold">
-                    <span className={`inline-flex items-center gap-1 ${emp.isUp ? "text-emerald-600" : "text-slate-500"}`}>
-                      {emp.isUp ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                      {emp.trend}
-                    </span>
+              {topContributors.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-muted-foreground text-xs">
+                    No active contributors recorded in the database yet.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                topContributors.map((emp) => (
+                  <tr key={emp.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="py-3 px-4 font-bold">
+                      {emp.currentRank === 1 ? (
+                        <Badge className="bg-amber-500 text-white font-black"><Crown className="w-3 h-3 mr-1" /> #1</Badge>
+                      ) : emp.currentRank === 2 ? (
+                        <Badge className="bg-slate-400 text-white font-black">#2</Badge>
+                      ) : emp.currentRank === 3 ? (
+                        <Badge className="bg-amber-700 text-white font-black">#3</Badge>
+                      ) : (
+                        <span className="text-slate-600 dark:text-slate-400 pl-2">#{emp.currentRank}</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 font-bold text-slate-900 dark:text-slate-100">
+                      <div className="flex items-center gap-3">
+                        {emp.photo ? (
+                          <img src={emp.photo} alt={emp.name} className="w-9 h-9 rounded-full object-cover border border-slate-200" />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs border border-primary/20 shrink-0">
+                            <Users className="w-4 h-4" />
+                          </div>
+                        )}
+                        <div>
+                          <span className="block font-bold">{emp.name}</span>
+                          <span className="text-[10px] text-muted-foreground font-normal">{emp.id}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="font-semibold text-slate-700 dark:text-slate-300 block">{emp.dept}</span>
+                      <span className="text-[10px] text-muted-foreground">{emp.plant}</span>
+                    </td>
+                    <td className="py-3 px-4 font-black text-primary">{emp.points} Pts</td>
+                    <td className="py-3 px-4 font-semibold">{emp.sugsCount} Ideas</td>
+                    <td className="py-3 px-4">
+                      <span className="font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full text-[11px]">
+                        {emp.implPct}%
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" /> {emp.awards}
+                    </td>
+                    <td className="py-3 px-4 font-bold">
+                      <span className={`inline-flex items-center gap-1 ${emp.isUp ? "text-emerald-600" : "text-slate-500"}`}>
+                        {emp.isUp ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                        {emp.trend}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
