@@ -291,7 +291,7 @@ function AppShellInner({
                 className={cn("brand-logo h-8 sm:h-11 w-auto max-w-full object-contain hover-scale", pgLoaded && "is-loaded")}
               />
             </div>
-            <div className="relative bg-white rounded-md px-1 sm:px-2 h-11 sm:h-13 w-[64px] sm:w-[110px] flex items-center justify-center shadow-sm shrink-0 border border-border/60">
+            <div className="relative bg-white rounded-md px-1.5 sm:px-2.5 h-11 sm:h-13 w-[110px] sm:w-[160px] flex items-center justify-center shadow-sm shrink-0 border border-border/60">
               {!espLoaded && (
                 <div aria-hidden="true" className="absolute inset-1 rounded bg-muted/60 animate-pulse" />
               )}
@@ -299,7 +299,7 @@ function AppShellInner({
                 ref={espImgRef}
                 src={espLogo.url}
                 alt="Employee Suggestion Portal logo"
-                width={184}
+                width={260}
                 height={80}
                 decoding="async"
                 fetchPriority="high"
