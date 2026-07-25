@@ -598,9 +598,9 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: -15, bottom: 5 }}>
+              <LineChart data={monthlyTrendData} margin={{ top: 15, right: 28, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#64748B" }} />
+                <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#64748B" }} padding={{ left: 10, right: 15 }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
@@ -624,7 +624,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyParticipationData} margin={{ top: 10, right: 10, left: -15, bottom: 5 }}>
+              <AreaChart data={monthlyParticipationData} margin={{ top: 15, right: 28, left: -15, bottom: 5 }}>
                 <defs>
                   <linearGradient id="colorPurpleGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#C084FC" stopOpacity={0.6} />
@@ -632,7 +632,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#64748B" }} />
+                <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#64748B" }} padding={{ left: 10, right: 15 }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Area type="monotone" dataKey="Participants" stroke="#9333EA" strokeWidth={3} fillOpacity={1} fill="url(#colorPurpleGrad)" dot={{ r: 4, fill: "#9333EA", stroke: "#fff", strokeWidth: 2 }} />
@@ -768,7 +768,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={savingsData} margin={{ top: 10, right: 10, left: -15, bottom: 5 }}>
+              <AreaChart data={savingsData} margin={{ top: 15, right: 28, left: -15, bottom: 5 }}>
                 <defs>
                   <linearGradient id="colorGreenGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#6EE7B7" stopOpacity={0.7} />
@@ -776,7 +776,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#64748B" }} />
+                <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#64748B" }} padding={{ left: 10, right: 15 }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Area type="monotone" dataKey="Savings" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorGreenGrad)" dot={{ r: 3, fill: "#10B981" }} />
@@ -798,9 +798,9 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={timelineData} margin={{ top: 10, right: 10, left: -15, bottom: 5 }}>
+              <LineChart data={timelineData} margin={{ top: 15, right: 28, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis dataKey="week" tick={{ fontSize: 10, fill: "#64748B" }} />
+                <XAxis dataKey="week" tick={{ fontSize: 10, fill: "#64748B" }} padding={{ left: 10, right: 15 }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
