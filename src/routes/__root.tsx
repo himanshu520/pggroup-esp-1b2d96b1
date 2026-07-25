@@ -14,8 +14,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { SplashScreen } from "@/components/splash-screen";
 import { LanguageProvider } from "@/lib/i18n";
-import pgLogo from "@/assets/pg-logo.png.asset.json";
-import espLogo from "@/assets/esp-logo.png.asset.json";
 
 function NotFoundComponent() {
   return (
@@ -70,8 +68,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" },
-      { rel: "preload", as: "image", href: pgLogo.url, fetchpriority: "high" },
-      { rel: "preload", as: "image", href: espLogo.url, fetchpriority: "high" },
     ],
   }),
   shellComponent: RootShell,
@@ -92,6 +88,33 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+
+  useEffect(() => {
+    // Automatically recover from stale asset chunk 404s after new Vercel deployments
+    const handleChunkError = (event: ErrorEvent | PromiseRejectionEvent) => {
+      const errorMsg = 'reason' in event ? (event.reason?.message || '') : (event.message || '');
+      if (
+        typeof errorMsg === 'string' &&
+        (errorMsg.includes('Failed to fetch dynamically imported module') ||
+          errorMsg.includes('Importing a module script failed') ||
+          errorMsg.includes('404'))
+      ) {
+        const hasReloaded = sessionStorage.getItem('esp_chunk_reload');
+        if (!hasReloaded) {
+          sessionStorage.setItem('esp_chunk_reload', '1');
+          window.location.reload();
+        }
+      }
+    };
+
+    window.addEventListener('error', handleChunkError as EventListener);
+    window.addEventListener('unhandledrejection', handleChunkError as EventListener);
+    return () => {
+      window.removeEventListener('error', handleChunkError as EventListener);
+      window.removeEventListener('unhandledrejection', handleChunkError as EventListener);
+    };
+  }, []);
+
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
