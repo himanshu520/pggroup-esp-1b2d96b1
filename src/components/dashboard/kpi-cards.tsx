@@ -5,8 +5,6 @@ import {
   TrendingUp,
   TrendingDown,
   Users,
-  AlertTriangle,
-  XCircle,
   Award,
   CheckCircle2,
   Clock,
@@ -16,7 +14,6 @@ import {
   Zap,
   ChevronLeft,
   ChevronRight,
-  Filter,
 } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
 import type { EmployeeSuggestion } from "@/lib/dummy-suggestions";
@@ -25,7 +22,7 @@ interface KPICardsProps {
   suggestions: EmployeeSuggestion[];
 }
 
-type TimePeriod = "today" | "yesterday" | "this_month" | "3m" | "6m" | "1y" | "prev_year" | "all";
+type SugTimeSubFilter = "today" | "month" | "year" | "prev_year" | "all";
 
 // Simple counter hook for smooth number animation
 function useAnimatedCount(targetValue: number, duration = 800) {
@@ -47,98 +44,58 @@ function useAnimatedCount(targetValue: number, duration = 800) {
 }
 
 export function KPICardsSection({ suggestions }: KPICardsProps) {
-  const [period, setPeriod] = useState<TimePeriod>("all");
+  const [sugFilter, setSugFilter] = useState<SugTimeSubFilter>("all");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Filter suggestions by selected Time Period tab
-  const filteredSuggestions = useMemo(() => {
-    if (period === "all") return suggestions;
-
+  // Compute suggestions count based on Card 1 internal switcher button
+  const mergedSuggestionsCount = useMemo(() => {
     const now = new Date();
     const todayStr = now.toISOString().split("T")[0];
-
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split("T")[0];
-
     const currentYear = now.getFullYear();
-    const prevYear = currentYear - 1;
+    const lastYear = currentYear - 1;
     const monthShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][now.getMonth()];
 
-    if (period === "today") {
-      return suggestions.filter((s) => s.createdDate === todayStr);
+    if (sugFilter === "today") {
+      return suggestions.filter((s) => s.createdDate === todayStr).length;
     }
-    if (period === "yesterday") {
-      return suggestions.filter((s) => s.createdDate === yesterdayStr);
+    if (sugFilter === "month") {
+      return suggestions.filter((s) => s.year === currentYear && s.participationMonth === monthShort).length;
     }
-    if (period === "this_month") {
-      return suggestions.filter((s) => s.year === currentYear && s.participationMonth === monthShort);
+    if (sugFilter === "year") {
+      return suggestions.filter((s) => s.year === currentYear).length;
     }
-    if (period === "3m") {
-      const threeMonthsAgo = new Date(now);
-      threeMonthsAgo.setMonth(now.getMonth() - 3);
-      return suggestions.filter((s) => new Date(s.createdDate) >= threeMonthsAgo);
+    if (sugFilter === "prev_year") {
+      return suggestions.filter((s) => s.year === lastYear).length;
     }
-    if (period === "6m") {
-      const sixMonthsAgo = new Date(now);
-      sixMonthsAgo.setMonth(now.getMonth() - 6);
-      return suggestions.filter((s) => new Date(s.createdDate) >= sixMonthsAgo);
-    }
-    if (period === "1y") {
-      return suggestions.filter((s) => s.year === currentYear);
-    }
-    if (period === "prev_year") {
-      return suggestions.filter((s) => s.year === prevYear);
-    }
-
-    return suggestions;
-  }, [suggestions, period]);
+    return suggestions.length;
+  }, [suggestions, sugFilter]);
 
   const kpiData = useMemo(() => {
-    const total = filteredSuggestions.length;
-    const implemented = filteredSuggestions.filter((s) => s.status === "implemented").length;
-    const pendingExecution = filteredSuggestions.filter((s) => s.status === "approved" || s.implementationStatus === "In Progress").length;
-    const underReview = filteredSuggestions.filter((s) => s.status === "under_review" || s.status === "pending").length;
-    const fakeClosures = filteredSuggestions.filter((s) => s.status === "fake_closure").length;
-    const rejectedDropped = filteredSuggestions.filter((s) => s.status === "rejected" || s.status === "dropped").length;
+    const total = suggestions.length;
+    const implemented = suggestions.filter((s) => s.status === "implemented").length;
+    const pendingExecution = suggestions.filter((s) => s.status === "approved" || s.implementationStatus === "In Progress").length;
+    const underReview = suggestions.filter((s) => s.status === "under_review" || s.status === "pending").length;
 
     // Total savings
-    const totalSavings = filteredSuggestions.reduce((acc, s) => acc + (s.savings || 0), 0);
+    const totalSavings = suggestions.reduce((acc, s) => acc + (s.savings || 0), 0);
 
     // Unique active employees
-    const activeEmpSet = new Set(filteredSuggestions.map((s) => s.employeeId));
+    const activeEmpSet = new Set(suggestions.map((s) => s.employeeId));
     const activeEmployees = activeEmpSet.size;
 
     // Participation % (assuming 50 total workforce baseline)
     const participationPct = Math.min(100, Math.round((activeEmployees / 35) * 100));
 
-    // Dynamic Date calculations
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const lastYear = currentYear - 1;
-    const todayStr = now.toISOString().split("T")[0];
-    const monthShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][now.getMonth()];
-    const prevMonthShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][(now.getMonth() + 11) % 12];
-
-    const todaySugs = suggestions.filter((s) => s.createdDate === todayStr).length;
-    const monthSugs = suggestions.filter((s) => s.year === currentYear && s.participationMonth === monthShort).length;
-    const prevMonthSugs = suggestions.filter((s) => s.year === currentYear && s.participationMonth === prevMonthShort).length;
-    const currentYearSugs = suggestions.filter((s) => s.year === currentYear).length;
-    const lastYearSugs = suggestions.filter((s) => s.year === lastYear).length;
-
-    // MoM Improvement
-    const momImprovement = prevMonthSugs > 0 ? Math.round(((monthSugs - prevMonthSugs) / prevMonthSugs) * 100) : 0;
-
     // Best Dept
     const deptCounts: Record<string, number> = {};
-    filteredSuggestions.forEach((s) => {
+    suggestions.forEach((s) => {
       deptCounts[s.department] = (deptCounts[s.department] || 0) + 1;
     });
     const bestDeptEntry = Object.entries(deptCounts).sort((a, b) => b[1] - a[1])[0];
     const bestDept = bestDeptEntry ? bestDeptEntry[0] : "Awaiting Data";
 
     // Avg Implementation Time
-    const implSugs = filteredSuggestions.filter((s) => s.completedDate && s.createdDate);
+    const implSugs = suggestions.filter((s) => s.completedDate && s.createdDate);
     const avgTimeDays =
       implSugs.length > 0
         ? Math.round(
@@ -151,244 +108,170 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
 
     return {
       total,
-      todaySugs,
-      monthSugs,
-      currentYearSugs,
-      lastYearSugs,
-      participationPct,
-      fakeClosures,
-      rejectedDropped,
-      bestDept,
-      momImprovement,
       totalImplemented: implemented,
       pendingExecution,
       underReview,
       totalSavings,
+      participationPct,
       activeEmployees,
+      bestDept,
       avgTimeDays,
     };
-  }, [filteredSuggestions, suggestions]);
+  }, [suggestions]);
 
   // Scroll handlers for single-row slider
   const handleScroll = (direction: "left" | "right") => {
     if (scrollRef.current) {
-      const scrollAmount = direction === "left" ? -300 : 300;
+      const scrollAmount = direction === "left" ? -320 : 320;
       scrollRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
     }
   };
 
-  // Mini sparkline data generators
+  // Mini sparklines
   const sparklineUp = [{ value: 10 }, { value: 14 }, { value: 12 }, { value: 18 }, { value: 24 }, { value: 28 }, { value: 35 }];
   const sparklineDown = [{ value: 35 }, { value: 28 }, { value: 22 }, { value: 18 }, { value: 12 }, { value: 8 }, { value: 4 }];
   const sparklineSteady = [{ value: 15 }, { value: 18 }, { value: 16 }, { value: 20 }, { value: 22 }, { value: 25 }, { value: 27 }];
 
+  // 9 Consolidated Executive KPI Cards
   const cards = [
     {
-      title: "Today's Suggestions",
-      value: kpiData.todaySugs,
-      suffix: "",
-      growth: "+12.5%",
-      growthType: "up",
-      icon: Calendar,
-      color: "from-blue-500 to-indigo-600",
-      sparkline: sparklineUp,
-      comparison: "vs yesterday",
-    },
-    {
-      title: "This Month Suggestions",
-      value: kpiData.monthSugs,
-      suffix: "",
-      growth: "+18.2%",
+      id: "suggestions",
+      title: "Suggestions Submitted",
+      value: mergedSuggestionsCount,
+      isMergedCard: true,
+      growth: "+14.5%",
       growthType: "up",
       icon: Sparkles,
-      color: "from-amber-500 to-orange-600",
+      lightBg: "bg-blue-50/90 dark:bg-blue-950/30 border-blue-200/90 dark:border-blue-800/60",
+      iconBg: "bg-blue-500 text-white",
       sparkline: sparklineUp,
-      comparison: "vs last month",
+      comparison: "Switch period inside",
     },
     {
-      title: "This Year Suggestions",
-      value: kpiData.currentYearSugs,
-      suffix: "",
-      growth: "+24.0%",
-      growthType: "up",
-      icon: TrendingUp,
-      color: "from-emerald-500 to-teal-600",
-      sparkline: sparklineUp,
-      comparison: "Current Year 2026",
-    },
-    {
-      title: "Last Year Suggestions",
-      value: kpiData.lastYearSugs,
-      suffix: "",
-      growth: "0%",
-      growthType: "neutral",
-      icon: Calendar,
-      color: "from-purple-500 to-violet-600",
-      sparkline: sparklineSteady,
-      comparison: "Full Year 2025",
-    },
-    {
-      title: "Employee Participation %",
-      value: kpiData.participationPct,
-      suffix: "%",
-      growth: "+6.4%",
-      growthType: "up",
-      icon: Users,
-      color: "from-cyan-500 to-blue-600",
-      sparkline: sparklineUp,
-      comparison: "vs previous quarter",
-    },
-    {
-      title: "Fake Closures",
-      value: kpiData.fakeClosures,
-      suffix: "",
-      growth: "-40%",
-      growthType: "down",
-      icon: AlertTriangle,
-      color: "from-rose-500 to-red-600",
-      sparkline: sparklineDown,
-      comparison: "Flagged by audit",
-    },
-    {
-      title: "Dropped / Rejected",
-      value: kpiData.rejectedDropped,
-      suffix: "",
-      growth: "-15%",
-      growthType: "down",
-      icon: XCircle,
-      color: "from-slate-500 to-slate-700",
-      sparkline: sparklineDown,
-      comparison: "vs target tolerance",
-    },
-    {
-      title: "Best Department",
-      textValue: kpiData.bestDept,
-      growth: "Top Performer",
-      growthType: "up",
-      icon: Award,
-      color: "from-amber-400 to-yellow-600",
-      sparkline: sparklineUp,
-      comparison: "Highest Implementation Rate",
-    },
-    {
-      title: "MoM Improvement (%)",
-      value: kpiData.momImprovement,
-      suffix: "%",
-      growth: `${kpiData.momImprovement >= 0 ? "+" : ""}${kpiData.momImprovement}%`,
-      growthType: kpiData.momImprovement >= 0 ? "up" : "down",
-      icon: TrendingUp,
-      color: "from-teal-500 to-emerald-600",
-      sparkline: sparklineUp,
-      comparison: "vs previous month",
-    },
-    {
+      id: "implemented",
       title: "Total Implemented",
       value: kpiData.totalImplemented,
       suffix: "",
-      growth: "+22%",
+      growth: `${kpiData.total > 0 ? Math.round((kpiData.totalImplemented / kpiData.total) * 100) : 0}% Impl Rate`,
       growthType: "up",
       icon: CheckCircle2,
-      color: "from-emerald-500 to-green-600",
+      lightBg: "bg-emerald-50/90 dark:bg-emerald-950/30 border-emerald-200/90 dark:border-emerald-800/60",
+      iconBg: "bg-emerald-500 text-white",
       sparkline: sparklineUp,
       comparison: "Completed Kaizens",
     },
     {
+      id: "pending",
       title: "Pending Execution",
       value: kpiData.pendingExecution,
       suffix: "",
-      growth: "Pipeline",
+      growth: "In Pipeline",
       growthType: "neutral",
       icon: Clock,
-      color: "from-amber-500 to-orange-500",
+      lightBg: "bg-amber-50/90 dark:bg-amber-950/30 border-amber-200/90 dark:border-amber-800/60",
+      iconBg: "bg-amber-500 text-white",
       sparkline: sparklineSteady,
       comparison: "Approved & In Progress",
     },
     {
+      id: "review",
       title: "Under Review",
       value: kpiData.underReview,
       suffix: "",
-      growth: "Action Required",
+      growth: "Evaluation",
       growthType: "neutral",
       icon: Search,
-      color: "from-blue-400 to-indigo-500",
+      lightBg: "bg-sky-50/90 dark:bg-sky-950/30 border-sky-200/90 dark:border-sky-800/60",
+      iconBg: "bg-sky-500 text-white",
       sparkline: sparklineSteady,
-      comparison: "Committee Evaluation",
+      comparison: "Committee Review",
     },
     {
+      id: "savings",
       title: "Total Savings",
       currencyValue: kpiData.totalSavings,
       growth: "+32.4%",
       growthType: "up",
       icon: DollarSign,
-      color: "from-emerald-600 to-teal-700",
+      lightBg: "bg-teal-50/90 dark:bg-teal-950/30 border-teal-200/90 dark:border-teal-800/60",
+      iconBg: "bg-teal-600 text-white",
       sparkline: sparklineUp,
-      comparison: "Verified Financial Impact",
+      comparison: "Verified Impact",
     },
     {
+      id: "participation",
+      title: "Participation %",
+      value: kpiData.participationPct,
+      suffix: "%",
+      growth: "+6.4%",
+      growthType: "up",
+      icon: Users,
+      lightBg: "bg-purple-50/90 dark:bg-purple-950/30 border-purple-200/90 dark:border-purple-800/60",
+      iconBg: "bg-purple-500 text-white",
+      sparkline: sparklineUp,
+      comparison: "Active workforce",
+    },
+    {
+      id: "active_emp",
       title: "Active Employees",
       value: kpiData.activeEmployees,
       suffix: "",
-      growth: "Members",
+      growth: "Contributors",
       growthType: "up",
       icon: UserCheck,
-      color: "from-indigo-500 to-purple-600",
+      lightBg: "bg-indigo-50/90 dark:bg-indigo-950/30 border-indigo-200/90 dark:border-indigo-800/60",
+      iconBg: "bg-indigo-500 text-white",
       sparkline: sparklineUp,
-      comparison: "Submitted suggestions",
+      comparison: "Submitted ideas",
     },
     {
-      title: "Avg Impl. Time (Days)",
+      id: "best_dept",
+      title: "Best Department",
+      textValue: kpiData.bestDept,
+      growth: "Top Rank",
+      growthType: "up",
+      icon: Award,
+      lightBg: "bg-orange-50/90 dark:bg-orange-950/30 border-orange-200/90 dark:border-orange-800/60",
+      iconBg: "bg-orange-500 text-white",
+      sparkline: sparklineUp,
+      comparison: "Top Points",
+    },
+    {
+      id: "speed",
+      title: "Avg Impl. Speed",
       value: kpiData.avgTimeDays,
       suffix: " Days",
-      growth: "Speed",
+      growth: "Execution",
       growthType: "down",
       icon: Zap,
-      color: "from-blue-600 to-cyan-600",
+      lightBg: "bg-rose-50/90 dark:bg-rose-950/30 border-rose-200/90 dark:border-rose-800/60",
+      iconBg: "bg-rose-500 text-white",
       sparkline: sparklineDown,
-      comparison: "Speed of execution",
+      comparison: "Cycle time",
     },
   ];
 
-  const tabs: Array<{ id: TimePeriod; label: string }> = [
-    { id: "all", label: "All Time" },
+  const subFilterButtons: Array<{ id: SugTimeSubFilter; label: string }> = [
+    { id: "all", label: "All" },
     { id: "today", label: "Today" },
-    { id: "yesterday", label: "Yesterday" },
-    { id: "this_month", label: "This Month" },
-    { id: "3m", label: "3 Months" },
-    { id: "6m", label: "6 Months" },
-    { id: "1y", label: "1 Year" },
-    { id: "prev_year", label: "Prev Year" },
+    { id: "month", label: "Month" },
+    { id: "year", label: "Year" },
+    { id: "prev_year", label: "Prev" },
   ];
 
   return (
     <div className="space-y-3">
-      {/* Header with Title and Time Period Filter Tabs */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white/60 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-sm backdrop-blur-md">
+      {/* Executive Header */}
+      <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-500" /> Executive Dashboard KPIs
+            <Sparkles className="w-5 h-5 text-amber-500" /> Executive Dashboard KPIs (9 Metrics)
           </h2>
-          <p className="text-[11px] text-muted-foreground">Dynamic real-time performance indicators filtered by time period</p>
-        </div>
-
-        {/* Time Period Tabs Bar */}
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 scrollbar-none bg-slate-100 dark:bg-slate-800/80 p-1 rounded-lg border border-slate-200/60 dark:border-slate-700">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setPeriod(t.id)}
-              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
-                period === t.id
-                  ? "bg-primary text-primary-foreground shadow-sm scale-105"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/60 dark:hover:bg-slate-700/60"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+          <p className="text-[11px] text-muted-foreground">Light pastel themed cards arranged in a single row</p>
         </div>
       </div>
 
-      {/* Single-Row Horizontal Carousel Container */}
+      {/* Single-Row 9 KPI Cards Container */}
       <div className="relative group">
         {/* Left Arrow Button */}
         <button
@@ -411,31 +294,54 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
 
             return (
               <div
-                key={idx}
-                className="min-w-[220px] max-w-[240px] shrink-0 snap-start glass-card relative overflow-hidden rounded-xl p-3 flex flex-col justify-between cursor-pointer border border-slate-200/80 dark:border-slate-800 hover:border-primary/50 transition-all hover:shadow-md"
+                key={card.id}
+                className={`min-w-[240px] max-w-[260px] shrink-0 snap-start relative overflow-hidden rounded-xl p-3 flex flex-col justify-between cursor-pointer border shadow-sm transition-all hover:shadow-md hover:scale-[1.01] ${card.lightBg}`}
               >
                 {/* Top Row: Title & Icon */}
                 <div className="flex items-start justify-between gap-1.5">
-                  <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 line-clamp-1">{card.title}</span>
-                  <div className={`p-1.5 rounded-lg bg-gradient-to-br ${card.color} text-white shadow-sm shrink-0`}>
+                  <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 line-clamp-1">{card.title}</span>
+                  <div className={`p-1.5 rounded-lg ${card.iconBg} shadow-xs shrink-0`}>
                     <Icon className="w-3.5 h-3.5" />
                   </div>
                 </div>
 
-                {/* Middle Row: Value & Sparkline */}
-                <div className="my-1.5 flex items-baseline justify-between gap-2">
-                  <span className="text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                {/* Card 1 Specific: Internal Period Switcher Pills */}
+                {card.isMergedCard && (
+                  <div className="flex items-center gap-1 my-1.5 bg-white/70 dark:bg-slate-900/70 p-1 rounded-md border border-blue-200/60 dark:border-blue-800/40">
+                    {subFilterButtons.map((b) => (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSugFilter(b.id);
+                        }}
+                        className={`flex-1 py-0.5 text-[9px] font-black rounded transition-all ${
+                          sugFilter === b.id
+                            ? "bg-blue-600 text-white shadow-xs"
+                            : "text-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                        }`}
+                      >
+                        {b.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Middle Row: Animated Main Value & Sparkline */}
+                <div className="my-1 flex items-baseline justify-between gap-2">
+                  <span className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
                     {card.textValue ? (
                       card.textValue
                     ) : card.currencyValue !== undefined ? (
                       `₹${(card.currencyValue / 100000).toFixed(1)}L`
                     ) : (
-                      `${animVal}${card.suffix}`
+                      `${animVal}${card.suffix || ""}`
                     )}
                   </span>
 
                   {/* Sparkline */}
-                  <div className="w-14 h-7 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity">
+                  <div className="w-14 h-7 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={card.sparkline}>
                         <defs>
@@ -451,14 +357,14 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
                 </div>
 
                 {/* Bottom Row: Growth Badge & Comparison */}
-                <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-200/60 dark:border-slate-800">
                   <span
                     className={`inline-flex items-center gap-0.5 font-bold px-1.5 py-0.5 rounded-full ${
                       card.growthType === "up"
-                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300"
                         : card.growthType === "down"
-                        ? "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300"
-                        : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                        ? "bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300"
+                        : "bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300"
                     }`}
                   >
                     {card.growthType === "up" ? (
@@ -468,7 +374,7 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
                     ) : null}
                     {card.growth}
                   </span>
-                  <span className="text-muted-foreground truncate text-[9px]">{card.comparison}</span>
+                  <span className="text-slate-500 dark:text-slate-400 truncate text-[9px] font-medium">{card.comparison}</span>
                 </div>
               </div>
             );

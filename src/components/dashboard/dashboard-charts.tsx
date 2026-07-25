@@ -275,8 +275,8 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
         </div>
       </div>
 
-      {/* Grid Row 1: State-Wise & Plant-Wise */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Grid Row 1 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Chart 1: Suggestion State / Status Distribution */}
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
@@ -327,7 +327,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       </div>
 
       {/* Grid Row 2: Category & Gender */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Chart 3: Suggestion Category Distribution */}
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
@@ -375,7 +375,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       </div>
 
       {/* Grid Row 3: Execution Pending & Cost Category Stacked */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Chart 5: Execution Pending Department Wise */}
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
@@ -423,7 +423,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       </div>
 
       {/* Grid Row 4: Monthly Trend & Monthly Participation */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Chart 7: Monthly Trend */}
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
@@ -476,7 +476,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       </div>
 
       {/* Grid Row 5: Dept Ranking & Suggestion Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Chart 9: Department Ranking */}
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
@@ -523,7 +523,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       </div>
 
       {/* Grid Row 6: Year-wise Comparison & Plant Radar */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Chart 11: Year-wise Comparison */}
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
@@ -572,7 +572,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       </div>
 
       {/* Grid Row 7: Cost Savings Area & Execution Timeline */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Chart 13: Cost Savings Monthly Area */}
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
