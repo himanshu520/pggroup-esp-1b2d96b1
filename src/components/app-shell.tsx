@@ -264,18 +264,19 @@ function AppShellInner({
 
   return (
     <div className="min-h-screen flex flex-col bg-muted/30">
-      <header className="sticky top-0 z-30 w-full h-16 bg-background border-b border-border shadow-xs flex items-center justify-between px-2 sm:px-4 gap-2">
-        <div className="flex items-center gap-1 sm:gap-3 min-w-0">
+      <header className="sticky top-0 z-30 w-full h-18 sm:h-20 bg-background border-b border-border shadow-xs flex items-center justify-between px-3 sm:px-5 gap-3">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           <button
             type="button"
             onClick={toggleSidebar}
-            className="shrink-0 grid place-items-center w-8 h-8 sm:w-9 sm:h-9 -ml-1 rounded-md hover:bg-muted"
+            className="shrink-0 grid place-items-center w-9 h-9 sm:w-10 sm:h-10 -ml-1 rounded-md hover:bg-muted"
             aria-label="Toggle menu"
           >
-            <Menu className="w-5 h-5" />
+            <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
-          <div className="flex items-center gap-1 sm:gap-3 min-w-0" role="img" aria-label="PG Group — Employee Suggestion Portal">
-            <div className="relative bg-white rounded-md px-1 sm:px-2 h-11 sm:h-13 w-[64px] sm:w-[110px] flex items-center justify-center shadow-sm shrink-0 border border-border/60">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0" role="img" aria-label="PG Group — Employee Suggestion Portal">
+            {/* 1. PG Group Company Logo (Increased size) */}
+            <div className="relative bg-white rounded-lg px-2 sm:px-3 h-13 sm:h-16 w-[90px] sm:w-[155px] flex items-center justify-center shadow-xs shrink-0 border border-border/80 transition-transform hover:scale-[1.02]">
               {!pgLoaded && (
                 <div aria-hidden="true" className="absolute inset-1 rounded bg-muted/60 animate-pulse" />
               )}
@@ -283,15 +284,16 @@ function AppShellInner({
                 ref={pgImgRef}
                 src={pgLogo.url}
                 alt="PG Group company logo"
-                width={184}
-                height={80}
+                width={220}
+                height={90}
                 decoding="async"
                 fetchPriority="high"
                 onLoad={() => setPgLoaded(true)}
-                className={cn("brand-logo h-8 sm:h-11 w-auto max-w-full object-contain hover-scale", pgLoaded && "is-loaded")}
+                className={cn("brand-logo h-10 sm:h-13 w-auto max-w-full object-contain hover-scale", pgLoaded && "is-loaded")}
               />
             </div>
-            <div className="relative bg-white rounded-md px-1.5 sm:px-2.5 h-11 sm:h-13 w-[110px] sm:w-[160px] flex items-center justify-center shadow-sm shrink-0 border border-border/60">
+            {/* 2. ESP App Logo (Increased size) */}
+            <div className="relative bg-white rounded-lg px-2 sm:px-3.5 h-13 sm:h-16 w-[140px] sm:w-[220px] flex items-center justify-center shadow-xs shrink-0 border border-border/80 transition-transform hover:scale-[1.02]">
               {!espLoaded && (
                 <div aria-hidden="true" className="absolute inset-1 rounded bg-muted/60 animate-pulse" />
               )}
@@ -299,17 +301,17 @@ function AppShellInner({
                 ref={espImgRef}
                 src={espLogo.url}
                 alt="Employee Suggestion Portal logo"
-                width={260}
-                height={80}
+                width={320}
+                height={90}
                 decoding="async"
                 fetchPriority="high"
                 onLoad={() => setEspLoaded(true)}
-                className={cn("brand-logo brand-logo-delay h-8 sm:h-11 w-auto max-w-full object-contain hover-scale", espLoaded && "is-loaded")}
+                className={cn("brand-logo brand-logo-delay h-10 sm:h-13 w-auto max-w-full object-contain hover-scale", espLoaded && "is-loaded")}
               />
             </div>
-            <div className="hidden sm:flex flex-col leading-tight min-w-0">
-              <span className="text-sm font-bold text-foreground truncate">ESP - Employee Suggestion Portal</span>
-              <span className="text-[11px] text-muted-foreground truncate">{title}</span>
+            <div className="hidden lg:flex flex-col leading-tight min-w-0">
+              <span className="text-base font-extrabold text-foreground truncate">ESP - Employee Suggestion Portal</span>
+              <span className="text-xs text-muted-foreground font-medium truncate">{title}</span>
             </div>
           </div>
         </div>

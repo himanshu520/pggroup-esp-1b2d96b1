@@ -275,7 +275,7 @@ export function KPICardsSection({
   };
 
   return (
-    <div className="sticky top-16 z-20 bg-background dark:bg-slate-900 pt-2 pb-2.5 -mx-4 px-4 border-b border-border shadow-md transition-all">
+    <div className="sticky top-18 sm:top-20 z-20 bg-background dark:bg-slate-900 pt-2 pb-2.5 -mx-4 px-4 border-b border-border shadow-md transition-all">
       {/* Expandable Filter Bar (toggled exclusively from Main Top Navbar) */}
 
       {/* Expandable Filter Bar (Appears directly above 9 KPI cards when Navbar Filter button is clicked) */}
