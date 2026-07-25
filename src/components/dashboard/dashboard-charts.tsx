@@ -28,7 +28,38 @@ interface DashboardChartsProps {
   suggestions: EmployeeSuggestion[];
 }
 
-const COLORS = ["#0066FF", "#FF6B00", "#00B8D9", "#36B37E", "#6554C0", "#FFAB00", "#FF5630", "#0052CC"];
+// Professional Soft Pastel Light Palette
+const LIGHT_COLORS = [
+  "#6366F1", // Soft Indigo
+  "#10B981", // Soft Emerald Mint
+  "#F59E0B", // Soft Amber
+  "#06B6D4", // Soft Cyan
+  "#8B5CF6", // Soft Violet
+  "#EC4899", // Soft Rose Pink
+  "#14B8A6", // Soft Teal
+  "#3B82F6", // Soft Sky Blue
+];
+
+// Custom Soft Glassmorphic Light Tooltip
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white/95 dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-700 shadow-xl rounded-lg p-2.5 text-xs backdrop-blur-md">
+        {label && <p className="font-bold text-slate-800 dark:text-slate-200 mb-1 border-b border-slate-100 dark:border-slate-800 pb-1">{label}</p>}
+        {payload.map((entry: any, index: number) => (
+          <div key={`item-${index}`} className="flex items-center justify-between gap-3 py-0.5">
+            <span className="flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-400">
+              <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ backgroundColor: entry.color || entry.fill }} />
+              {entry.name || entry.dataKey}:
+            </span>
+            <span className="font-extrabold text-slate-900 dark:text-slate-100">{entry.value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
   // 1. Suggestion State / Status Breakdown (Pending, Under Review, Approved, Implemented, Rejected)
@@ -60,7 +91,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       { state: "Under Review", count: statusCounts["Under Review"], fill: "#3B82F6" },
       { state: "Approved", count: statusCounts["Approved"], fill: "#8B5CF6" },
       { state: "Implemented", count: statusCounts["Implemented"], fill: "#10B981" },
-      { state: "Rejected / Dropped", count: statusCounts["Rejected / Dropped"], fill: "#EF4444" },
+      { state: "Rejected / Dropped", count: statusCounts["Rejected / Dropped"], fill: "#F43F5E" },
     ];
   }, [suggestions]);
 
@@ -282,33 +313,38 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
   }, [suggestions]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-primary" /> Interactive Analytics & Charts (3 Per Row)
+          <h2 className="text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-indigo-500" /> Interactive Executive Analytics & Charts
           </h2>
-          <p className="text-xs text-muted-foreground">Power BI executive dashboards arranged in 3 columns per row</p>
+          <p className="text-xs text-muted-foreground">Power BI professional dashboard charts with soft light color palettes (3 per row)</p>
         </div>
       </div>
 
-      {/* SINGLE UNIFIED GRID: Exactly 3 Charts Per Row */}
+      {/* SINGLE UNIFIED GRID: 3 Charts Per Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Chart 1: Suggestion State / Status Distribution */}
-        <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+        <div className="glass-card relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-indigo-50/70 via-slate-50/40 to-white dark:from-slate-900 dark:to-slate-950 border border-indigo-100/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-blue-500" /> Suggestion State Breakdown
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+                <Layers className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Suggestion State Breakdown</span>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
+              Workflow Stages
             </span>
-            <span className="text-[11px] text-muted-foreground">Workflow Stages</span>
           </div>
-          <div className="h-64">
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={statusStateData}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
                 <XAxis dataKey="state" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                   {statusStateData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -320,303 +356,368 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
         </div>
 
         {/* Chart 2: Plant-wise Distribution */}
-        <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+        <div className="glass-card relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-amber-50/70 via-slate-50/40 to-white dark:from-slate-900 dark:to-slate-950 border border-amber-100/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-amber-500" /> Plant-wise Distribution
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
+                <Building2 className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Plant-wise Distribution</span>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300">
+              Manufacturing Units
             </span>
-            <span className="text-[11px] text-muted-foreground">Manufacturing Plants</span>
           </div>
-          <div className="h-64 flex items-center justify-center">
+          <div className="h-60 flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={plantData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={4} dataKey="value">
+                <Pie data={plantData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={4} dataKey="value">
                   {plantData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={LIGHT_COLORS[index % LIGHT_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend tick={{ fontSize: 11 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend tick={{ fontSize: 10 }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 3: Suggestion Category Distribution */}
-        <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+        <div className="glass-card relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-emerald-50/70 via-slate-50/40 to-white dark:from-slate-900 dark:to-slate-950 border border-emerald-100/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Tag className="w-4 h-4 text-emerald-500" /> Category Distribution
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                <Tag className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Category Distribution</span>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">
+              Safety, 5S, Kaizen
             </span>
-            <span className="text-[11px] text-muted-foreground">Safety, Kaizen, 5S, Quality</span>
           </div>
-          <div className="h-64">
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={categoryData} cx="50%" cy="50%" outerRadius={85} dataKey="value" label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}>
+                <Pie data={categoryData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}>
                   {categoryData.map((_, index) => (
-                    <Cell key={`cell-cat-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-cat-${index}`} fill={LIGHT_COLORS[index % LIGHT_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip content={<CustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 4: Gender-wise Participation */}
-        <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+        <div className="glass-card relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-purple-50/70 via-slate-50/40 to-white dark:from-slate-900 dark:to-slate-950 border border-purple-100/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <PieIcon className="w-4 h-4 text-purple-500" /> Gender-wise Participation
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400">
+                <PieIcon className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Gender Participation</span>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300">
+              Workforce Ratio
             </span>
-            <span className="text-[11px] text-muted-foreground">Male, Female, Others</span>
           </div>
-          <div className="h-64">
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={genderData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={6} dataKey="value">
-                  <Cell fill="#0066FF" />
-                  <Cell fill="#FF6B00" />
-                  <Cell fill="#36B37E" />
+                <Pie data={genderData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={6} dataKey="value">
+                  <Cell fill="#6366F1" />
+                  <Cell fill="#EC4899" />
+                  <Cell fill="#10B981" />
                 </Pie>
-                <Tooltip />
-                <Legend tick={{ fontSize: 11 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend tick={{ fontSize: 10 }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 5: Execution Pending Department Wise */}
-        <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+        <div className="glass-card relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-rose-50/70 via-slate-50/40 to-white dark:from-slate-900 dark:to-slate-950 border border-rose-100/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-rose-500" /> Execution Pending Dept-Wise
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
+                <Layers className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Pending Dept-Wise</span>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300">
+              Pipeline Bottlenecks
             </span>
-            <span className="text-[11px] text-muted-foreground">Horizontal Bar</span>
           </div>
-          <div className="h-64">
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart layout="vertical" data={pendingDeptData}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis type="number" tick={{ fontSize: 11 }} />
-                <YAxis dataKey="department" type="category" tick={{ fontSize: 11 }} width={80} />
-                <Tooltip />
-                <Bar dataKey="count" fill="#FF6B00" radius={[0, 6, 6, 0]} />
+                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                <XAxis type="number" tick={{ fontSize: 10 }} />
+                <YAxis dataKey="department" type="category" tick={{ fontSize: 10 }} width={75} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="count" fill="#F43F5E" radius={[0, 6, 6, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 6: Cost Category Stacked Column Chart */}
-        <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+        <div className="glass-card relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-teal-50/70 via-slate-50/40 to-white dark:from-slate-900 dark:to-slate-950 border border-teal-100/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-teal-500" /> Cost Category Breakdown
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-teal-100 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400">
+                <BarChart3 className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Cost Breakdown</span>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 dark:bg-teal-900/60 dark:text-teal-300">
+              Investment Tiers
             </span>
-            <span className="text-[11px] text-muted-foreground">No Cost, Low Cost, High Cost</span>
           </div>
-          <div className="h-64">
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={costCategoryData}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
                 <XAxis dataKey="department" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend tick={{ fontSize: 11 }} />
-                <Bar dataKey="No Cost" stackId="a" fill="#36B37E" />
-                <Bar dataKey="Low Cost" stackId="a" fill="#0066FF" />
-                <Bar dataKey="High Cost" stackId="a" fill="#FF6B00" />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend tick={{ fontSize: 10 }} />
+                <Bar dataKey="No Cost" stackId="a" fill="#10B981" />
+                <Bar dataKey="Low Cost" stackId="a" fill="#3B82F6" />
+                <Bar dataKey="High Cost" stackId="a" fill="#F59E0B" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 7: Monthly Trend */}
-        <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+        <div className="glass-card relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-blue-50/70 via-slate-50/40 to-white dark:from-slate-900 dark:to-slate-950 border border-blue-100/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <LineIcon className="w-4 h-4 text-indigo-500" /> Monthly Trend (2026 vs 2025)
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+                <LineIcon className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Monthly Trend</span>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300">
+              2026 vs 2025
             </span>
-            <span className="text-[11px] text-muted-foreground">Line Comparison</span>
           </div>
-          <div className="h-64">
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={monthlyTrendData}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend tick={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="Current Year (2026)" stroke="#0066FF" strokeWidth={3} dot={{ r: 4 }} />
-                <Line type="monotone" dataKey="Last Year (2025)" stroke="#94A3B8" strokeWidth={2} strokeDasharray="4 4" />
+                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend tick={{ fontSize: 10 }} />
+                <Line type="monotone" dataKey="Current Year (2026)" stroke="#6366F1" strokeWidth={2.5} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="Last Year (2025)" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 4" />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 8: Monthly Participation */}
-        <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+        <div className="glass-card relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-cyan-50/70 via-slate-50/40 to-white dark:from-slate-900 dark:to-slate-950 border border-cyan-100/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-cyan-500" /> Monthly Participation Growth
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-cyan-100 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400">
+                <TrendingUp className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Monthly Participation</span>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700 dark:bg-cyan-900/60 dark:text-cyan-300">
+              Active Submitters
             </span>
-            <span className="text-[11px] text-muted-foreground">Area Chart</span>
           </div>
-          <div className="h-64">
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={monthlyParticipationData}>
                 <defs>
                   <linearGradient id="colorPart" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00B8D9" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#00B8D9" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.7} />
+                    <stop offset="95%" stopColor="#06B6D4" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Area type="monotone" dataKey="Participants" stroke="#00B8D9" strokeWidth={2} fillOpacity={1} fill="url(#colorPart)" />
+                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Area type="monotone" dataKey="Participants" stroke="#06B6D4" strokeWidth={2.5} fillOpacity={1} fill="url(#colorPart)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 9: Department Ranking */}
-        <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+        <div className="glass-card relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-amber-50/70 via-slate-50/40 to-white dark:from-slate-900 dark:to-slate-950 border border-amber-100/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-amber-600" /> Dept Points Ranking
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
+                <BarChart3 className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Dept Points Ranking</span>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300">
+              Leaderboard Points
             </span>
-            <span className="text-[11px] text-muted-foreground">Top Departments</span>
           </div>
-          <div className="h-64">
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={deptRankingData}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
                 <XAxis dataKey="department" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Bar dataKey="points" fill="#FF6B00" radius={[6, 6, 0, 0]} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="points" fill="#F59E0B" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 10: Suggestion Status Donut */}
-        <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+        <div className="glass-card relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-emerald-50/70 via-slate-50/40 to-white dark:from-slate-900 dark:to-slate-950 border border-emerald-100/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <PieIcon className="w-4 h-4 text-emerald-600" /> Suggestion Status Breakdown
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                <PieIcon className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Status Breakdown</span>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">
+              Org Totals
             </span>
-            <span className="text-[11px] text-muted-foreground">Implemented, Pending, Rejected</span>
           </div>
-          <div className="h-64">
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={statusData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={4} dataKey="value">
+                <Pie data={statusData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={4} dataKey="value">
                   {statusData.map((_, index) => (
-                    <Cell key={`cell-st-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-st-${index}`} fill={LIGHT_COLORS[index % LIGHT_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend tick={{ fontSize: 11 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend tick={{ fontSize: 10 }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 11: Year-wise Comparison */}
-        <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+        <div className="glass-card relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-indigo-50/70 via-slate-50/40 to-white dark:from-slate-900 dark:to-slate-950 border border-indigo-100/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-indigo-600" /> Year Performance (2025 vs 2026)
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+                <BarChart3 className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">YoY Comparison</span>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300">
+              2025 vs 2026
             </span>
-            <span className="text-[11px] text-muted-foreground">YoY Analysis</span>
           </div>
-          <div className="h-64">
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={yearComparisonData}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="metric" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend tick={{ fontSize: 11 }} />
+                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                <XAxis dataKey="metric" tick={{ fontSize: 9 }} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend tick={{ fontSize: 10 }} />
                 <Bar dataKey="2025" fill="#94A3B8" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="2026" fill="#0066FF" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="2026" fill="#6366F1" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 12: Plant Performance Radar Chart */}
-        <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+        <div className="glass-card relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-rose-50/70 via-slate-50/40 to-white dark:from-slate-900 dark:to-slate-950 border border-rose-100/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-rose-500" /> Plant Multi-Axis Radar Matrix
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
+                <Activity className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Plant Radar Matrix</span>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300">
+              Plant 1-4
             </span>
-            <span className="text-[11px] text-muted-foreground">Plants 1-4 Matrix</span>
           </div>
-          <div className="h-64">
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius={75} data={radarData}>
-                <PolarGrid opacity={0.3} />
-                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10 }} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9 }} />
-                <Radar name="Plant 1" dataKey="Plant 1" stroke="#0066FF" fill="#0066FF" fillOpacity={0.3} />
-                <Radar name="Plant 2" dataKey="Plant 2" stroke="#FF6B00" fill="#FF6B00" fillOpacity={0.3} />
-                <Legend tick={{ fontSize: 11 }} />
-                <Tooltip />
+              <RadarChart cx="50%" cy="50%" outerRadius={70} data={radarData}>
+                <PolarGrid opacity={0.2} />
+                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9 }} />
+                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 8 }} />
+                <Radar name="Plant 1" dataKey="Plant 1" stroke="#6366F1" fill="#6366F1" fillOpacity={0.25} />
+                <Radar name="Plant 2" dataKey="Plant 2" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.25} />
+                <Legend tick={{ fontSize: 10 }} />
+                <Tooltip content={<CustomTooltip />} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 13: Cost Savings Monthly Area */}
-        <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+        <div className="glass-card relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-teal-50/70 via-slate-50/40 to-white dark:from-slate-900 dark:to-slate-950 border border-teal-100/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-emerald-600" /> Cumulative Savings (₹ Lacs)
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-teal-100 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400">
+                <TrendingUp className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Cumulative Savings</span>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 dark:bg-teal-900/60 dark:text-teal-300">
+              ₹ Lacs
             </span>
-            <span className="text-[11px] text-muted-foreground">Financial Returns</span>
           </div>
-          <div className="h-64">
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={savingsData}>
                 <defs>
                   <linearGradient id="colorSav" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#36B37E" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#36B37E" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.7} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Area type="monotone" dataKey="Savings" stroke="#36B37E" strokeWidth={3} fillOpacity={1} fill="url(#colorSav)" />
+                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Area type="monotone" dataKey="Savings" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorSav)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 14: Suggestion Execution Timeline */}
-        <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+        <div className="glass-card relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-sky-50/70 via-slate-50/40 to-white dark:from-slate-900 dark:to-slate-950 border border-sky-100/90 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <LineIcon className="w-4 h-4 text-blue-600" /> Execution Velocity Timeline
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-sky-100 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400">
+                <LineIcon className="w-4 h-4" />
+              </div>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Execution Velocity</span>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300">
+              Timeline
             </span>
-            <span className="text-[11px] text-muted-foreground">Submitted vs Completed</span>
           </div>
-          <div className="h-64">
+          <div className="h-60">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={timelineData}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
                 <XAxis dataKey="week" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend tick={{ fontSize: 11 }} />
-                <Line type="monotone" dataKey="Submitted" stroke="#FF6B00" strokeWidth={2} dot={{ r: 4 }} />
-                <Line type="monotone" dataKey="Completed" stroke="#36B37E" strokeWidth={2} dot={{ r: 4 }} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend tick={{ fontSize: 10 }} />
+                <Line type="monotone" dataKey="Submitted" stroke="#F59E0B" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="Completed" stroke="#10B981" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
