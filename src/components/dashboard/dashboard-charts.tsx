@@ -122,19 +122,17 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     ];
   }, [suggestions]);
 
-  // 2. Plant-wise Distribution (Donut Chart with PG Group Plant names)
+  // 2. Plant-wise Distribution (Donut Chart for PGTL & NGM Plants)
   const plantData = useMemo(() => {
     const counts: Record<string, number> = {};
     suggestions.forEach((s) => {
-      const p = (s.plant || "Bawal Plant").trim();
+      const p = (s.plant || "PGTL").trim();
       counts[p] = (counts[p] || 0) + 1;
     });
     if (Object.keys(counts).length === 0) {
       return [
-        { name: "Bawal Plant", value: 45 },
-        { name: "Manesar Plant", value: 32 },
-        { name: "Pune Plant", value: 24 },
-        { name: "Pantnagar Plant", value: 18 },
+        { name: "PGTL Plant", value: 48 },
+        { name: "NGM Plant", value: 36 },
       ];
     }
     return Object.entries(counts).map(([plant, value]) => ({
@@ -257,21 +255,21 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
 
   const MONTHS = ["Feb", "Mar", "Apr", "May", "Jun", "Jul"];
 
-  // 7. Monthly Trend Line Chart (PG Group Bawal & Manesar Plants)
+  // 7. Monthly Trend Line Chart (PGTL & NGM Plants)
   const monthlyTrendData = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const lastYear = currentYear - 1;
     return MONTHS.map((m, idx) => {
-      const curCount = suggestions.filter((s) => s.participationMonth === m && s.year === currentYear).length;
-      const lastCount = suggestions.filter((s) => s.participationMonth === m && s.year === lastYear).length;
+      const pgtlCount = suggestions.filter((s) => s.participationMonth === m && s.plant === "PGTL" && s.year === currentYear).length;
+      const ngmCount = suggestions.filter((s) => s.participationMonth === m && s.plant === "NGM" && s.year === currentYear).length;
 
       const baseVal1 = [52, 103, 165, 185, 40, 18][idx];
       const baseVal2 = [33, 64, 140, 168, 28, 12][idx];
 
       return {
         month: `${m} 26`,
-        "Bawal Plant": curCount || baseVal1,
-        "Manesar Plant": lastCount || baseVal2,
+        "PGTL": pgtlCount || baseVal1,
+        "NGM": ngmCount || baseVal2,
       };
     });
   }, [suggestions]);
@@ -337,13 +335,13 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     ];
   }, [suggestions]);
 
-  // 12. Plant Performance Radar Chart (PG Group Bawal vs Manesar)
+  // 12. Plant Performance Radar Chart (PGTL vs NGM)
   const radarData = useMemo(() => {
     const subjects = ["Participation", "Implementation", "Avg Points", "Savings", "5S Compliance"];
     return subjects.map((subj, idx) => ({
       subject: subj,
-      "Bawal Plant": [85, 78, 90, 82, 95][idx],
-      "Manesar Plant": [70, 65, 75, 68, 80][idx],
+      "PGTL": [88, 82, 92, 85, 96][idx],
+      "NGM": [75, 68, 78, 72, 84][idx],
     }));
   }, [suggestions]);
 
@@ -404,7 +402,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 2: Plant Distribution (Donut Chart with clean outer callout labels) */}
+        {/* Chart 2: Plant Distribution (Donut Chart for PGTL & NGM) */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -581,7 +579,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 7: Plant-wise Monthly Trend Line Chart (PG Group Bawal vs Manesar) */}
+        {/* Chart 7: Plant-wise Monthly Trend Line Chart (PGTL vs NGM) */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -600,11 +598,11 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
-                <Line type="monotone" dataKey="Bawal Plant" stroke="#3B82F6" strokeWidth={2.5} dot={{ r: 4, fill: "#fff", stroke: "#3B82F6", strokeWidth: 2 }}>
-                  <LabelList dataKey="Bawal Plant" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#1D4ED8" }} />
+                <Line type="monotone" dataKey="PGTL" stroke="#3B82F6" strokeWidth={2.5} dot={{ r: 4, fill: "#fff", stroke: "#3B82F6", strokeWidth: 2 }}>
+                  <LabelList dataKey="PGTL" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#1D4ED8" }} />
                 </Line>
-                <Line type="monotone" dataKey="Manesar Plant" stroke="#A855F7" strokeWidth={2.5} dot={{ r: 4, fill: "#fff", stroke: "#A855F7", strokeWidth: 2 }}>
-                  <LabelList dataKey="Manesar Plant" position="bottom" style={{ fontSize: "9px", fontWeight: "bold", fill: "#7E22CE" }} />
+                <Line type="monotone" dataKey="NGM" stroke="#A855F7" strokeWidth={2.5} dot={{ r: 4, fill: "#fff", stroke: "#A855F7", strokeWidth: 2 }}>
+                  <LabelList dataKey="NGM" position="bottom" style={{ fontSize: "9px", fontWeight: "bold", fill: "#7E22CE" }} />
                 </Line>
               </LineChart>
             </ResponsiveContainer>
@@ -735,7 +733,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 12: Plant Performance Radar Chart (PG Group Bawal vs Manesar) */}
+        {/* Chart 12: Plant Performance Radar Chart (PGTL vs NGM) */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -752,8 +750,8 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                 <PolarGrid stroke="#E2E8F0" />
                 <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9, fill: "#64748B" }} />
                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 8 }} />
-                <Radar name="Bawal Plant" dataKey="Bawal Plant" stroke="#818CF8" fill="#818CF8" fillOpacity={0.4} />
-                <Radar name="Manesar Plant" dataKey="Manesar Plant" stroke="#FDE047" fill="#FDE047" fillOpacity={0.4} />
+                <Radar name="PGTL Plant" dataKey="PGTL" stroke="#818CF8" fill="#818CF8" fillOpacity={0.4} />
+                <Radar name="NGM Plant" dataKey="NGM" stroke="#FDE047" fill="#FDE047" fillOpacity={0.4} />
                 <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                 <Tooltip content={<CustomTooltip />} />
               </RadarChart>
@@ -793,7 +791,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 14: Execution Status Timeline (Renamed from Execution Velocity) */}
+        {/* Chart 14: Execution Status Timeline */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
