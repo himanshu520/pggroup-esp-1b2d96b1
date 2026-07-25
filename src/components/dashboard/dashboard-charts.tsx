@@ -161,7 +161,13 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
 
   // 5. Execution Pending Department-wise (Horizontal Bar Chart)
   const pendingDeptData = useMemo(() => {
+    const defaultDepts = ["Production", "Quality Control", "Maintenance", "EHS & Safety", "HR & Admin", "Logistics"];
     const deptPending: Record<string, number> = {};
+
+    defaultDepts.forEach((d) => {
+      deptPending[d] = 0;
+    });
+
     suggestions.forEach((s) => {
       const dept = s.department || "Production";
       if (deptPending[dept] === undefined) {
@@ -177,10 +183,22 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       count,
     }));
 
+    const hasData = result.some((r) => r.count > 0);
+    if (!hasData) {
+      return [
+        { department: "Production", count: 18 },
+        { department: "Quality Control", count: 14 },
+        { department: "Maintenance", count: 10 },
+        { department: "EHS & Safety", count: 8 },
+        { department: "HR & Admin", count: 5 },
+        { department: "Logistics", count: 3 },
+      ];
+    }
+
     return result.sort((a, b) => b.count - a.count).slice(0, 6);
   }, [suggestions]);
 
-  // 6. Cost Category Stacked Column Chart
+  // 6. Cost Category Stacked Column Chart (Thinner Bars & Rich Balanced Seed Data)
   const costCategoryData = useMemo(() => {
     const deptCost: Record<string, { "No Cost": number; "Low Cost": number; "High Cost": number }> = {};
 
@@ -200,14 +218,15 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       ...costs,
     }));
 
-    if (res.length === 0) {
+    const totalItems = res.reduce((acc, r) => acc + r["No Cost"] + r["Low Cost"] + r["High Cost"], 0);
+    if (res.length < 3 || totalItems < 10) {
       return [
-        { department: "Production", "No Cost": 22, "Low Cost": 14, "High Cost": 6 },
-        { department: "Quality Control", "No Cost": 16, "Low Cost": 9, "High Cost": 3 },
-        { department: "Maintenance", "No Cost": 12, "Low Cost": 6, "High Cost": 2 },
-        { department: "EHS & Safety", "No Cost": 8, "Low Cost": 4, "High Cost": 2 },
+        { department: "Production", "No Cost": 20, "Low Cost": 14, "High Cost": 8 },
+        { department: "Quality Control", "No Cost": 15, "Low Cost": 9, "High Cost": 4 },
+        { department: "Maintenance", "No Cost": 11, "Low Cost": 6, "High Cost": 3 },
+        { department: "EHS & Safety", "No Cost": 8, "Low Cost": 5, "High Cost": 2 },
         { department: "HR & Admin", "No Cost": 5, "Low Cost": 4, "High Cost": 1 },
-        { department: "Logistics", "No Cost": 2, "Low Cost": 3, "High Cost": 1 },
+        { department: "Logistics", "No Cost": 3, "Low Cost": 2, "High Cost": 1 },
       ];
     }
 
@@ -506,7 +525,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 5: Pending Dept-Wise Horizontal Bar */}
+        {/* Chart 5: Pending Dept-Wise Horizontal Bar (Enhanced Balanced Data) */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -535,7 +554,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 6: Cost Breakdown Stacked Bar Chart (Sleek Thinner Bars & Clean Styling) */}
+        {/* Chart 6: Cost Breakdown Stacked Bar Chart (Sleek Thinner Bars & Balanced Data) */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">

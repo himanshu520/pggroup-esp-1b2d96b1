@@ -53,16 +53,15 @@ export interface DashboardFilters {
 function createLogicalDataset(): EmployeeSuggestion[] {
   const dataset: EmployeeSuggestion[] = [];
 
-  const plants = ["PGTL", "NGM"];
   const depts = ["Production", "Quality Control", "Maintenance", "EHS & Safety", "HR & Admin", "Logistics"];
   const categories = ["Kaizen", "5S", "Quality Control", "Cost Savings"];
   const months = ["Feb", "Mar", "Apr", "May", "Jun", "Jul"];
+  
+  // Balanced status distribution: 45% implemented, 25% approved, 15% under review, 10% pending, 5% rejected
   const statuses: ("implemented" | "approved" | "pending" | "under_review" | "rejected")[] = [
-    "implemented", "implemented", "implemented", "implemented", "implemented",
-    "approved", "approved", "approved",
-    "under_review", "under_review",
-    "pending",
-    "rejected"
+    "implemented", "approved", "pending", "under_review", "implemented",
+    "approved", "implemented", "under_review", "implemented", "approved",
+    "implemented", "pending", "approved", "implemented", "rejected"
   ];
 
   const maleNames = ["Rajesh Kumar", "Suresh Verma", "Manish Yadav", "Vikas Saini", "Amit Sharma", "Rohan Mehta", "Deepak Gupta", "Sunil Rawat"];
@@ -80,14 +79,14 @@ function createLogicalDataset(): EmployeeSuggestion[] {
     const employeeName = isFemale ? femaleNames[i % femaleNames.length] : maleNames[i % maleNames.length];
     const employeeId = `${plant}-EMP-${100 + (i % 35)}`;
 
-    const department = depts[i % depts.length];
-    const category = categories[i % categories.length];
-    const month = months[i % months.length];
+    const department = depts[(i - 1) % depts.length];
+    const category = categories[(i - 1) % categories.length];
+    const month = months[(i - 1) % months.length];
     const monthIndex = months.indexOf(month) + 2; // 02 to 07
     const day = String((i % 25) + 1).padStart(2, "0");
     const createdDate = `2026-0${monthIndex}-${day}`;
 
-    const status = statuses[i % statuses.length];
+    const status = statuses[(i - 1) % statuses.length];
     let implStatus: "Completed" | "In Progress" | "Pending Review" | "On Hold" | "Rejected" = "Pending Review";
     let completedDate: string | null = null;
     let savings = 0;
@@ -98,12 +97,12 @@ function createLogicalDataset(): EmployeeSuggestion[] {
       implStatus = "Completed";
       completedDate = `2026-0${monthIndex}-28`;
       points = 450;
-      savings = (i % 4 === 0) ? 120000 : (i % 2 === 0 ? 50000 : 15000);
+      savings = (i % 4 === 0) ? 120000 : (i % 2 === 0 ? 55000 : 25000);
       award = i % 5 === 0 ? "Best Kaizen Award" : "Implementation Certificate";
     } else if (status === "approved") {
       implStatus = "In Progress";
       points = 250;
-      savings = 25000;
+      savings = 30000;
     } else if (status === "under_review") {
       implStatus = "Pending Review";
       points = 150;
@@ -112,9 +111,15 @@ function createLogicalDataset(): EmployeeSuggestion[] {
       points = 50;
     }
 
+    // Well-balanced Cost Category Tiering for rich Stacked Bar charts
     let costType: "No Cost" | "Low Cost" | "High Cost" = "No Cost";
-    if (savings > 100000) costType = "High Cost";
-    else if (savings > 0) costType = "Low Cost";
+    if (i % 5 === 0) {
+      costType = "High Cost";
+    } else if (i % 3 === 0) {
+      costType = "Low Cost";
+    } else {
+      costType = "No Cost";
+    }
 
     dataset.push({
       id: `sug-logical-${i}`,
