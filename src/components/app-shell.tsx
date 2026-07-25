@@ -155,7 +155,7 @@ function AppShellInner({
         "lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)]",
         "fixed inset-y-0 left-0 z-50 h-screen transition-all duration-300 ease-in-out",
         mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
-        collapsible && collapsed && "lg:w-16",
+        collapsible && collapsed && "lg:-translate-x-full lg:w-0 lg:opacity-0 lg:overflow-hidden lg:border-r-0 lg:p-0 lg:pointer-events-none",
       )}
     >
       {/* Mobile-only close button */}
