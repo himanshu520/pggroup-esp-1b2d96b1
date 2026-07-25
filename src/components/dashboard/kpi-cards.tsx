@@ -31,6 +31,8 @@ interface KPICardsProps {
   filters?: DashboardFilters;
   onApplyFilters?: (filters: DashboardFilters) => void;
   onResetFilters?: () => void;
+  isFilterBarOpen?: boolean;
+  onToggleFilterBar?: () => void;
 }
 
 type SugTimeSubFilter = "today" | "month" | "year" | "prev_year" | "all";
@@ -54,9 +56,19 @@ function useAnimatedCount(targetValue: number, duration = 800) {
   return count;
 }
 
-export function KPICardsSection({ suggestions, filters = {}, onApplyFilters, onResetFilters }: KPICardsProps) {
+export function KPICardsSection({
+  suggestions,
+  filters = {},
+  onApplyFilters,
+  onResetFilters,
+  isFilterBarOpen: externalFilterBarOpen,
+  onToggleFilterBar,
+}: KPICardsProps) {
   const [sugFilter, setSugFilter] = useState<SugTimeSubFilter>("all");
-  const [isFilterBarOpen, setIsFilterBarOpen] = useState(false);
+  const [internalFilterBarOpen, setInternalFilterBarOpen] = useState(false);
+
+  const isFilterBarOpen = externalFilterBarOpen !== undefined ? externalFilterBarOpen : internalFilterBarOpen;
+  const toggleFilterBar = onToggleFilterBar || (() => setInternalFilterBarOpen((prev) => !prev));
 
   const activeFilterCount = useMemo(() => {
     return Object.values(filters).filter((v) => v && v !== "all").length;
@@ -263,14 +275,14 @@ export function KPICardsSection({ suggestions, filters = {}, onApplyFilters, onR
   };
 
   return (
-    <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md pt-2 pb-2.5 -mx-4 px-4 border-b border-border shadow-xs transition-all">
+    <div className="sticky top-16 z-20 bg-background/95 backdrop-blur-md pt-2 pb-2.5 -mx-4 px-4 border-b border-border shadow-xs transition-all">
       {/* Top Bar: Filter Button & Quick Action Toggle */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <Button
             variant={isFilterBarOpen ? "default" : "outline"}
             size="sm"
-            onClick={() => setIsFilterBarOpen(!isFilterBarOpen)}
+            onClick={toggleFilterBar}
             className="h-8 px-3 font-bold text-xs gap-1.5 shadow-2xs hover:scale-[1.02] transition-transform"
           >
             <Filter className="w-3.5 h-3.5" />

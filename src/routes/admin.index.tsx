@@ -9,7 +9,7 @@ import { ExportMenu } from "@/components/export-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ClipboardList, Search, CheckCircle2, Rocket, XCircle, TrendingUp, RotateCcw } from "lucide-react";
+import { ClipboardList, Search, CheckCircle2, Rocket, XCircle, TrendingUp, RotateCcw, Filter } from "lucide-react";
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend } from "recharts";
 import { useSession, isLocationAccessible, isPlantAccessible, isSuggestionAccessible } from "@/lib/session";
 
@@ -101,6 +101,7 @@ const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Se
 function OverviewPage() {
   const { data: sess } = useSession();
   const [filters, setFilters] = useState<DashboardFilters>({});
+  const [isFilterBarOpen, setIsFilterBarOpen] = useState(false);
 
   // Query database suggestions
   const { data: sugs = [] } = useQuery({
@@ -134,11 +135,23 @@ function OverviewPage() {
       navGroups={ADMIN_NAV}
       title="Executive Analytics Dashboard"
       filterSlot={
-        <FilterDrawer
-          filters={filters}
-          onApplyFilters={(f) => setFilters(f)}
-          onResetFilters={() => setFilters({})}
-        />
+        <div className="flex items-center gap-2">
+          <Button
+            variant={isFilterBarOpen ? "default" : "outline"}
+            size="sm"
+            onClick={() => setIsFilterBarOpen(!isFilterBarOpen)}
+            className="h-8 px-3 font-bold text-xs gap-1.5 shadow-2xs hover:scale-[1.02] transition-transform"
+          >
+            <Filter className="w-3.5 h-3.5" />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="bg-white text-primary dark:bg-primary dark:text-white rounded-full px-1.5 py-0.2 text-[10px] font-extrabold">
+                {activeFilterCount}
+              </span>
+            )}
+          </Button>
+          <ExportMenu suggestions={filteredSuggestions} />
+        </div>
       }
     >
       <div className="space-y-6 pb-8 page-fade-in">
@@ -160,6 +173,8 @@ function OverviewPage() {
           filters={filters}
           onApplyFilters={(f) => setFilters(f)}
           onResetFilters={() => setFilters({})}
+          isFilterBarOpen={isFilterBarOpen}
+          onToggleFilterBar={() => setIsFilterBarOpen(!isFilterBarOpen)}
         />
 
         {/* 2. Executive Highlights Cards */}
