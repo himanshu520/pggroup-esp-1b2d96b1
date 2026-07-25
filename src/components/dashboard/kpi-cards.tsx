@@ -278,109 +278,126 @@ export function KPICardsSection({
     <div className="sticky top-16 z-20 bg-background dark:bg-slate-900 pt-2 pb-2.5 -mx-4 px-4 border-b border-border shadow-md transition-all">
       {/* Expandable Filter Bar (toggled exclusively from Main Top Navbar) */}
 
-      {/* Expandable Filter Bar */}
+      {/* Expandable Filter Bar (Appears directly above 9 KPI cards when Navbar Filter button is clicked) */}
       {isFilterBarOpen && (
-        <div className="mb-3 p-3 bg-muted/60 dark:bg-slate-900/80 rounded-xl border border-border grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
-          {/* Location / State Filter */}
-          <div>
-            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-              <MapPin className="w-3 h-3" /> Location / State
-            </label>
-            <Select value={filters.state || "all"} onValueChange={(val) => handleFilterChange("state", val)}>
-              <SelectTrigger className="h-8 text-xs bg-background">
-                <SelectValue placeholder="All States" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All States</SelectItem>
-                <SelectItem value="Haryana">Haryana</SelectItem>
-                <SelectItem value="Delhi NCR">Delhi NCR</SelectItem>
-                <SelectItem value="Gujarat">Gujarat</SelectItem>
-                <SelectItem value="Maharashtra">Maharashtra</SelectItem>
-                <SelectItem value="Punjab">Punjab</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="mb-3 p-3 bg-white dark:bg-slate-900 rounded-xl border border-primary/20 shadow-md animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-border/60">
+            <span className="text-xs font-extrabold text-foreground flex items-center gap-1.5">
+              <Filter className="w-3.5 h-3.5 text-primary" /> Filter Dashboard Data (Location, Plant, Dept, Category & Status)
+            </span>
+            {activeFilterCount > 0 && onResetFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onResetFilters}
+                className="h-6 px-2 text-[11px] font-bold text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
+              >
+                <RotateCcw className="w-3 h-3" /> Clear All Filters
+              </Button>
+            )}
           </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+            {/* Location / State Filter */}
+            <div>
+              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                <MapPin className="w-3 h-3" /> Location / State
+              </label>
+              <Select value={filters.state || "all"} onValueChange={(val) => handleFilterChange("state", val)}>
+                <SelectTrigger className="h-8 text-xs bg-background">
+                  <SelectValue placeholder="All States" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All States</SelectItem>
+                  <SelectItem value="Haryana">Haryana</SelectItem>
+                  <SelectItem value="Delhi NCR">Delhi NCR</SelectItem>
+                  <SelectItem value="Gujarat">Gujarat</SelectItem>
+                  <SelectItem value="Maharashtra">Maharashtra</SelectItem>
+                  <SelectItem value="Punjab">Punjab</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Plant Filter */}
-          <div>
-            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-              <Building2 className="w-3 h-3" /> Plant Unit
-            </label>
-            <Select value={filters.plant || "all"} onValueChange={(val) => handleFilterChange("plant", val)}>
-              <SelectTrigger className="h-8 text-xs bg-background">
-                <SelectValue placeholder="All Plants" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Plants</SelectItem>
-                <SelectItem value="Plant 1">Plant 1</SelectItem>
-                <SelectItem value="Plant 2">Plant 2</SelectItem>
-                <SelectItem value="Plant 3">Plant 3</SelectItem>
-                <SelectItem value="Plant 4">Plant 4</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            {/* Plant Filter */}
+            <div>
+              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                <Building2 className="w-3 h-3" /> Plant Unit
+              </label>
+              <Select value={filters.plant || "all"} onValueChange={(val) => handleFilterChange("plant", val)}>
+                <SelectTrigger className="h-8 text-xs bg-background">
+                  <SelectValue placeholder="All Plants" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Plants</SelectItem>
+                  <SelectItem value="Plant 1">Plant 1</SelectItem>
+                  <SelectItem value="Plant 2">Plant 2</SelectItem>
+                  <SelectItem value="Plant 3">Plant 3</SelectItem>
+                  <SelectItem value="Plant 4">Plant 4</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Department Filter */}
-          <div>
-            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-              <Layers className="w-3 h-3" /> Department
-            </label>
-            <Select value={filters.department || "all"} onValueChange={(val) => handleFilterChange("department", val)}>
-              <SelectTrigger className="h-8 text-xs bg-background">
-                <SelectValue placeholder="All Departments" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
-                <SelectItem value="Production">Production</SelectItem>
-                <SelectItem value="Quality">Quality</SelectItem>
-                <SelectItem value="Maintenance">Maintenance</SelectItem>
-                <SelectItem value="Safety">Safety</SelectItem>
-                <SelectItem value="HR">HR</SelectItem>
-                <SelectItem value="Logistics">Logistics</SelectItem>
-                <SelectItem value="Finance">Finance</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            {/* Department Filter */}
+            <div>
+              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                <Layers className="w-3 h-3" /> Department
+              </label>
+              <Select value={filters.department || "all"} onValueChange={(val) => handleFilterChange("department", val)}>
+                <SelectTrigger className="h-8 text-xs bg-background">
+                  <SelectValue placeholder="All Departments" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Departments</SelectItem>
+                  <SelectItem value="Production">Production</SelectItem>
+                  <SelectItem value="Quality">Quality</SelectItem>
+                  <SelectItem value="Maintenance">Maintenance</SelectItem>
+                  <SelectItem value="Safety">Safety</SelectItem>
+                  <SelectItem value="HR">HR</SelectItem>
+                  <SelectItem value="Logistics">Logistics</SelectItem>
+                  <SelectItem value="Finance">Finance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Category Filter */}
-          <div>
-            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-              <Tag className="w-3 h-3" /> Suggestion Category
-            </label>
-            <Select value={filters.category || "all"} onValueChange={(val) => handleFilterChange("category", val)}>
-              <SelectTrigger className="h-8 text-xs bg-background">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="5S">5S</SelectItem>
-                <SelectItem value="Kaizen">Kaizen</SelectItem>
-                <SelectItem value="Safety">Safety</SelectItem>
-                <SelectItem value="Cost Reduction">Cost Reduction</SelectItem>
-                <SelectItem value="Quality">Quality</SelectItem>
-                <SelectItem value="Productivity">Productivity</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            {/* Category Filter */}
+            <div>
+              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                <Tag className="w-3 h-3" /> Suggestion Category
+              </label>
+              <Select value={filters.category || "all"} onValueChange={(val) => handleFilterChange("category", val)}>
+                <SelectTrigger className="h-8 text-xs bg-background">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="5S">5S</SelectItem>
+                  <SelectItem value="Kaizen">Kaizen</SelectItem>
+                  <SelectItem value="Safety">Safety</SelectItem>
+                  <SelectItem value="Cost Reduction">Cost Reduction</SelectItem>
+                  <SelectItem value="Quality">Quality</SelectItem>
+                  <SelectItem value="Productivity">Productivity</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Status Filter */}
-          <div>
-            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Status
-            </label>
-            <Select value={filters.status || "all"} onValueChange={(val) => handleFilterChange("status", val)}>
-              <SelectTrigger className="h-8 text-xs bg-background">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="implemented">Implemented</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="under_review">Under Review</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Status Filter */}
+            <div>
+              <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" /> Status
+              </label>
+              <Select value={filters.status || "all"} onValueChange={(val) => handleFilterChange("status", val)}>
+                <SelectTrigger className="h-8 text-xs bg-background">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="implemented">Implemented</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="under_review">Under Review</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
       )}
