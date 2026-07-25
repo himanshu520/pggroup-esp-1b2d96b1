@@ -86,34 +86,51 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
   const genderData = useMemo(() => {
     const counts: Record<string, number> = { Male: 0, Female: 0, Others: 0 };
     suggestions.forEach((s) => {
-      counts[s.gender] = (counts[s.gender] || 0) + 1;
+      const g = s.gender || "Male";
+      counts[g] = (counts[g] || 0) + 1;
     });
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+    return [
+      { name: "Male", value: counts.Male },
+      { name: "Female", value: counts.Female },
+      { name: "Others", value: counts.Others },
+    ];
   }, [suggestions]);
 
-  // 5. Execution Pending Department Wise (Horizontal Bar Chart)
+  // 5. Execution Pending Department-wise (Horizontal Bar Chart)
   const pendingDeptData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    suggestions.forEach((s) => {
-      if (s.status === "approved" || s.status === "pending" || s.status === "under_review") {
-        counts[s.department] = (counts[s.department] || 0) + 1;
-      }
-    });
-    return Object.entries(counts).map(([department, count]) => ({ department, count })).sort((a, b) => b.count - a.count);
+    const deptPending: Record<string, number> = {};
+    suggestions
+      .filter((s) => s.status !== "implemented" && s.status !== "rejected")
+      .forEach((s) => {
+        deptPending[s.department] = (deptPending[s.department] || 0) + 1;
+      });
+    return Object.entries(deptPending)
+      .map(([department, count]) => ({ department, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
   }, [suggestions]);
 
-  // 6. Cost Category Stacked Column Chart (Low Cost, No Cost, High Cost by Dept)
+  // 6. Cost Category Stacked Column Chart (No Cost, Low Cost, High Cost)
   const costCategoryData = useMemo(() => {
-    const depts = Array.from(new Set(suggestions.map((s) => s.department))).slice(0, 6);
-    return depts.map((dept) => {
-      const deptSugs = suggestions.filter((s) => s.department === dept);
-      return {
-        department: dept,
-        "No Cost": deptSugs.filter((s) => s.costType === "No Cost").length,
-        "Low Cost": deptSugs.filter((s) => s.costType === "Low Cost").length,
-        "High Cost": deptSugs.filter((s) => s.costType === "High Cost").length,
-      };
+    const deptCost: Record<string, { "No Cost": number; "Low Cost": number; "High Cost": number }> = {};
+
+    suggestions.forEach((s) => {
+      const dept = s.department || "General";
+      if (!deptCost[dept]) {
+        deptCost[dept] = { "No Cost": 0, "Low Cost": 0, "High Cost": 0 };
+      }
+      const ct = s.costType || "No Cost";
+      if (ct === "High Cost") deptCost[dept]["High Cost"] += 1;
+      else if (ct === "Low Cost") deptCost[dept]["Low Cost"] += 1;
+      else deptCost[dept]["No Cost"] += 1;
     });
+
+    return Object.entries(deptCost)
+      .map(([department, costs]) => ({
+        department,
+        ...costs,
+      }))
+      .slice(0, 6);
   }, [suggestions]);
 
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -199,7 +216,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
   // 12. Plant Performance Radar Chart
   const radarData = useMemo(() => {
     const plantList = ["Plant 1", "Plant 2", "Plant 3", "Plant 4"];
-    
+
     const getMetricValue = (plant: string, metric: string) => {
       const plantSugs = suggestions.filter((s) => s.plant === plant);
       if (plantSugs.length === 0) return 0;
@@ -269,19 +286,19 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-primary" /> Interactive Analytics & Charts
+            <Activity className="w-5 h-5 text-primary" /> Interactive Analytics & Charts (3 Per Row)
           </h2>
-          <p className="text-xs text-muted-foreground">Power BI executive dashboards across organization parameters</p>
+          <p className="text-xs text-muted-foreground">Power BI executive dashboards arranged in 3 columns per row</p>
         </div>
       </div>
 
-      {/* Grid Row 1 */}
+      {/* SINGLE UNIFIED GRID: Exactly 3 Charts Per Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Chart 1: Suggestion State / Status Distribution */}
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Layers className="w-4 h-4 text-blue-500" /> Suggestion State / Status Breakdown
+              <Layers className="w-4 h-4 text-blue-500" /> Suggestion State Breakdown
             </span>
             <span className="text-[11px] text-muted-foreground">Workflow Stages</span>
           </div>
@@ -289,7 +306,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={statusStateData}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="state" tick={{ fontSize: 11 }} />
+                <XAxis dataKey="state" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
                 <Bar dataKey="count" radius={[6, 6, 0, 0]}>
@@ -324,10 +341,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
 
-      {/* Grid Row 2: Category & Gender */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Chart 3: Suggestion Category Distribution */}
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
@@ -372,10 +386,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
 
-      {/* Grid Row 3: Execution Pending & Cost Category Stacked */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Chart 5: Execution Pending Department Wise */}
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
@@ -389,7 +400,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
               <BarChart layout="vertical" data={pendingDeptData}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                 <XAxis type="number" tick={{ fontSize: 11 }} />
-                <YAxis dataKey="department" type="category" tick={{ fontSize: 11 }} width={90} />
+                <YAxis dataKey="department" type="category" tick={{ fontSize: 11 }} width={80} />
                 <Tooltip />
                 <Bar dataKey="count" fill="#FF6B00" radius={[0, 6, 6, 0]} />
               </BarChart>
@@ -420,10 +431,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
 
-      {/* Grid Row 4: Monthly Trend & Monthly Participation */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Chart 7: Monthly Trend */}
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
@@ -473,15 +481,12 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
 
-      {/* Grid Row 5: Dept Ranking & Suggestion Status */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Chart 9: Department Ranking */}
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-amber-600" /> Department Total Points Ranking
+              <BarChart3 className="w-4 h-4 text-amber-600" /> Dept Points Ranking
             </span>
             <span className="text-[11px] text-muted-foreground">Top Departments</span>
           </div>
@@ -520,15 +525,12 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
 
-      {/* Grid Row 6: Year-wise Comparison & Plant Radar */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Chart 11: Year-wise Comparison */}
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-indigo-600" /> Year-wise Performance (2025 vs 2026)
+              <BarChart3 className="w-4 h-4 text-indigo-600" /> Year Performance (2025 vs 2026)
             </span>
             <span className="text-[11px] text-muted-foreground">YoY Analysis</span>
           </div>
@@ -551,7 +553,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-rose-500" /> Plant Multi-Axis Radar Performance
+              <Activity className="w-4 h-4 text-rose-500" /> Plant Multi-Axis Radar Matrix
             </span>
             <span className="text-[11px] text-muted-foreground">Plants 1-4 Matrix</span>
           </div>
@@ -569,15 +571,12 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
 
-      {/* Grid Row 7: Cost Savings Area & Execution Timeline */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Chart 13: Cost Savings Monthly Area */}
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-emerald-600" /> Cumulative Cost Savings (in ₹ Lacs)
+              <TrendingUp className="w-4 h-4 text-emerald-600" /> Cumulative Savings (₹ Lacs)
             </span>
             <span className="text-[11px] text-muted-foreground">Financial Returns</span>
           </div>
@@ -604,7 +603,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
         <div className="glass-card rounded-xl p-4 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <LineIcon className="w-4 h-4 text-blue-600" /> Suggestion Execution Velocity Timeline
+              <LineIcon className="w-4 h-4 text-blue-600" /> Execution Velocity Timeline
             </span>
             <span className="text-[11px] text-muted-foreground">Submitted vs Completed</span>
           </div>
