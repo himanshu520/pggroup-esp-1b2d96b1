@@ -458,7 +458,11 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                 <XAxis type="number" tick={{ fontSize: 10 }} />
                 <YAxis dataKey="department" type="category" tick={{ fontSize: 10 }} width={75} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="count" fill="#F43F5E" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+                  {pendingDeptData.map((_, index) => (
+                    <Cell key={`cell-pd-${index}`} fill={LIGHT_COLORS[index % LIGHT_COLORS.length]} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -573,7 +577,11 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                 <XAxis dataKey="department" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="points" fill="#F59E0B" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="points" radius={[6, 6, 0, 0]}>
+                  {deptRankingData.map((_, index) => (
+                    <Cell key={`cell-dr-${index}`} fill={LIGHT_COLORS[index % LIGHT_COLORS.length]} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>

@@ -271,124 +271,83 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
         </div>
       </div>
 
-      {/* Single-Row 9 KPI Cards Container */}
-      <div className="relative group">
-        {/* Left Arrow Button */}
-        <button
-          onClick={() => handleScroll("left")}
-          className="absolute left-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-900/90 shadow-md border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
-          aria-label="Scroll Left"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
+      {/* 9 KPI Cards 1-Row Grid Container */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 w-full">
+        {cards.map((card, idx) => {
+          const Icon = card.icon;
+          const animVal = useAnimatedCount(typeof card.value === "number" ? card.value : 0);
 
-        {/* Single Row Flex Container */}
-        <div
-          ref={scrollRef}
-          className="flex items-center gap-3 overflow-x-auto pb-2 pt-1 scrollbar-none snap-x snap-mandatory transition-all duration-300"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-        >
-          {cards.map((card, idx) => {
-            const Icon = card.icon;
-            const animVal = useAnimatedCount(typeof card.value === "number" ? card.value : 0);
-
-            return (
-              <div
-                key={card.id}
-                className={`min-w-[240px] max-w-[260px] shrink-0 snap-start relative overflow-hidden rounded-xl p-3 flex flex-col justify-between cursor-pointer border shadow-sm transition-all hover:shadow-md hover:scale-[1.01] ${card.lightBg}`}
-              >
-                {/* Top Row: Title & Icon */}
-                <div className="flex items-start justify-between gap-1.5">
-                  <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 line-clamp-1">{card.title}</span>
-                  <div className={`p-1.5 rounded-lg ${card.iconBg} shadow-xs shrink-0`}>
-                    <Icon className="w-3.5 h-3.5" />
-                  </div>
-                </div>
-
-                {/* Card 1 Specific: Internal Period Switcher Pills */}
-                {card.isMergedCard && (
-                  <div className="flex items-center gap-1 my-1.5 bg-white/70 dark:bg-slate-900/70 p-1 rounded-md border border-blue-200/60 dark:border-blue-800/40">
-                    {subFilterButtons.map((b) => (
-                      <button
-                        key={b.id}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSugFilter(b.id);
-                        }}
-                        className={`flex-1 py-0.5 text-[9px] font-black rounded transition-all ${
-                          sugFilter === b.id
-                            ? "bg-blue-600 text-white shadow-xs"
-                            : "text-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50"
-                        }`}
-                      >
-                        {b.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Middle Row: Animated Main Value & Sparkline */}
-                <div className="my-1 flex items-baseline justify-between gap-2">
-                  <span className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
-                    {card.textValue ? (
-                      card.textValue
-                    ) : card.currencyValue !== undefined ? (
-                      `₹${(card.currencyValue / 100000).toFixed(1)}L`
-                    ) : (
-                      `${animVal}${card.suffix || ""}`
-                    )}
-                  </span>
-
-                  {/* Sparkline */}
-                  <div className="w-14 h-7 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={card.sparkline}>
-                        <defs>
-                          <linearGradient id={`grad-${idx}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#0066FF" stopOpacity={0.4} />
-                            <stop offset="100%" stopColor="#0066FF" stopOpacity={0.0} />
-                          </linearGradient>
-                        </defs>
-                        <Area type="monotone" dataKey="value" stroke="#0066FF" strokeWidth={2} fill={`url(#grad-${idx})`} isAnimationActive={false} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* Bottom Row: Growth Badge & Comparison */}
-                <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-200/60 dark:border-slate-800">
-                  <span
-                    className={`inline-flex items-center gap-0.5 font-bold px-1.5 py-0.5 rounded-full ${
-                      card.growthType === "up"
-                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300"
-                        : card.growthType === "down"
-                        ? "bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300"
-                        : "bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300"
-                    }`}
-                  >
-                    {card.growthType === "up" ? (
-                      <TrendingUp className="w-3 h-3" />
-                    ) : card.growthType === "down" ? (
-                      <TrendingDown className="w-3 h-3" />
-                    ) : null}
-                    {card.growth}
-                  </span>
-                  <span className="text-slate-500 dark:text-slate-400 truncate text-[9px] font-medium">{card.comparison}</span>
+          return (
+            <div
+              key={card.id}
+              className={`relative overflow-hidden rounded-xl p-2.5 flex flex-col justify-between cursor-pointer border shadow-xs transition-all hover:shadow-sm hover:scale-[1.02] ${card.lightBg}`}
+            >
+              {/* Top Row: Title & Icon */}
+              <div className="flex items-start justify-between gap-1">
+                <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 line-clamp-1 leading-tight">{card.title}</span>
+                <div className={`p-1 rounded-md ${card.iconBg} shadow-2xs shrink-0`}>
+                  <Icon className="w-3 h-3" />
                 </div>
               </div>
-            );
-          })}
-        </div>
 
-        {/* Right Arrow Button */}
-        <button
-          onClick={() => handleScroll("right")}
-          className="absolute right-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-900/90 shadow-md border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110"
-          aria-label="Scroll Right"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
+              {/* Card 1 Specific: Internal Period Switcher Pills */}
+              {card.isMergedCard && (
+                <div className="flex items-center gap-0.5 my-1 bg-white/80 dark:bg-slate-900/80 p-0.5 rounded border border-blue-200/60 dark:border-blue-800/40">
+                  {subFilterButtons.map((b) => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSugFilter(b.id);
+                      }}
+                      className={`flex-1 py-0.2 text-[8px] font-black rounded transition-all ${
+                        sugFilter === b.id
+                          ? "bg-blue-600 text-white shadow-2xs"
+                          : "text-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                      }`}
+                    >
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Middle Row: Animated Main Value */}
+              <div className="my-1 flex items-baseline justify-between gap-1">
+                <span className="text-base font-black text-slate-900 dark:text-slate-100 tracking-tight leading-none truncate">
+                  {card.textValue ? (
+                    card.textValue
+                  ) : card.currencyValue !== undefined ? (
+                    `₹${(card.currencyValue / 100000).toFixed(1)}L`
+                  ) : (
+                    `${animVal}${card.suffix || ""}`
+                  )}
+                </span>
+              </div>
+
+              {/* Bottom Row: Growth Badge */}
+              <div className="flex items-center justify-between text-[9px] pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                <span
+                  className={`inline-flex items-center gap-0.5 font-bold px-1 py-0.2 rounded-full ${
+                    card.growthType === "up"
+                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300"
+                      : card.growthType === "down"
+                      ? "bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300"
+                      : "bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300"
+                  }`}
+                >
+                  {card.growthType === "up" ? (
+                    <TrendingUp className="w-2.5 h-2.5" />
+                  ) : card.growthType === "down" ? (
+                    <TrendingDown className="w-2.5 h-2.5" />
+                  ) : null}
+                  {card.growth}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
