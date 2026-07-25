@@ -276,36 +276,7 @@ export function KPICardsSection({
 
   return (
     <div className="sticky top-16 z-20 bg-background dark:bg-slate-900 pt-2 pb-2.5 -mx-4 px-4 border-b border-border shadow-md transition-all">
-      {/* Top Bar: Filter Button & Quick Action Toggle */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Button
-            variant={isFilterBarOpen ? "default" : "outline"}
-            size="sm"
-            onClick={toggleFilterBar}
-            className="h-8 px-3 font-bold text-xs gap-1.5 shadow-2xs hover:scale-[1.02] transition-transform"
-          >
-            <Filter className="w-3.5 h-3.5" />
-            Filters & Parameters
-            {activeFilterCount > 0 && (
-              <span className="bg-white text-primary dark:bg-primary dark:text-white rounded-full px-1.5 py-0.2 text-[10px] font-extrabold">
-                {activeFilterCount}
-              </span>
-            )}
-            {isFilterBarOpen ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />}
-          </Button>
-
-          {activeFilterCount > 0 && onResetFilters && (
-            <Button variant="ghost" size="sm" onClick={onResetFilters} className="h-8 px-2 text-xs font-semibold text-muted-foreground hover:text-foreground gap-1">
-              <RotateCcw className="w-3 h-3" /> Clear Filters
-            </Button>
-          )}
-        </div>
-
-        <div className="text-[11px] font-bold text-muted-foreground hidden sm:block">
-          Showing <span className="text-foreground">{suggestions.length}</span> active metrics
-        </div>
-      </div>
+      {/* Expandable Filter Bar (toggled exclusively from Main Top Navbar) */}
 
       {/* Expandable Filter Bar */}
       {isFilterBarOpen && (
