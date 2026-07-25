@@ -275,7 +275,7 @@ export function KPICardsSection({
   };
 
   return (
-    <div className="sticky top-16 z-20 bg-background/95 backdrop-blur-md pt-2 pb-2.5 -mx-4 px-4 border-b border-border shadow-xs transition-all">
+    <div className="sticky top-16 z-20 bg-background dark:bg-slate-900 pt-2 pb-2.5 -mx-4 px-4 border-b border-border shadow-md transition-all">
       {/* Top Bar: Filter Button & Quick Action Toggle */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">

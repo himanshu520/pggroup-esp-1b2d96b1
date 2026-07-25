@@ -264,7 +264,7 @@ function AppShellInner({
 
   return (
     <div className="min-h-screen flex flex-col bg-muted/30">
-      <header className="sticky top-0 z-30 w-full h-16 bg-background/95 backdrop-blur border-b border-border flex items-center justify-between px-2 sm:px-4 gap-2">
+      <header className="sticky top-0 z-30 w-full h-16 bg-background border-b border-border shadow-xs flex items-center justify-between px-2 sm:px-4 gap-2">
         <div className="flex items-center gap-1 sm:gap-3 min-w-0">
           <button
             type="button"
