@@ -12,14 +12,25 @@ import {
   DollarSign,
   UserCheck,
   Zap,
-  ChevronLeft,
-  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Filter,
+  RotateCcw,
+  MapPin,
+  Building2,
+  Tag,
+  Layers,
 } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
-import type { EmployeeSuggestion } from "@/lib/dummy-suggestions";
+import type { EmployeeSuggestion, DashboardFilters } from "@/lib/dummy-suggestions";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface KPICardsProps {
   suggestions: EmployeeSuggestion[];
+  filters?: DashboardFilters;
+  onApplyFilters?: (filters: DashboardFilters) => void;
+  onResetFilters?: () => void;
 }
 
 type SugTimeSubFilter = "today" | "month" | "year" | "prev_year" | "all";
@@ -43,9 +54,13 @@ function useAnimatedCount(targetValue: number, duration = 800) {
   return count;
 }
 
-export function KPICardsSection({ suggestions }: KPICardsProps) {
+export function KPICardsSection({ suggestions, filters = {}, onApplyFilters, onResetFilters }: KPICardsProps) {
   const [sugFilter, setSugFilter] = useState<SugTimeSubFilter>("all");
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isFilterBarOpen, setIsFilterBarOpen] = useState(false);
+
+  const activeFilterCount = useMemo(() => {
+    return Object.values(filters).filter((v) => v && v !== "all").length;
+  }, [filters]);
 
   // Compute suggestions count based on Card 1 internal switcher button
   const mergedSuggestionsCount = useMemo(() => {
@@ -83,7 +98,7 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
     const activeEmpSet = new Set(suggestions.map((s) => s.employeeId));
     const activeEmployees = activeEmpSet.size;
 
-    // Participation % (assuming 50 total workforce baseline)
+    // Participation %
     const participationPct = Math.min(100, Math.round((activeEmployees / 35) * 100));
 
     // Best Dept
@@ -100,15 +115,15 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
       implSugs.length > 0
         ? Math.round(
             implSugs.reduce((acc, s) => {
-              const diffMs = new Date(s.completedDate!).getTime() - new Date(s.createdDate).getTime();
-              return acc + diffMs / (1000 * 60 * 60 * 24);
+              const diff = new Date(s.completedDate!).getTime() - new Date(s.createdDate).getTime();
+              return acc + diff / (1000 * 3600 * 24);
             }, 0) / implSugs.length
           )
-        : 0;
+        : 14;
 
     return {
       total,
-      totalImplemented: implemented,
+      implemented,
       pendingExecution,
       underReview,
       totalSavings,
@@ -119,58 +134,43 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
     };
   }, [suggestions]);
 
-  // Scroll handlers for single-row slider
-  const handleScroll = (direction: "left" | "right") => {
-    if (scrollRef.current) {
-      const scrollAmount = direction === "left" ? -320 : 320;
-      scrollRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
-    }
-  };
-
-  // Mini sparklines
-  const sparklineUp = [{ value: 10 }, { value: 14 }, { value: 12 }, { value: 18 }, { value: 24 }, { value: 28 }, { value: 35 }];
-  const sparklineDown = [{ value: 35 }, { value: 28 }, { value: 22 }, { value: 18 }, { value: 12 }, { value: 8 }, { value: 4 }];
-  const sparklineSteady = [{ value: 15 }, { value: 18 }, { value: 16 }, { value: 20 }, { value: 22 }, { value: 25 }, { value: 27 }];
-
-  // 9 Consolidated Executive KPI Cards
+  // Card definitions
   const cards = [
     {
-      id: "suggestions",
-      title: "Suggestions Submitted",
+      id: "suggestions_merged",
+      title: "Total Suggestions",
       value: mergedSuggestionsCount,
-      isMergedCard: true,
-      growth: "+14.5%",
+      suffix: "",
+      growth: "+14.2%",
       growthType: "up",
-      icon: Sparkles,
+      icon: Calendar,
       lightBg: "bg-blue-50/90 dark:bg-blue-950/30 border-blue-200/90 dark:border-blue-800/60",
-      iconBg: "bg-blue-500 text-white",
-      sparkline: sparklineUp,
-      comparison: "Switch period inside",
+      iconBg: "bg-blue-600 text-white",
+      comparison: "Dynamic Switcher",
+      isMergedCard: true,
     },
     {
       id: "implemented",
-      title: "Total Implemented",
-      value: kpiData.totalImplemented,
+      title: "Implemented Ideas",
+      value: kpiData.implemented,
       suffix: "",
-      growth: `${kpiData.total > 0 ? Math.round((kpiData.totalImplemented / kpiData.total) * 100) : 0}% Impl Rate`,
+      growth: "+8.5%",
       growthType: "up",
       icon: CheckCircle2,
       lightBg: "bg-emerald-50/90 dark:bg-emerald-950/30 border-emerald-200/90 dark:border-emerald-800/60",
-      iconBg: "bg-emerald-500 text-white",
-      sparkline: sparklineUp,
-      comparison: "Completed Kaizens",
+      iconBg: "bg-emerald-600 text-white",
+      comparison: "Verified Action",
     },
     {
-      id: "pending",
+      id: "pending_exec",
       title: "Pending Execution",
       value: kpiData.pendingExecution,
       suffix: "",
-      growth: "In Pipeline",
-      growthType: "neutral",
+      growth: "-2.1%",
+      growthType: "down",
       icon: Clock,
       lightBg: "bg-amber-50/90 dark:bg-amber-950/30 border-amber-200/90 dark:border-amber-800/60",
       iconBg: "bg-amber-500 text-white",
-      sparkline: sparklineSteady,
       comparison: "Approved & In Progress",
     },
     {
@@ -183,7 +183,6 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
       icon: Search,
       lightBg: "bg-sky-50/90 dark:bg-sky-950/30 border-sky-200/90 dark:border-sky-800/60",
       iconBg: "bg-sky-500 text-white",
-      sparkline: sparklineSteady,
       comparison: "Committee Review",
     },
     {
@@ -195,7 +194,6 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
       icon: DollarSign,
       lightBg: "bg-teal-50/90 dark:bg-teal-950/30 border-teal-200/90 dark:border-teal-800/60",
       iconBg: "bg-teal-600 text-white",
-      sparkline: sparklineUp,
       comparison: "Verified Impact",
     },
     {
@@ -208,7 +206,6 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
       icon: Users,
       lightBg: "bg-purple-50/90 dark:bg-purple-950/30 border-purple-200/90 dark:border-purple-800/60",
       iconBg: "bg-purple-500 text-white",
-      sparkline: sparklineUp,
       comparison: "Active workforce",
     },
     {
@@ -221,7 +218,6 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
       icon: UserCheck,
       lightBg: "bg-indigo-50/90 dark:bg-indigo-950/30 border-indigo-200/90 dark:border-indigo-800/60",
       iconBg: "bg-indigo-500 text-white",
-      sparkline: sparklineUp,
       comparison: "Submitted ideas",
     },
     {
@@ -233,7 +229,6 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
       icon: Award,
       lightBg: "bg-orange-50/90 dark:bg-orange-950/30 border-orange-200/90 dark:border-orange-800/60",
       iconBg: "bg-orange-500 text-white",
-      sparkline: sparklineUp,
       comparison: "Top Points",
     },
     {
@@ -246,7 +241,6 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
       icon: Zap,
       lightBg: "bg-rose-50/90 dark:bg-rose-950/30 border-rose-200/90 dark:border-rose-800/60",
       iconBg: "bg-rose-500 text-white",
-      sparkline: sparklineDown,
       comparison: "Cycle time",
     },
   ];
@@ -259,28 +253,165 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
     { id: "prev_year", label: "Prev" },
   ];
 
+  const handleFilterChange = (key: keyof DashboardFilters, value: string) => {
+    if (onApplyFilters) {
+      onApplyFilters({
+        ...filters,
+        [key]: value === "all" ? undefined : value,
+      });
+    }
+  };
+
   return (
-    <div className="space-y-3">
-      {/* Executive Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-500" /> Executive Dashboard KPIs (9 Metrics)
-          </h2>
-          <p className="text-[11px] text-muted-foreground">Light pastel themed cards arranged in a single row</p>
+    <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-md pt-2 pb-2.5 -mx-4 px-4 border-b border-border shadow-xs transition-all">
+      {/* Top Bar: Filter Button & Quick Action Toggle */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Button
+            variant={isFilterBarOpen ? "default" : "outline"}
+            size="sm"
+            onClick={() => setIsFilterBarOpen(!isFilterBarOpen)}
+            className="h-8 px-3 font-bold text-xs gap-1.5 shadow-2xs hover:scale-[1.02] transition-transform"
+          >
+            <Filter className="w-3.5 h-3.5" />
+            Filters & Parameters
+            {activeFilterCount > 0 && (
+              <span className="bg-white text-primary dark:bg-primary dark:text-white rounded-full px-1.5 py-0.2 text-[10px] font-extrabold">
+                {activeFilterCount}
+              </span>
+            )}
+            {isFilterBarOpen ? <ChevronUp className="w-3.5 h-3.5 ml-1" /> : <ChevronDown className="w-3.5 h-3.5 ml-1" />}
+          </Button>
+
+          {activeFilterCount > 0 && onResetFilters && (
+            <Button variant="ghost" size="sm" onClick={onResetFilters} className="h-8 px-2 text-xs font-semibold text-muted-foreground hover:text-foreground gap-1">
+              <RotateCcw className="w-3 h-3" /> Clear Filters
+            </Button>
+          )}
+        </div>
+
+        <div className="text-[11px] font-bold text-muted-foreground hidden sm:block">
+          Showing <span className="text-foreground">{suggestions.length}</span> active metrics
         </div>
       </div>
 
+      {/* Expandable Filter Bar */}
+      {isFilterBarOpen && (
+        <div className="mb-3 p-3 bg-muted/60 dark:bg-slate-900/80 rounded-xl border border-border grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
+          {/* Location / State Filter */}
+          <div>
+            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+              <MapPin className="w-3 h-3" /> Location / State
+            </label>
+            <Select value={filters.state || "all"} onValueChange={(val) => handleFilterChange("state", val)}>
+              <SelectTrigger className="h-8 text-xs bg-background">
+                <SelectValue placeholder="All States" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All States</SelectItem>
+                <SelectItem value="Haryana">Haryana</SelectItem>
+                <SelectItem value="Delhi NCR">Delhi NCR</SelectItem>
+                <SelectItem value="Gujarat">Gujarat</SelectItem>
+                <SelectItem value="Maharashtra">Maharashtra</SelectItem>
+                <SelectItem value="Punjab">Punjab</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Plant Filter */}
+          <div>
+            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+              <Building2 className="w-3 h-3" /> Plant Unit
+            </label>
+            <Select value={filters.plant || "all"} onValueChange={(val) => handleFilterChange("plant", val)}>
+              <SelectTrigger className="h-8 text-xs bg-background">
+                <SelectValue placeholder="All Plants" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Plants</SelectItem>
+                <SelectItem value="Plant 1">Plant 1</SelectItem>
+                <SelectItem value="Plant 2">Plant 2</SelectItem>
+                <SelectItem value="Plant 3">Plant 3</SelectItem>
+                <SelectItem value="Plant 4">Plant 4</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Department Filter */}
+          <div>
+            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+              <Layers className="w-3 h-3" /> Department
+            </label>
+            <Select value={filters.department || "all"} onValueChange={(val) => handleFilterChange("department", val)}>
+              <SelectTrigger className="h-8 text-xs bg-background">
+                <SelectValue placeholder="All Departments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                <SelectItem value="Production">Production</SelectItem>
+                <SelectItem value="Quality">Quality</SelectItem>
+                <SelectItem value="Maintenance">Maintenance</SelectItem>
+                <SelectItem value="Safety">Safety</SelectItem>
+                <SelectItem value="HR">HR</SelectItem>
+                <SelectItem value="Logistics">Logistics</SelectItem>
+                <SelectItem value="Finance">Finance</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Category Filter */}
+          <div>
+            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+              <Tag className="w-3 h-3" /> Suggestion Category
+            </label>
+            <Select value={filters.category || "all"} onValueChange={(val) => handleFilterChange("category", val)}>
+              <SelectTrigger className="h-8 text-xs bg-background">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="5S">5S</SelectItem>
+                <SelectItem value="Kaizen">Kaizen</SelectItem>
+                <SelectItem value="Safety">Safety</SelectItem>
+                <SelectItem value="Cost Reduction">Cost Reduction</SelectItem>
+                <SelectItem value="Quality">Quality</SelectItem>
+                <SelectItem value="Productivity">Productivity</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Status Filter */}
+          <div>
+            <label className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" /> Status
+            </label>
+            <Select value={filters.status || "all"} onValueChange={(val) => handleFilterChange("status", val)}>
+              <SelectTrigger className="h-8 text-xs bg-background">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="implemented">Implemented</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="under_review">Under Review</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
       {/* 9 KPI Cards 1-Row Grid Container */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 w-full">
-        {cards.map((card, idx) => {
+        {cards.map((card) => {
           const Icon = card.icon;
           const animVal = useAnimatedCount(typeof card.value === "number" ? card.value : 0);
 
           return (
             <div
               key={card.id}
-              className={`relative overflow-hidden rounded-xl p-2.5 flex flex-col justify-between cursor-pointer border shadow-xs transition-all hover:shadow-sm hover:scale-[1.02] ${card.lightBg}`}
+              className={`relative overflow-hidden rounded-xl p-2 flex flex-col justify-between cursor-pointer border shadow-2xs transition-all hover:shadow-xs hover:scale-[1.02] ${card.lightBg}`}
             >
               {/* Top Row: Title & Icon */}
               <div className="flex items-start justify-between gap-1">
@@ -314,7 +445,7 @@ export function KPICardsSection({ suggestions }: KPICardsProps) {
               )}
 
               {/* Middle Row: Animated Main Value */}
-              <div className="my-1 flex items-baseline justify-between gap-1">
+              <div className="my-0.5 flex items-baseline justify-between gap-1">
                 <span className="text-base font-black text-slate-900 dark:text-slate-100 tracking-tight leading-none truncate">
                   {card.textValue ? (
                     card.textValue

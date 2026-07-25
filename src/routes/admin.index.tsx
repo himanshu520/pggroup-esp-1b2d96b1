@@ -154,8 +154,13 @@ function OverviewPage() {
           </div>
         )}
 
-        {/* 1. Dashboard 15 KPI Cards */}
-        <KPICardsSection suggestions={filteredSuggestions} />
+        {/* 1. Sticky Dashboard 9 KPI Cards with Expandable Filter Bar */}
+        <KPICardsSection
+          suggestions={filteredSuggestions}
+          filters={filters}
+          onApplyFilters={(f) => setFilters(f)}
+          onResetFilters={() => setFilters({})}
+        />
 
         {/* 2. Executive Highlights Cards */}
         <DashboardHighlightsSection suggestions={filteredSuggestions} />
