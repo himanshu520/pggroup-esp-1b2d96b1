@@ -45,7 +45,7 @@ const SCREENSHOT_PALETTE = [
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700 shadow-lg rounded-md p-2 text-xs backdrop-blur-md">
+      <div className="bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700 shadow-lg rounded-md p-2.5 text-xs backdrop-blur-md z-50">
         {label && <p className="font-bold text-slate-800 dark:text-slate-200 mb-1 border-b border-slate-100 dark:border-slate-800 pb-0.5">{label}</p>}
         {payload.map((entry: any, index: number) => (
           <div key={`item-${index}`} className="flex items-center justify-between gap-3 py-0.5">
@@ -62,21 +62,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-// Render customized pie label like reference screenshot: "519  25.5%"
-const renderCustomPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, value, name }: any) => {
-  if (!percent || percent < 0.05) return null;
-  const RADIAN = Math.PI / 180;
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-  return (
-    <text x={x} y={y} fill="#1E293B" textAnchor="middle" dominantBaseline="central" className="text-[10px] font-bold">
-      {`${value} (${(percent * 100).toFixed(1)}%)`}
-    </text>
-  );
-};
-
 export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
   // 1. Suggestion State / Status Breakdown (Pending, Under Review, Approved, Implemented, Rejected)
   const statusStateData = useMemo(() => {
@@ -85,7 +70,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       "Under Review": 0,
       "Approved": 0,
       "Implemented": 0,
-      "Rejected / Dropped": 0,
+      "Rejected": 0,
     };
 
     suggestions.forEach((s) => {
@@ -96,7 +81,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       } else if (s.status === "approved") {
         statusCounts["Approved"] += 1;
       } else if (s.status === "rejected" || s.status === "dropped") {
-        statusCounts["Rejected / Dropped"] += 1;
+        statusCounts["Rejected"] += 1;
       } else {
         statusCounts["Pending"] += 1;
       }
@@ -107,7 +92,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       { state: "Under Review", count: statusCounts["Under Review"], fill: "#7DD3FC" },
       { state: "Approved", count: statusCounts["Approved"], fill: "#C084FC" },
       { state: "Implemented", count: statusCounts["Implemented"], fill: "#A7F3D0" },
-      { state: "Rejected", count: statusCounts["Rejected / Dropped"], fill: "#FCA5A5" },
+      { state: "Rejected", count: statusCounts["Rejected"], fill: "#FCA5A5" },
     ];
   }, [suggestions]);
 
@@ -115,7 +100,8 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
   const plantData = useMemo(() => {
     const counts: Record<string, number> = {};
     suggestions.forEach((s) => {
-      counts[s.plant || "Plant 1"] = (counts[s.plant || "Plant 1"] || 0) + 1;
+      const p = (s.plant || "Plant 1").trim();
+      counts[p] = (counts[p] || 0) + 1;
     });
     if (Object.keys(counts).length === 0) {
       return [
@@ -124,14 +110,22 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
         { name: "Plant 3", value: 25 },
       ];
     }
-    return Object.entries(counts).map(([plant, value]) => ({ name: plant, value }));
+    return Object.entries(counts).map(([plant, value]) => ({
+      name: plant.length > 18 ? plant.slice(0, 18) + "..." : plant,
+      value,
+    }));
   }, [suggestions]);
 
-  // 3. Suggestion Category Distribution (Pie Chart)
+  // 3. Suggestion Category Distribution (Pie Chart with truncated long category names)
   const categoryData = useMemo(() => {
     const counts: Record<string, number> = {};
     suggestions.forEach((s) => {
-      counts[s.category || "Kaizen"] = (counts[s.category || "Kaizen"] || 0) + 1;
+      let cat = (s.category || "Kaizen").trim();
+      // Clean long category text if needed
+      if (cat.length > 20) {
+        cat = cat.slice(0, 18) + "...";
+      }
+      counts[cat] = (counts[cat] || 0) + 1;
     });
     if (Object.keys(counts).length === 0) {
       return [
@@ -163,7 +157,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     ];
   }, [suggestions]);
 
-  // 5. Execution Pending Department-wise (Horizontal Bar Chart matching Screenshot 3)
+  // 5. Execution Pending Department-wise (Horizontal Bar Chart)
   const pendingDeptData = useMemo(() => {
     const defaultDepts = ["Production", "Quality", "Maintenance", "Safety", "HR", "Logistics"];
     const deptPending: Record<string, number> = {};
@@ -183,7 +177,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     });
 
     const result = Object.entries(deptPending).map(([department, count]) => ({
-      department,
+      department: department.length > 15 ? department.slice(0, 15) + "..." : department,
       count,
     }));
 
@@ -196,7 +190,10 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
         deptCounts[d] = (deptCounts[d] || 0) + 1;
       });
       return Object.entries(deptCounts)
-        .map(([department, count]) => ({ department, count }))
+        .map(([department, count]) => ({
+          department: department.length > 15 ? department.slice(0, 15) + "..." : department,
+          count,
+        }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 6);
     }
@@ -231,7 +228,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     });
 
     const res = Object.entries(deptCost).map(([department, costs]) => ({
-      department,
+      department: department.length > 12 ? department.slice(0, 12) + "..." : department,
       ...costs,
     }));
 
@@ -247,7 +244,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
 
   const MONTHS = ["Feb", "Mar", "Apr", "May", "Jun", "Jul"];
 
-  // 7. Monthly Trend Line Chart (Matching Screenshot 2 & 3: Purple & Blue Spline Curves)
+  // 7. Monthly Trend Line Chart
   const monthlyTrendData = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const lastYear = currentYear - 1;
@@ -255,7 +252,6 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       const curCount = suggestions.filter((s) => s.participationMonth === m && s.year === currentYear).length;
       const lastCount = suggestions.filter((s) => s.participationMonth === m && s.year === lastYear).length;
 
-      // Realistic values if demo empty
       const baseVal1 = [52, 103, 165, 185, 40, 0][idx];
       const baseVal2 = [33, 64, 140, 168, 15, 0][idx];
 
@@ -267,7 +263,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     });
   }, [suggestions]);
 
-  // 8. Monthly Participation Area Chart (Matching Screenshot 3 Purple Area Chart)
+  // 8. Monthly Participation Area Chart
   const monthlyParticipationData = useMemo(() => {
     return MONTHS.map((m, idx) => {
       const monthSugs = suggestions.filter((s) => s.participationMonth === m);
@@ -280,13 +276,16 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     });
   }, [suggestions]);
 
-  // 9. Department Ranking Bar Chart (Matching Screenshot 2 Column Chart)
+  // 9. Department Ranking Bar Chart
   const deptRankingData = useMemo(() => {
     const deptPoints: Record<string, number> = {};
     suggestions.forEach((s) => {
       deptPoints[s.department || "Production"] = (deptPoints[s.department || "Production"] || 0) + (s.points || 10);
     });
-    const res = Object.entries(deptPoints).map(([department, points]) => ({ department, points }));
+    const res = Object.entries(deptPoints).map(([department, points]) => ({
+      department: department.length > 14 ? department.slice(0, 14) + "..." : department,
+      points,
+    }));
     if (res.length === 0) {
       return [
         { department: "Outdoor Line 1", points: 740 },
@@ -356,19 +355,16 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     <div className="space-y-4">
       {/* Executive Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-indigo-500" /> Executive Analytics Charts & Dashboards
-          </h2>
-          <p className="text-xs text-muted-foreground">Clean light cards matching reference dashboard design (3 per row)</p>
-        </div>
+        <h2 className="text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <Activity className="w-5 h-5 text-indigo-500" /> Executive Analytics Charts & Dashboards
+        </h2>
       </div>
 
       {/* SINGLE UNIFIED GRID: 3 Charts Per Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Chart 1: Suggestion State / Status Breakdown */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">📊</span>
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Suggestion State Breakdown</span>
@@ -377,11 +373,11 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
               Workflow Stages
             </span>
           </div>
-          <div className="h-60">
+          <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={statusStateData}>
+              <BarChart data={statusStateData} margin={{ top: 15, right: 10, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis dataKey="state" tick={{ fontSize: 10, fill: "#64748B" }} />
+                <XAxis dataKey="state" tick={{ fontSize: 9, fill: "#64748B" }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
@@ -395,9 +391,9 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 2: Plant Distribution (Donut Chart matching Screenshot 4) */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between mb-3">
+        {/* Chart 2: Plant Distribution (Donut Chart) */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">🏭</span>
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Plant Distribution</span>
@@ -406,24 +402,29 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
               Units Ratio
             </span>
           </div>
-          <div className="h-60">
+          <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={plantData} cx="50%" cy="50%" innerRadius={50} outerRadius={78} paddingAngle={2} dataKey="value" label={renderCustomPieLabel}>
+                <Pie data={plantData} cx="50%" cy="45%" innerRadius={48} outerRadius={72} paddingAngle={3} dataKey="value">
                   {plantData.map((_, index) => (
                     <Cell key={`cell-plant-${index}`} fill={SCREENSHOT_PALETTE[index % SCREENSHOT_PALETTE.length]} />
                   ))}
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
-                <Legend tick={{ fontSize: 10 }} />
+                <Legend
+                  verticalAlign="bottom"
+                  align="center"
+                  formatter={(val: string) => (val.length > 18 ? val.slice(0, 18) + "..." : val)}
+                  wrapperStyle={{ fontSize: "11px", pt: "6px" }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Chart 3: Suggestion Category Distribution (Pie Chart matching Screenshot 4) */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between mb-3">
+        {/* Chart 3: Suggestion Category Distribution (Pie Chart) */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">🔍</span>
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Category Distribution</span>
@@ -432,24 +433,29 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
               5S, Kaizen
             </span>
           </div>
-          <div className="h-60">
+          <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={categoryData} cx="50%" cy="50%" outerRadius={78} dataKey="value" label={renderCustomPieLabel}>
+                <Pie data={categoryData} cx="50%" cy="45%" outerRadius={72} dataKey="value">
                   {categoryData.map((_, index) => (
                     <Cell key={`cell-cat-${index}`} fill={SCREENSHOT_PALETTE[(index + 3) % SCREENSHOT_PALETTE.length]} />
                   ))}
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
-                <Legend tick={{ fontSize: 10 }} />
+                <Legend
+                  verticalAlign="bottom"
+                  align="center"
+                  formatter={(val: string) => (val.length > 18 ? val.slice(0, 18) + "..." : val)}
+                  wrapperStyle={{ fontSize: "11px", pt: "6px" }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 4: Gender Participation Donut Chart */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">👥</span>
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Gender Participation</span>
@@ -458,23 +464,23 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
               Workforce Ratio
             </span>
           </div>
-          <div className="h-60">
+          <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={genderData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={4} dataKey="value" label={renderCustomPieLabel}>
+                <Pie data={genderData} cx="50%" cy="45%" innerRadius={42} outerRadius={70} paddingAngle={4} dataKey="value">
                   <Cell fill="#A5B4FC" />
                   <Cell fill="#F472B6" />
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
-                <Legend tick={{ fontSize: 10 }} />
+                <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: "11px", pt: "6px" }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Chart 5: Top Contributors Horizontal Bar (Matching Screenshot 3 "Top 6-Month Contributors") */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between mb-3">
+        {/* Chart 5: Top Contributors Horizontal Bar */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">🔝</span>
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Pending Dept-Wise</span>
@@ -483,12 +489,12 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
               Pending Queue
             </span>
           </div>
-          <div className="h-60">
+          <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart layout="vertical" data={pendingDeptData}>
+              <BarChart layout="vertical" data={pendingDeptData} margin={{ top: 10, right: 25, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
                 <XAxis type="number" tick={{ fontSize: 10, fill: "#64748B" }} />
-                <YAxis dataKey="department" type="category" tick={{ fontSize: 10, fill: "#64748B" }} width={85} />
+                <YAxis dataKey="department" type="category" tick={{ fontSize: 10, fill: "#64748B" }} width={80} />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                   {pendingDeptData.map((_, index) => (
@@ -502,8 +508,8 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
         </div>
 
         {/* Chart 6: Cost Breakdown Stacked Bar Chart */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">💰</span>
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Cost Breakdown</span>
@@ -512,14 +518,14 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
               Investment Tiers
             </span>
           </div>
-          <div className="h-60">
+          <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={costCategoryData}>
+              <BarChart data={costCategoryData} margin={{ top: 10, right: 10, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis dataKey="department" tick={{ fontSize: 10, fill: "#64748B" }} />
+                <XAxis dataKey="department" tick={{ fontSize: 9, fill: "#64748B" }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend tick={{ fontSize: 10 }} />
+                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                 <Bar dataKey="No Cost" stackId="a" fill="#A7F3D0" />
                 <Bar dataKey="Low Cost" stackId="a" fill="#7DD3FC" />
                 <Bar dataKey="High Cost" stackId="a" fill="#FDE047" />
@@ -528,9 +534,9 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 7: Plant-wise Monthly Trend (Matching Screenshot 2: Curved Purple & Blue Spline Curves) */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between mb-3">
+        {/* Chart 7: Plant-wise Monthly Trend Line Chart */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">🏢</span>
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Plant-wise Monthly Trend</span>
@@ -539,14 +545,14 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
               Monthly Trend
             </span>
           </div>
-          <div className="h-60">
+          <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyTrendData}>
+              <LineChart data={monthlyTrendData} margin={{ top: 10, right: 10, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#64748B" }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend tick={{ fontSize: 10 }} />
+                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                 <Line type="monotone" dataKey="Plant-1" stroke="#3B82F6" strokeWidth={2.5} dot={{ r: 4, fill: "#fff", stroke: "#3B82F6", strokeWidth: 2 }} />
                 <Line type="monotone" dataKey="Plant-2" stroke="#A855F7" strokeWidth={2.5} dot={{ r: 4, fill: "#fff", stroke: "#A855F7", strokeWidth: 2 }} />
               </LineChart>
@@ -554,9 +560,9 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 8: 6-Month Trend Area Chart (Matching Screenshot 3: Soft Purple Curve & Fill) */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between mb-3">
+        {/* Chart 8: 6-Month Trend Area Chart */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">📈</span>
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">6-Month Suggestion Trend</span>
@@ -565,9 +571,9 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
               Volume Trend
             </span>
           </div>
-          <div className="h-60">
+          <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyParticipationData}>
+              <AreaChart data={monthlyParticipationData} margin={{ top: 10, right: 10, left: -15, bottom: 5 }}>
                 <defs>
                   <linearGradient id="colorPurpleGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#C084FC" stopOpacity={0.6} />
@@ -584,9 +590,9 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 9: Production Line Comparison Bar Chart (Matching Screenshot 2 Column Chart) */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between mb-3">
+        {/* Chart 9: Production Line Comparison Bar Chart */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">📊</span>
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Production Line Comparison</span>
@@ -595,9 +601,9 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
               Lines Volume
             </span>
           </div>
-          <div className="h-60">
+          <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={deptRankingData}>
+              <BarChart data={deptRankingData} margin={{ top: 15, right: 10, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
                 <XAxis dataKey="department" tick={{ fontSize: 9, fill: "#64748B" }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
@@ -611,8 +617,8 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
         </div>
 
         {/* Chart 10: Status Breakdown Donut Chart */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">🍩</span>
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Status Breakdown</span>
@@ -621,24 +627,24 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
               Org Summary
             </span>
           </div>
-          <div className="h-60">
+          <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={statusData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={3} dataKey="value" label={renderCustomPieLabel}>
+                <Pie data={statusData} cx="50%" cy="45%" innerRadius={42} outerRadius={70} paddingAngle={3} dataKey="value">
                   {statusData.map((_, index) => (
                     <Cell key={`cell-st-${index}`} fill={SCREENSHOT_PALETTE[index % SCREENSHOT_PALETTE.length]} />
                   ))}
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
-                <Legend tick={{ fontSize: 10 }} />
+                <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: "11px", pt: "6px" }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 11: YoY Comparison Column Chart */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">⚖️</span>
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">YoY Comparison</span>
@@ -647,14 +653,14 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
               2025 vs 2026
             </span>
           </div>
-          <div className="h-60">
+          <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={yearComparisonData}>
+              <BarChart data={yearComparisonData} margin={{ top: 15, right: 10, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
                 <XAxis dataKey="metric" tick={{ fontSize: 9, fill: "#64748B" }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend tick={{ fontSize: 10 }} />
+                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                 <Bar dataKey="2025" fill="#CBD5E1" radius={[3, 3, 0, 0]} />
                 <Bar dataKey="2026" fill="#818CF8" radius={[3, 3, 0, 0]} />
               </BarChart>
@@ -663,8 +669,8 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
         </div>
 
         {/* Chart 12: Plant Performance Radar Chart */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">🎯</span>
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Plant Performance Matrix</span>
@@ -673,15 +679,15 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
               Radar
             </span>
           </div>
-          <div className="h-60">
+          <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius={70} data={radarData}>
+              <RadarChart cx="50%" cy="45%" outerRadius={68} data={radarData}>
                 <PolarGrid stroke="#E2E8F0" />
                 <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9, fill: "#64748B" }} />
                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 8 }} />
                 <Radar name="Plant 1" dataKey="Plant 1" stroke="#818CF8" fill="#818CF8" fillOpacity={0.4} />
                 <Radar name="Plant 2" dataKey="Plant 2" stroke="#FDE047" fill="#FDE047" fillOpacity={0.4} />
-                <Legend tick={{ fontSize: 10 }} />
+                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                 <Tooltip content={<CustomTooltip />} />
               </RadarChart>
             </ResponsiveContainer>
@@ -689,8 +695,8 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
         </div>
 
         {/* Chart 13: Cumulative Cost Savings Area Chart */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">💵</span>
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Cumulative Savings</span>
@@ -699,9 +705,9 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
               ₹ Lacs
             </span>
           </div>
-          <div className="h-60">
+          <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={savingsData}>
+              <AreaChart data={savingsData} margin={{ top: 10, right: 10, left: -15, bottom: 5 }}>
                 <defs>
                   <linearGradient id="colorGreenGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#6EE7B7" stopOpacity={0.7} />
@@ -719,8 +725,8 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
         </div>
 
         {/* Chart 14: Execution Velocity Timeline */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow">
-          <div className="flex items-center justify-between mb-3">
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">⚡</span>
               <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Execution Velocity</span>
@@ -729,14 +735,14 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
               Weekly Rate
             </span>
           </div>
-          <div className="h-60">
+          <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={timelineData}>
+              <LineChart data={timelineData} margin={{ top: 10, right: 10, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
                 <XAxis dataKey="week" tick={{ fontSize: 10, fill: "#64748B" }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend tick={{ fontSize: 10 }} />
+                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                 <Line type="monotone" dataKey="Submitted" stroke="#FDBA74" strokeWidth={2} dot={{ r: 3 }} />
                 <Line type="monotone" dataKey="Completed" stroke="#86EFAC" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
