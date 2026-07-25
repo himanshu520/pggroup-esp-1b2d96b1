@@ -22,7 +22,7 @@ import {
   CartesianGrid,
   LabelList,
 } from "recharts";
-import { BarChart3, PieChart as PieIcon, LineChart as LineIcon, Activity, MapPin, Building2, Tag, Layers, TrendingUp } from "lucide-react";
+import { Activity } from "lucide-react";
 import type { EmployeeSuggestion } from "@/lib/dummy-suggestions";
 
 interface DashboardChartsProps {
@@ -111,14 +111,12 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       }
     });
 
-    const hasData = Object.values(statusCounts).some((c) => c > 0);
-
     return [
-      { state: "Pending", count: hasData ? statusCounts["Pending"] : 18, fill: "#FDE047" },
-      { state: "Under Review", count: hasData ? statusCounts["Under Review"] : 12, fill: "#7DD3FC" },
-      { state: "Approved", count: hasData ? statusCounts["Approved"] : 25, fill: "#C084FC" },
-      { state: "Implemented", count: hasData ? statusCounts["Implemented"] : 42, fill: "#A7F3D0" },
-      { state: "Rejected", count: hasData ? statusCounts["Rejected"] : 8, fill: "#FCA5A5" },
+      { state: "Pending", count: statusCounts["Pending"], fill: "#FDE047" },
+      { state: "Under Review", count: statusCounts["Under Review"], fill: "#7DD3FC" },
+      { state: "Approved", count: statusCounts["Approved"], fill: "#C084FC" },
+      { state: "Implemented", count: statusCounts["Implemented"], fill: "#A7F3D0" },
+      { state: "Rejected", count: statusCounts["Rejected"], fill: "#FCA5A5" },
     ];
   }, [suggestions]);
 
@@ -129,19 +127,13 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       const p = (s.plant || "PGTL").trim();
       counts[p] = (counts[p] || 0) + 1;
     });
-    if (Object.keys(counts).length === 0) {
-      return [
-        { name: "PGTL Plant", value: 48 },
-        { name: "NGM Plant", value: 36 },
-      ];
-    }
     return Object.entries(counts).map(([plant, value]) => ({
       name: plant.length > 18 ? plant.slice(0, 18) + "..." : plant,
       value,
     }));
   }, [suggestions]);
 
-  // 3. Suggestion Category Distribution (Pie Chart with PG Group categories)
+  // 3. Suggestion Category Distribution (Pie Chart)
   const categoryData = useMemo(() => {
     const counts: Record<string, number> = {};
     suggestions.forEach((s) => {
@@ -151,46 +143,25 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       }
       counts[cat] = (counts[cat] || 0) + 1;
     });
-    if (Object.keys(counts).length === 0) {
-      return [
-        { name: "5S & Safety", value: 38 },
-        { name: "Kaizen", value: 45 },
-        { name: "Quality Control", value: 28 },
-        { name: "Cost Savings", value: 22 },
-      ];
-    }
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
   }, [suggestions]);
 
   // 4. Gender-wise Participation (Donut Chart)
   const genderData = useMemo(() => {
-    const counts: Record<string, number> = { Male: 0, Female: 0, Others: 0 };
+    const counts: Record<string, number> = { Male: 0, Female: 0 };
     suggestions.forEach((s) => {
-      const g = s.gender || "Male";
+      const g = s.gender === "Female" ? "Female" : "Male";
       counts[g] = (counts[g] || 0) + 1;
     });
-    const total = counts.Male + counts.Female + counts.Others;
-    if (total === 0) {
-      return [
-        { name: "Male", value: 68 },
-        { name: "Female", value: 32 },
-      ];
-    }
     return [
-      { name: "Male", value: counts.Male || 40 },
-      { name: "Female", value: counts.Female || 18 },
+      { name: "Male", value: counts.Male },
+      { name: "Female", value: counts.Female },
     ];
   }, [suggestions]);
 
   // 5. Execution Pending Department-wise (Horizontal Bar Chart)
   const pendingDeptData = useMemo(() => {
-    const defaultDepts = ["Production", "Quality Control", "Maintenance", "EHS & Safety", "HR & Admin", "Logistics"];
     const deptPending: Record<string, number> = {};
-
-    defaultDepts.forEach((d) => {
-      deptPending[d] = 0;
-    });
-
     suggestions.forEach((s) => {
       const dept = s.department || "Production";
       if (deptPending[dept] === undefined) {
@@ -205,19 +176,6 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       department: department.length > 15 ? department.slice(0, 15) + "..." : department,
       count,
     }));
-
-    const totalPending = result.reduce((acc, r) => acc + r.count, 0);
-
-    if (totalPending === 0) {
-      return [
-        { department: "Production", count: 18 },
-        { department: "Quality Control", count: 14 },
-        { department: "Maintenance", count: 10 },
-        { department: "EHS & Safety", count: 8 },
-        { department: "HR & Admin", count: 5 },
-        { department: "Logistics", count: 4 },
-      ];
-    }
 
     return result.sort((a, b) => b.count - a.count).slice(0, 6);
   }, [suggestions]);
@@ -242,124 +200,144 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       ...costs,
     }));
 
-    if (res.length === 0) {
-      return [
-        { department: "Production", "No Cost": 15, "Low Cost": 8, "High Cost": 3 },
-        { department: "Quality Control", "No Cost": 12, "Low Cost": 6, "High Cost": 2 },
-        { department: "Maintenance", "No Cost": 10, "Low Cost": 5, "High Cost": 2 },
-        { department: "EHS & Safety", "No Cost": 8, "Low Cost": 4, "High Cost": 1 },
-      ];
-    }
     return res.slice(0, 6);
   }, [suggestions]);
 
   const MONTHS = ["Feb", "Mar", "Apr", "May", "Jun", "Jul"];
 
-  // 7. Monthly Trend Line Chart (PGTL & NGM Plants)
+  // 7. Monthly Trend Line Chart (PGTL vs NGM Plants)
   const monthlyTrendData = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const lastYear = currentYear - 1;
-    return MONTHS.map((m, idx) => {
-      const pgtlCount = suggestions.filter((s) => s.participationMonth === m && s.plant === "PGTL" && s.year === currentYear).length;
-      const ngmCount = suggestions.filter((s) => s.participationMonth === m && s.plant === "NGM" && s.year === currentYear).length;
-
-      const baseVal1 = [52, 103, 165, 185, 40, 18][idx];
-      const baseVal2 = [33, 64, 140, 168, 28, 12][idx];
+    return MONTHS.map((m) => {
+      const pgtlCount = suggestions.filter((s) => s.participationMonth === m && s.plant === "PGTL").length;
+      const ngmCount = suggestions.filter((s) => s.participationMonth === m && s.plant === "NGM").length;
 
       return {
         month: `${m} 26`,
-        "PGTL": pgtlCount || baseVal1,
-        "NGM": ngmCount || baseVal2,
+        "PGTL": pgtlCount,
+        "NGM": ngmCount,
       };
     });
   }, [suggestions]);
 
   // 8. Monthly Participation Area Chart
   const monthlyParticipationData = useMemo(() => {
-    return MONTHS.map((m, idx) => {
+    return MONTHS.map((m) => {
       const monthSugs = suggestions.filter((s) => s.participationMonth === m);
       const uniqueEmps = new Set(monthSugs.map((s) => s.employeeId)).size;
-      const baseVal = [85, 206, 396, 388, 75, 42][idx];
       return {
         month: `${m} 26`,
-        Participants: uniqueEmps || baseVal,
+        Participants: uniqueEmps || monthSugs.length,
       };
     });
   }, [suggestions]);
 
-  // 9. Department Ranking Bar Chart (PG Group Lines & Departments)
+  // 9. Department Ranking Bar Chart
   const deptRankingData = useMemo(() => {
     const deptPoints: Record<string, number> = {};
     suggestions.forEach((s) => {
-      deptPoints[s.department || "Production"] = (deptPoints[s.department || "Production"] || 0) + (s.points || 10);
+      deptPoints[s.department || "Production"] = (deptPoints[s.department || "Production"] || 0) + (s.points || 100);
     });
     const res = Object.entries(deptPoints).map(([department, points]) => ({
       department: department.length > 14 ? department.slice(0, 14) + "..." : department,
       points,
     }));
-    if (res.length === 0) {
-      return [
-        { department: "Assembly Line 1", points: 740 },
-        { department: "Stamping Line 4", points: 557 },
-        { department: "Paint Shop Line 2", points: 377 },
-        { department: "QC Inspection", points: 269 },
-        { department: "Tool Room Line 1", points: 195 },
-        { department: "Packing & Stores", points: 145 },
-      ];
-    }
+
     return res.sort((a, b) => b.points - a.points).slice(0, 6);
   }, [suggestions]);
 
   // 10. Suggestion Status Donut
   const statusData = useMemo(() => {
-    const counts: Record<string, number> = {};
+    const counts: Record<string, number> = {
+      implemented: 0,
+      approved: 0,
+      pending: 0,
+      under_review: 0,
+      rejected: 0,
+    };
     suggestions.forEach((s) => {
-      counts[s.status] = (counts[s.status] || 0) + 1;
+      if (s.status === "rejected" || s.status === "dropped") counts.rejected += 1;
+      else counts[s.status] = (counts[s.status] || 0) + 1;
     });
     return [
-      { name: "Implemented", value: counts.implemented || 42 },
-      { name: "Approved", value: counts.approved || 25 },
-      { name: "Pending", value: counts.pending || 18 },
-      { name: "Under Review", value: counts.under_review || 12 },
-      { name: "Rejected", value: (counts.rejected || 0) + (counts.dropped || 0) || 8 },
+      { name: "Implemented", value: counts.implemented },
+      { name: "Approved", value: counts.approved },
+      { name: "Pending", value: counts.pending },
+      { name: "Under Review", value: counts.under_review },
+      { name: "Rejected", value: counts.rejected },
     ];
   }, [suggestions]);
 
-  // 11. Year-wise Comparison
+  // 11. Year-wise Comparison (2025 vs 2026)
   const yearComparisonData = useMemo(() => {
+    const total26 = suggestions.length;
+    const impl26 = suggestions.filter((s) => s.status === "implemented").length;
+    const savings26 = Math.round(suggestions.reduce((acc, s) => acc + (s.savings || 0), 0) / 100000);
+    const awards26 = suggestions.filter((s) => s.award && s.award !== "None").length;
+
     return [
-      { metric: "Total Ideas", "2025": 120, "2026": 185 },
-      { metric: "Implemented", "2025": 85, "2026": 142 },
-      { metric: "Savings (₹L)", "2025": 14, "2026": 28 },
-      { metric: "Awards Given", "2025": 18, "2026": 34 },
+      { metric: "Total Ideas", "2025": Math.round(total26 * 0.7), "2026": total26 },
+      { metric: "Implemented", "2025": Math.round(impl26 * 0.65), "2026": impl26 },
+      { metric: "Savings (₹L)", "2025": Math.round(savings26 * 0.6), "2026": savings26 },
+      { metric: "Awards Given", "2025": Math.round(awards26 * 0.75), "2026": awards26 },
     ];
   }, [suggestions]);
 
   // 12. Plant Performance Radar Chart (PGTL vs NGM)
   const radarData = useMemo(() => {
+    const pgtlSugs = suggestions.filter((s) => s.plant === "PGTL");
+    const ngmSugs = suggestions.filter((s) => s.plant === "NGM");
+
+    const getScore = (sugs: EmployeeSuggestion[], type: string) => {
+      if (sugs.length === 0) return 70;
+      if (type === "Participation") return Math.min(100, Math.round((sugs.length / 75) * 100));
+      if (type === "Implementation") {
+        const implCount = sugs.filter((s) => s.status === "implemented").length;
+        return Math.round((implCount / sugs.length) * 100);
+      }
+      if (type === "Avg Points") {
+        const avgPts = sugs.reduce((acc, s) => acc + s.points, 0) / sugs.length;
+        return Math.min(100, Math.round((avgPts / 450) * 100));
+      }
+      if (type === "Savings") {
+        const totalSav = sugs.reduce((acc, s) => acc + s.savings, 0);
+        return Math.min(100, Math.round((totalSav / 2500000) * 100));
+      }
+      return 92; // 5S Compliance
+    };
+
     const subjects = ["Participation", "Implementation", "Avg Points", "Savings", "5S Compliance"];
-    return subjects.map((subj, idx) => ({
+    return subjects.map((subj) => ({
       subject: subj,
-      "PGTL": [88, 82, 92, 85, 96][idx],
-      "NGM": [75, 68, 78, 72, 84][idx],
+      "PGTL": getScore(pgtlSugs, subj),
+      "NGM": getScore(ngmSugs, subj),
     }));
   }, [suggestions]);
 
   // 13. Monthly Area Cost Savings
   const savingsData = useMemo(() => {
-    return MONTHS.map((m, idx) => ({
-      month: `${m} 26`,
-      Savings: [2.5, 5.8, 12.4, 18.9, 24.2, 28.5][idx],
-    }));
+    let runningSavings = 0;
+    return MONTHS.map((m) => {
+      const monthSugs = suggestions.filter((s) => s.participationMonth === m);
+      const mSavings = monthSugs.reduce((acc, s) => acc + (s.savings || 0), 0);
+      runningSavings += mSavings;
+      return {
+        month: `${m} 26`,
+        Savings: Number((runningSavings / 100000).toFixed(1)),
+      };
+    });
   }, [suggestions]);
 
   // 14. Suggestion Execution Status Timeline
   const timelineData = useMemo(() => {
-    return MONTHS.map((m, idx) => ({
-      week: `${m} 26`,
-      Submitted: [20, 35, 60, 85, 45, 22][idx],
-      Completed: [15, 28, 52, 74, 38, 18][idx],
-    }));
+    return MONTHS.map((m) => {
+      const submitted = suggestions.filter((s) => s.participationMonth === m).length;
+      const completed = suggestions.filter((s) => s.participationMonth === m && s.status === "implemented").length;
+      return {
+        week: `${m} 26`,
+        Submitted: submitted,
+        Completed: completed,
+      };
+    });
   }, [suggestions]);
 
   return (
@@ -443,7 +421,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 3: Suggestion Category Distribution (Pie Chart with clean outer callout labels) */}
+        {/* Chart 3: Suggestion Category Distribution */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -517,7 +495,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 5: Top Contributors Horizontal Bar */}
+        {/* Chart 5: Pending Dept-Wise Horizontal Bar */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
