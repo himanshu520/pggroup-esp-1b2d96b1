@@ -111,27 +111,30 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       }
     });
 
+    const hasData = Object.values(statusCounts).some((c) => c > 0);
+
     return [
-      { state: "Pending", count: statusCounts["Pending"], fill: "#FDE047" },
-      { state: "Under Review", count: statusCounts["Under Review"], fill: "#7DD3FC" },
-      { state: "Approved", count: statusCounts["Approved"], fill: "#C084FC" },
-      { state: "Implemented", count: statusCounts["Implemented"], fill: "#A7F3D0" },
-      { state: "Rejected", count: statusCounts["Rejected"], fill: "#FCA5A5" },
+      { state: "Pending", count: hasData ? statusCounts["Pending"] : 18, fill: "#FDE047" },
+      { state: "Under Review", count: hasData ? statusCounts["Under Review"] : 12, fill: "#7DD3FC" },
+      { state: "Approved", count: hasData ? statusCounts["Approved"] : 25, fill: "#C084FC" },
+      { state: "Implemented", count: hasData ? statusCounts["Implemented"] : 42, fill: "#A7F3D0" },
+      { state: "Rejected", count: hasData ? statusCounts["Rejected"] : 8, fill: "#FCA5A5" },
     ];
   }, [suggestions]);
 
-  // 2. Plant-wise Distribution (Donut Chart)
+  // 2. Plant-wise Distribution (Donut Chart with PG Group Plant names)
   const plantData = useMemo(() => {
     const counts: Record<string, number> = {};
     suggestions.forEach((s) => {
-      const p = (s.plant || "Plant 1").trim();
+      const p = (s.plant || "Bawal Plant").trim();
       counts[p] = (counts[p] || 0) + 1;
     });
     if (Object.keys(counts).length === 0) {
       return [
-        { name: "Plant 1", value: 45 },
-        { name: "Plant 2", value: 30 },
-        { name: "Plant 3", value: 25 },
+        { name: "Bawal Plant", value: 45 },
+        { name: "Manesar Plant", value: 32 },
+        { name: "Pune Plant", value: 24 },
+        { name: "Pantnagar Plant", value: 18 },
       ];
     }
     return Object.entries(counts).map(([plant, value]) => ({
@@ -140,7 +143,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     }));
   }, [suggestions]);
 
-  // 3. Suggestion Category Distribution (Pie Chart with truncated long category names)
+  // 3. Suggestion Category Distribution (Pie Chart with PG Group categories)
   const categoryData = useMemo(() => {
     const counts: Record<string, number> = {};
     suggestions.forEach((s) => {
@@ -152,9 +155,10 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     });
     if (Object.keys(counts).length === 0) {
       return [
-        { name: "5S", value: 35 },
-        { name: "Kaizen", value: 40 },
-        { name: "Safety", value: 25 },
+        { name: "5S & Safety", value: 38 },
+        { name: "Kaizen", value: 45 },
+        { name: "Quality Control", value: 28 },
+        { name: "Cost Savings", value: 22 },
       ];
     }
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
@@ -170,19 +174,19 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     const total = counts.Male + counts.Female + counts.Others;
     if (total === 0) {
       return [
-        { name: "Male", value: 32 },
-        { name: "Female", value: 18 },
+        { name: "Male", value: 68 },
+        { name: "Female", value: 32 },
       ];
     }
     return [
-      { name: "Male", value: counts.Male || 20 },
-      { name: "Female", value: counts.Female || 12 },
+      { name: "Male", value: counts.Male || 40 },
+      { name: "Female", value: counts.Female || 18 },
     ];
   }, [suggestions]);
 
   // 5. Execution Pending Department-wise (Horizontal Bar Chart)
   const pendingDeptData = useMemo(() => {
-    const defaultDepts = ["Production", "Quality", "Maintenance", "Safety", "HR", "Logistics"];
+    const defaultDepts = ["Production", "Quality Control", "Maintenance", "EHS & Safety", "HR & Admin", "Logistics"];
     const deptPending: Record<string, number> = {};
 
     defaultDepts.forEach((d) => {
@@ -206,29 +210,14 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
 
     const totalPending = result.reduce((acc, r) => acc + r.count, 0);
 
-    if (totalPending === 0 && suggestions.length > 0) {
-      const deptCounts: Record<string, number> = {};
-      suggestions.forEach((s) => {
-        const d = s.department || "Production";
-        deptCounts[d] = (deptCounts[d] || 0) + 1;
-      });
-      return Object.entries(deptCounts)
-        .map(([department, count]) => ({
-          department: department.length > 15 ? department.slice(0, 15) + "..." : department,
-          count,
-        }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 6);
-    }
-
     if (totalPending === 0) {
       return [
         { department: "Production", count: 18 },
-        { department: "Quality", count: 12 },
-        { department: "Maintenance", count: 9 },
-        { department: "Safety", count: 7 },
-        { department: "HR", count: 4 },
-        { department: "Logistics", count: 3 },
+        { department: "Quality Control", count: 14 },
+        { department: "Maintenance", count: 10 },
+        { department: "EHS & Safety", count: 8 },
+        { department: "HR & Admin", count: 5 },
+        { department: "Logistics", count: 4 },
       ];
     }
 
@@ -240,7 +229,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     const deptCost: Record<string, { "No Cost": number; "Low Cost": number; "High Cost": number }> = {};
 
     suggestions.forEach((s) => {
-      const dept = s.department || "General";
+      const dept = s.department || "Production";
       if (!deptCost[dept]) {
         deptCost[dept] = { "No Cost": 0, "Low Cost": 0, "High Cost": 0 };
       }
@@ -258,8 +247,9 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     if (res.length === 0) {
       return [
         { department: "Production", "No Cost": 15, "Low Cost": 8, "High Cost": 3 },
-        { department: "Quality", "No Cost": 10, "Low Cost": 5, "High Cost": 2 },
-        { department: "Maintenance", "No Cost": 8, "Low Cost": 4, "High Cost": 1 },
+        { department: "Quality Control", "No Cost": 12, "Low Cost": 6, "High Cost": 2 },
+        { department: "Maintenance", "No Cost": 10, "Low Cost": 5, "High Cost": 2 },
+        { department: "EHS & Safety", "No Cost": 8, "Low Cost": 4, "High Cost": 1 },
       ];
     }
     return res.slice(0, 6);
@@ -267,7 +257,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
 
   const MONTHS = ["Feb", "Mar", "Apr", "May", "Jun", "Jul"];
 
-  // 7. Monthly Trend Line Chart
+  // 7. Monthly Trend Line Chart (PG Group Bawal & Manesar Plants)
   const monthlyTrendData = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const lastYear = currentYear - 1;
@@ -275,13 +265,13 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       const curCount = suggestions.filter((s) => s.participationMonth === m && s.year === currentYear).length;
       const lastCount = suggestions.filter((s) => s.participationMonth === m && s.year === lastYear).length;
 
-      const baseVal1 = [52, 103, 165, 185, 40, 0][idx];
-      const baseVal2 = [33, 64, 140, 168, 15, 0][idx];
+      const baseVal1 = [52, 103, 165, 185, 40, 18][idx];
+      const baseVal2 = [33, 64, 140, 168, 28, 12][idx];
 
       return {
         month: `${m} 26`,
-        "Plant-1": curCount || baseVal1,
-        "Plant-2": lastCount || baseVal2,
+        "Bawal Plant": curCount || baseVal1,
+        "Manesar Plant": lastCount || baseVal2,
       };
     });
   }, [suggestions]);
@@ -291,7 +281,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     return MONTHS.map((m, idx) => {
       const monthSugs = suggestions.filter((s) => s.participationMonth === m);
       const uniqueEmps = new Set(monthSugs.map((s) => s.employeeId)).size;
-      const baseVal = [85, 206, 396, 388, 55, 0][idx];
+      const baseVal = [85, 206, 396, 388, 75, 42][idx];
       return {
         month: `${m} 26`,
         Participants: uniqueEmps || baseVal,
@@ -299,7 +289,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     });
   }, [suggestions]);
 
-  // 9. Department Ranking Bar Chart
+  // 9. Department Ranking Bar Chart (PG Group Lines & Departments)
   const deptRankingData = useMemo(() => {
     const deptPoints: Record<string, number> = {};
     suggestions.forEach((s) => {
@@ -311,12 +301,12 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     }));
     if (res.length === 0) {
       return [
-        { department: "Outdoor Line 1", points: 740 },
-        { department: "Outdoor Line 4", points: 357 },
-        { department: "Indoor Line 2", points: 177 },
-        { department: "Condenser Line 1", points: 169 },
-        { department: "Indoor Line 1", points: 135 },
-        { department: "Outdoor Line 3", points: 105 },
+        { department: "Assembly Line 1", points: 740 },
+        { department: "Stamping Line 4", points: 557 },
+        { department: "Paint Shop Line 2", points: 377 },
+        { department: "QC Inspection", points: 269 },
+        { department: "Tool Room Line 1", points: 195 },
+        { department: "Packing & Stores", points: 145 },
       ];
     }
     return res.sort((a, b) => b.points - a.points).slice(0, 6);
@@ -329,11 +319,11 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       counts[s.status] = (counts[s.status] || 0) + 1;
     });
     return [
-      { name: "Implemented", value: counts.implemented || 24 },
-      { name: "Approved", value: counts.approved || 18 },
-      { name: "Pending", value: counts.pending || 12 },
-      { name: "Under Review", value: counts.under_review || 8 },
-      { name: "Rejected", value: (counts.rejected || 0) + (counts.dropped || 0) || 5 },
+      { name: "Implemented", value: counts.implemented || 42 },
+      { name: "Approved", value: counts.approved || 25 },
+      { name: "Pending", value: counts.pending || 18 },
+      { name: "Under Review", value: counts.under_review || 12 },
+      { name: "Rejected", value: (counts.rejected || 0) + (counts.dropped || 0) || 8 },
     ];
   }, [suggestions]);
 
@@ -347,30 +337,30 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     ];
   }, [suggestions]);
 
-  // 12. Plant Performance Radar Chart
+  // 12. Plant Performance Radar Chart (PG Group Bawal vs Manesar)
   const radarData = useMemo(() => {
     const subjects = ["Participation", "Implementation", "Avg Points", "Savings", "5S Compliance"];
     return subjects.map((subj, idx) => ({
       subject: subj,
-      "Plant 1": [85, 78, 90, 82, 95][idx],
-      "Plant 2": [70, 65, 75, 68, 80][idx],
+      "Bawal Plant": [85, 78, 90, 82, 95][idx],
+      "Manesar Plant": [70, 65, 75, 68, 80][idx],
     }));
   }, [suggestions]);
 
   // 13. Monthly Area Cost Savings
   const savingsData = useMemo(() => {
     return MONTHS.map((m, idx) => ({
-      month: m,
+      month: `${m} 26`,
       Savings: [2.5, 5.8, 12.4, 18.9, 24.2, 28.5][idx],
     }));
   }, [suggestions]);
 
-  // 14. Suggestion Execution Timeline
+  // 14. Suggestion Execution Status Timeline
   const timelineData = useMemo(() => {
     return MONTHS.map((m, idx) => ({
-      week: m,
-      Submitted: [20, 35, 60, 85, 45, 12][idx],
-      Completed: [15, 28, 52, 74, 38, 10][idx],
+      week: `${m} 26`,
+      Submitted: [20, 35, 60, 85, 45, 22][idx],
+      Completed: [15, 28, 52, 74, 38, 18][idx],
     }));
   }, [suggestions]);
 
@@ -571,21 +561,27 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={costCategoryData} margin={{ top: 10, right: 10, left: -15, bottom: 5 }}>
+              <BarChart data={costCategoryData} margin={{ top: 15, right: 10, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
                 <XAxis dataKey="department" tick={{ fontSize: 9, fill: "#64748B" }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
-                <Bar dataKey="No Cost" stackId="a" fill="#A7F3D0" />
-                <Bar dataKey="Low Cost" stackId="a" fill="#7DD3FC" />
-                <Bar dataKey="High Cost" stackId="a" fill="#FDE047" />
+                <Bar dataKey="No Cost" stackId="a" fill="#A7F3D0">
+                  <LabelList dataKey="No Cost" position="center" style={{ fontSize: "9px", fontWeight: "bold", fill: "#065F46" }} />
+                </Bar>
+                <Bar dataKey="Low Cost" stackId="a" fill="#7DD3FC">
+                  <LabelList dataKey="Low Cost" position="center" style={{ fontSize: "9px", fontWeight: "bold", fill: "#0369A1" }} />
+                </Bar>
+                <Bar dataKey="High Cost" stackId="a" fill="#FDE047">
+                  <LabelList dataKey="High Cost" position="center" style={{ fontSize: "9px", fontWeight: "bold", fill: "#854D0E" }} />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Chart 7: Plant-wise Monthly Trend Line Chart */}
+        {/* Chart 7: Plant-wise Monthly Trend Line Chart (PG Group Bawal vs Manesar) */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -598,14 +594,18 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyTrendData} margin={{ top: 15, right: 28, left: -15, bottom: 5 }}>
+              <LineChart data={monthlyTrendData} margin={{ top: 20, right: 28, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#64748B" }} padding={{ left: 10, right: 15 }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
-                <Line type="monotone" dataKey="Plant-1" stroke="#3B82F6" strokeWidth={2.5} dot={{ r: 4, fill: "#fff", stroke: "#3B82F6", strokeWidth: 2 }} />
-                <Line type="monotone" dataKey="Plant-2" stroke="#A855F7" strokeWidth={2.5} dot={{ r: 4, fill: "#fff", stroke: "#A855F7", strokeWidth: 2 }} />
+                <Line type="monotone" dataKey="Bawal Plant" stroke="#3B82F6" strokeWidth={2.5} dot={{ r: 4, fill: "#fff", stroke: "#3B82F6", strokeWidth: 2 }}>
+                  <LabelList dataKey="Bawal Plant" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#1D4ED8" }} />
+                </Line>
+                <Line type="monotone" dataKey="Manesar Plant" stroke="#A855F7" strokeWidth={2.5} dot={{ r: 4, fill: "#fff", stroke: "#A855F7", strokeWidth: 2 }}>
+                  <LabelList dataKey="Manesar Plant" position="bottom" style={{ fontSize: "9px", fontWeight: "bold", fill: "#7E22CE" }} />
+                </Line>
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -624,7 +624,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyParticipationData} margin={{ top: 15, right: 28, left: -15, bottom: 5 }}>
+              <AreaChart data={monthlyParticipationData} margin={{ top: 20, right: 28, left: -15, bottom: 5 }}>
                 <defs>
                   <linearGradient id="colorPurpleGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#C084FC" stopOpacity={0.6} />
@@ -635,7 +635,9 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#64748B" }} padding={{ left: 10, right: 15 }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="Participants" stroke="#9333EA" strokeWidth={3} fillOpacity={1} fill="url(#colorPurpleGrad)" dot={{ r: 4, fill: "#9333EA", stroke: "#fff", strokeWidth: 2 }} />
+                <Area type="monotone" dataKey="Participants" stroke="#9333EA" strokeWidth={3} fillOpacity={1} fill="url(#colorPurpleGrad)" dot={{ r: 4, fill: "#9333EA", stroke: "#fff", strokeWidth: 2 }}>
+                  <LabelList dataKey="Participants" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#6B21A8" }} />
+                </Area>
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -716,20 +718,24 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={yearComparisonData} margin={{ top: 15, right: 10, left: -15, bottom: 5 }}>
+              <BarChart data={yearComparisonData} margin={{ top: 20, right: 10, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
                 <XAxis dataKey="metric" tick={{ fontSize: 9, fill: "#64748B" }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
-                <Bar dataKey="2025" fill="#CBD5E1" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="2026" fill="#818CF8" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="2025" fill="#CBD5E1" radius={[3, 3, 0, 0]}>
+                  <LabelList dataKey="2025" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#475569" }} />
+                </Bar>
+                <Bar dataKey="2026" fill="#818CF8" radius={[3, 3, 0, 0]}>
+                  <LabelList dataKey="2026" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#3730A3" }} />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Chart 12: Plant Performance Radar Chart */}
+        {/* Chart 12: Plant Performance Radar Chart (PG Group Bawal vs Manesar) */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -746,8 +752,8 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                 <PolarGrid stroke="#E2E8F0" />
                 <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9, fill: "#64748B" }} />
                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 8 }} />
-                <Radar name="Plant 1" dataKey="Plant 1" stroke="#818CF8" fill="#818CF8" fillOpacity={0.4} />
-                <Radar name="Plant 2" dataKey="Plant 2" stroke="#FDE047" fill="#FDE047" fillOpacity={0.4} />
+                <Radar name="Bawal Plant" dataKey="Bawal Plant" stroke="#818CF8" fill="#818CF8" fillOpacity={0.4} />
+                <Radar name="Manesar Plant" dataKey="Manesar Plant" stroke="#FDE047" fill="#FDE047" fillOpacity={0.4} />
                 <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                 <Tooltip content={<CustomTooltip />} />
               </RadarChart>
@@ -768,7 +774,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={savingsData} margin={{ top: 15, right: 28, left: -15, bottom: 5 }}>
+              <AreaChart data={savingsData} margin={{ top: 20, right: 28, left: -15, bottom: 5 }}>
                 <defs>
                   <linearGradient id="colorGreenGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#6EE7B7" stopOpacity={0.7} />
@@ -779,18 +785,20 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#64748B" }} padding={{ left: 10, right: 15 }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="Savings" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorGreenGrad)" dot={{ r: 3, fill: "#10B981" }} />
+                <Area type="monotone" dataKey="Savings" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorGreenGrad)" dot={{ r: 3, fill: "#10B981" }}>
+                  <LabelList dataKey="Savings" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#047857" }} />
+                </Area>
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Chart 14: Execution Velocity Timeline */}
+        {/* Chart 14: Execution Status Timeline (Renamed from Execution Velocity) */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">⚡</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Execution Velocity</span>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Execution Status</span>
             </div>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
               Weekly Rate
@@ -798,14 +806,18 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={timelineData} margin={{ top: 15, right: 28, left: -15, bottom: 5 }}>
+              <LineChart data={timelineData} margin={{ top: 20, right: 28, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
                 <XAxis dataKey="week" tick={{ fontSize: 10, fill: "#64748B" }} padding={{ left: 10, right: 15 }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
-                <Line type="monotone" dataKey="Submitted" stroke="#FDBA74" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="Completed" stroke="#86EFAC" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="Submitted" stroke="#FDBA74" strokeWidth={2} dot={{ r: 3 }}>
+                  <LabelList dataKey="Submitted" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#C2410C" }} />
+                </Line>
+                <Line type="monotone" dataKey="Completed" stroke="#86EFAC" strokeWidth={2} dot={{ r: 3 }}>
+                  <LabelList dataKey="Completed" position="bottom" style={{ fontSize: "9px", fontWeight: "bold", fill: "#15803D" }} />
+                </Line>
               </LineChart>
             </ResponsiveContainer>
           </div>
