@@ -62,6 +62,30 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+// Outer callout label for Pie & Donut Charts - renders values outside slice with clean leader lines
+const renderOuterPieLabel = ({ cx, cy, midAngle, outerRadius, percent, value }: any) => {
+  if (value === undefined || value === 0) return null;
+  const RADIAN = Math.PI / 180;
+  const radius = outerRadius + 14;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  const textAnchor = x > cx ? "start" : "end";
+  const pctStr = percent !== undefined ? ` (${(percent * 100).toFixed(0)}%)` : "";
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="#334155"
+      textAnchor={textAnchor}
+      dominantBaseline="central"
+      className="text-[11px] font-extrabold"
+    >
+      {`${value}${pctStr}`}
+    </text>
+  );
+};
+
 export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
   // 1. Suggestion State / Status Breakdown (Pending, Under Review, Approved, Implemented, Rejected)
   const statusStateData = useMemo(() => {
@@ -121,9 +145,8 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     const counts: Record<string, number> = {};
     suggestions.forEach((s) => {
       let cat = (s.category || "Kaizen").trim();
-      // Clean long category text if needed
-      if (cat.length > 20) {
-        cat = cat.slice(0, 18) + "...";
+      if (cat.length > 18) {
+        cat = cat.slice(0, 16) + "...";
       }
       counts[cat] = (counts[cat] || 0) + 1;
     });
@@ -375,7 +398,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={statusStateData} margin={{ top: 15, right: 10, left: -15, bottom: 5 }}>
+              <BarChart data={statusStateData} margin={{ top: 20, right: 10, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
                 <XAxis dataKey="state" tick={{ fontSize: 9, fill: "#64748B" }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
@@ -384,14 +407,14 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                   {statusStateData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
-                  <LabelList dataKey="count" position="top" style={{ fontSize: "10px", fontWeight: "bold", fill: "#475569" }} />
+                  <LabelList dataKey="count" position="top" style={{ fontSize: "11px", fontWeight: "bold", fill: "#334155" }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Chart 2: Plant Distribution (Donut Chart) */}
+        {/* Chart 2: Plant Distribution (Donut Chart with clean outer callout labels) */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -405,7 +428,17 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={plantData} cx="50%" cy="45%" innerRadius={48} outerRadius={72} paddingAngle={3} dataKey="value">
+                <Pie
+                  data={plantData}
+                  cx="50%"
+                  cy="42%"
+                  innerRadius={42}
+                  outerRadius={65}
+                  paddingAngle={3}
+                  dataKey="value"
+                  label={renderOuterPieLabel}
+                  labelLine={{ stroke: "#94A3B8", strokeWidth: 1.5 }}
+                >
                   {plantData.map((_, index) => (
                     <Cell key={`cell-plant-${index}`} fill={SCREENSHOT_PALETTE[index % SCREENSHOT_PALETTE.length]} />
                   ))}
@@ -422,7 +455,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 3: Suggestion Category Distribution (Pie Chart) */}
+        {/* Chart 3: Suggestion Category Distribution (Pie Chart with clean outer callout labels) */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -436,7 +469,15 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={categoryData} cx="50%" cy="45%" outerRadius={72} dataKey="value">
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="42%"
+                  outerRadius={65}
+                  dataKey="value"
+                  label={renderOuterPieLabel}
+                  labelLine={{ stroke: "#94A3B8", strokeWidth: 1.5 }}
+                >
                   {categoryData.map((_, index) => (
                     <Cell key={`cell-cat-${index}`} fill={SCREENSHOT_PALETTE[(index + 3) % SCREENSHOT_PALETTE.length]} />
                   ))}
@@ -467,7 +508,17 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={genderData} cx="50%" cy="45%" innerRadius={42} outerRadius={70} paddingAngle={4} dataKey="value">
+                <Pie
+                  data={genderData}
+                  cx="50%"
+                  cy="42%"
+                  innerRadius={38}
+                  outerRadius={62}
+                  paddingAngle={4}
+                  dataKey="value"
+                  label={renderOuterPieLabel}
+                  labelLine={{ stroke: "#94A3B8", strokeWidth: 1.5 }}
+                >
                   <Cell fill="#A5B4FC" />
                   <Cell fill="#F472B6" />
                 </Pie>
@@ -500,7 +551,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                   {pendingDeptData.map((_, index) => (
                     <Cell key={`cell-pd-${index}`} fill={SCREENSHOT_PALETTE[(index + 2) % SCREENSHOT_PALETTE.length]} />
                   ))}
-                  <LabelList dataKey="count" position="right" style={{ fontSize: "10px", fontWeight: "bold", fill: "#475569" }} />
+                  <LabelList dataKey="count" position="right" style={{ fontSize: "11px", fontWeight: "bold", fill: "#334155" }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -603,13 +654,13 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={deptRankingData} margin={{ top: 15, right: 10, left: -15, bottom: 5 }}>
+              <BarChart data={deptRankingData} margin={{ top: 20, right: 10, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
                 <XAxis dataKey="department" tick={{ fontSize: 9, fill: "#64748B" }} />
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="points" fill="#A5B4FC" radius={[4, 4, 0, 0]}>
-                  <LabelList dataKey="points" position="top" style={{ fontSize: "10px", fontWeight: "bold", fill: "#4338CA" }} />
+                  <LabelList dataKey="points" position="top" style={{ fontSize: "11px", fontWeight: "bold", fill: "#4338CA" }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -630,7 +681,17 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={statusData} cx="50%" cy="45%" innerRadius={42} outerRadius={70} paddingAngle={3} dataKey="value">
+                <Pie
+                  data={statusData}
+                  cx="50%"
+                  cy="42%"
+                  innerRadius={38}
+                  outerRadius={62}
+                  paddingAngle={3}
+                  dataKey="value"
+                  label={renderOuterPieLabel}
+                  labelLine={{ stroke: "#94A3B8", strokeWidth: 1.5 }}
+                >
                   {statusData.map((_, index) => (
                     <Cell key={`cell-st-${index}`} fill={SCREENSHOT_PALETTE[index % SCREENSHOT_PALETTE.length]} />
                   ))}
