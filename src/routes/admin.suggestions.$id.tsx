@@ -71,7 +71,7 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
   } catch {}
   const id = targetId || routeId;
   const validId = !!id && UUID_RE.test(id);
-  const session = useSession();
+  const { data: session } = useSession();
   const qc = useQueryClient();
 
   const { data: sug, isLoading: sugLoading, isError: sugError } = useQuery({
