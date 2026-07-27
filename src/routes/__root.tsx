@@ -13,6 +13,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 import { SplashScreen } from "@/components/splash-screen";
+import { OfflineDetector } from "@/components/offline-detector";
 import { LanguageProvider } from "@/lib/i18n";
 
 function NotFoundComponent() {
@@ -135,6 +136,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <SplashScreen />
+        <OfflineDetector />
         <Outlet />
         <Toaster richColors position="top-right" />
       </LanguageProvider>
