@@ -898,20 +898,22 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
             {(status === "implemented" || status === "closed" || status === "rejected") && (
               <div className="space-y-4">
                 <div className="text-sm text-muted-foreground">This suggestion is closed — no further actions.</div>
-                
-                {(session?.primaryRole === "super_admin" || session?.primaryRole === "admin" || session?.roles?.some(r => ["super_admin", "corporate_admin", "admin", "pe_user", "location_admin"].includes(r))) && status === "implemented" && (
-                  <div className="rounded-xl border-2 border-amber-500/60 bg-gradient-to-r from-amber-500/10 via-background to-amber-500/5 p-5 space-y-4 max-w-xl shadow-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                        <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
-                        Recognition & Best Suggestion Selection
-                      </div>
-                      {existingBestList.length > 0 && !isEditingBest && (
-                        <Button size="sm" variant="outline" className="h-7 text-xs border-amber-500/50 hover:bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold" onClick={() => startEditBest(existingBestList[0])}>
-                          Edit Selection
-                        </Button>
-                      )}
-                    </div>
+              </div>
+            )}
+
+            {(session?.isAdmin || session?.isPE || Boolean(session?.primaryRole)) && (status === "implemented" || status === "closed" || status === "under_pe_verification" || existingBestList.length > 0) && (
+              <div className="rounded-xl border-2 border-amber-500/60 bg-gradient-to-r from-amber-500/10 via-background to-amber-500/5 p-5 space-y-4 max-w-xl shadow-sm mt-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+                    Recognition & Best Suggestion Selection
+                  </div>
+                  {existingBestList.length > 0 && !isEditingBest && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs border-amber-500/50 hover:bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold" onClick={() => startEditBest(existingBestList[0])}>
+                      Edit Selection
+                    </Button>
+                  )}
+                </div>
 
                     {existingBestList.length > 0 && !isEditingBest ? (
                       <div className="space-y-3 border-t border-amber-500/20 pt-3">
@@ -1150,8 +1152,6 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
                       </div>
                     )}
                   </div>
-                )}
-              </div>
             )}
           </div>
 
