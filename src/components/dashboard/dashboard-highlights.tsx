@@ -1,6 +1,5 @@
-import { useMemo } from "react";
-import { Award, Crown, ShieldCheck, Sparkles, Building2, TrendingUp, CheckCircle, Flame, ArrowUpRight, User, Image as ImageIcon } from "lucide-react";
-import type { EmployeeSuggestion } from "@/lib/dummy-suggestions";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardHighlightsProps {
   suggestions: EmployeeSuggestion[];
@@ -12,15 +11,15 @@ export function DashboardHighlightsSection({ suggestions }: DashboardHighlightsP
     if (suggestions.length === 0) return null;
     const plantStats: Record<string, { total: number; implemented: number; savings: number; points: number }> = {};
     suggestions.forEach((s) => {
-      const p = s.plant || "Plant 1";
+      const p = (s.plant && s.plant !== "—" ? s.plant : "Unassigned").trim();
       if (!plantStats[p]) plantStats[p] = { total: 0, implemented: 0, savings: 0, points: 0 };
       plantStats[p].total += 1;
-      if (s.status === "implemented") plantStats[p].implemented += 1;
+      if (s.status === "implemented" || s.status === "closed") plantStats[p].implemented += 1;
       plantStats[p].savings += s.savings || 0;
       plantStats[p].points += s.points || 0;
     });
 
-    const topEntry = Object.entries(plantStats).sort((a, b) => b[1].points - a[1].points)[0];
+    const topEntry = Object.entries(plantStats).filter(([k]) => k !== "Unassigned").sort((a, b) => b[1].points - a[1].points)[0];
     if (!topEntry) return null;
 
     const [name, stat] = topEntry;
@@ -40,11 +39,11 @@ export function DashboardHighlightsSection({ suggestions }: DashboardHighlightsP
     if (suggestions.length === 0) return null;
     const deptStats: Record<string, { points: number; total: number; implemented: number }> = {};
     suggestions.forEach((s) => {
-      const d = s.department || "General";
+      const d = (s.department && s.department !== "—" ? s.department : "General").trim();
       if (!deptStats[d]) deptStats[d] = { points: 0, total: 0, implemented: 0 };
       deptStats[d].points += s.points || 0;
       deptStats[d].total += 1;
-      if (s.status === "implemented") deptStats[d].implemented += 1;
+      if (s.status === "implemented" || s.status === "closed") deptStats[d].implemented += 1;
     });
 
     const sorted = Object.entries(deptStats).sort((a, b) => b[1].points - a[1].points);
@@ -59,18 +58,69 @@ export function DashboardHighlightsSection({ suggestions }: DashboardHighlightsP
     };
   }, [suggestions]);
 
-  // 3. Dynamic Best Suggestion of Month
-  const bestSug = useMemo(() => {
-    if (suggestions.length === 0) return null;
-    return [...suggestions].sort((a, b) => (b.points || 0) - (a.points || 0))[0] || null;
-  }, [suggestions]);
+  // 3. Official Nominated Best Suggestion of Month from best_suggestions DB table
+  const { data: nominatedBestSug = null } = useQuery({
+    queryKey: ["official-best-suggestion-dashboard-card"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("best_suggestions" as any)
+        .select("*, suggestions(*, employees(*, departments(name), plants(name), locations(location)), categories(name))")
+        .eq("category", "month")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-  // 4. Dynamic Best Fool Proofing (Poka-Yoke)
-  const bestFoolProofing = useMemo(() => {
-    if (suggestions.length === 0) return null;
+      if (!data || !(data as any).suggestions) return null;
+      const s = (data as any).suggestions;
+      const emp = s.employees;
+      return {
+        id: s.id,
+        suggestionTitle: s.title,
+        description: s.problem || s.suggested_method || "",
+        employeeName: emp?.name || "Employee",
+        employeePhoto: emp?.avatar_url || "",
+        department: emp?.departments?.name || "General",
+        plant: emp?.plants?.name || "Plant",
+        savings: Number(s.expected_saving || s.actual_cost || 0),
+        points: (s.status === "implemented" || s.status === "closed") ? 450 : 100,
+      };
+    },
+  });
+
+  const bestSug = nominatedBestSug;
+
+  // 4. Official Nominated Best Fool Proofing (Poka-Yoke)
+  const { data: nominatedFoolProofing = null } = useQuery({
+    queryKey: ["official-foolproofing-dashboard-card"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("best_suggestions" as any)
+        .select("*, suggestions(*, employees(*, departments(name), plants(name), locations(location)), categories(name))")
+        .eq("category", "foolproofing")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!data || !(data as any).suggestions) return null;
+      const s = (data as any).suggestions;
+      const emp = s.employees;
+      return {
+        id: s.id,
+        suggestionTitle: s.title,
+        description: s.problem || s.suggested_method || "",
+        employeeName: emp?.name || "Employee",
+        employeePhoto: emp?.avatar_url || "",
+        department: emp?.departments?.name || "General",
+        plant: emp?.plants?.name || "Plant",
+        beforeImage: s.before_image_url || "",
+        afterImage: s.after_image_url || "",
+      };
+    },
+  });
+
+  const bestFoolProofing = nominatedFoolProofing || useMemo(() => {
     return (
       suggestions.find((s) => s.category?.toLowerCase().includes("fool") || s.suggestionType?.toLowerCase().includes("fool")) ||
-      suggestions[0] ||
       null
     );
   }, [suggestions]);

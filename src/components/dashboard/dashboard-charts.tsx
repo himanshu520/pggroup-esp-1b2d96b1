@@ -206,23 +206,27 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
 
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  // 7. Monthly Trend Line Chart
+  // 7. Monthly Trend Line Chart (Dynamic per real DB plant)
   const monthlyTrendData = useMemo(() => {
-    const plantsInUse = Array.from(new Set(suggestions.map((s) => s.plant).filter((p) => p && p !== "—")));
-    const p1 = plantsInUse[0] || "Plant 1";
-    const p2 = plantsInUse[1] || "Plant 2";
+    const plantsInUse = Array.from(new Set(suggestions.map((s) => s.plant).filter((p) => p && p !== "—" && p !== "Unassigned"))).slice(0, 5);
 
     return MONTHS.slice(0, 6).map((m) => {
-      const count1 = suggestions.filter((s) => s.participationMonth === m && s.plant === p1).length;
-      const count2 = suggestions.filter((s) => s.participationMonth === m && s.plant === p2).length;
-
-      return {
-        month: `${m}`,
-        [p1]: count1,
-        [p2]: count2,
-      };
+      const row: Record<string, any> = { month: `${m}` };
+      if (plantsInUse.length === 0) {
+        row["All Plants"] = suggestions.filter((s) => s.participationMonth === m).length;
+      } else {
+        plantsInUse.forEach((plant) => {
+          row[plant] = suggestions.filter((s) => s.participationMonth === m && s.plant === plant).length;
+        });
+      }
+      return row;
     });
   }, [suggestions]);
+
+  const trendPlantKeys = useMemo(() => {
+    if (monthlyTrendData.length === 0) return [];
+    return Object.keys(monthlyTrendData[0]).filter((k) => k !== "month");
+  }, [monthlyTrendData]);
 
   // 8. Monthly Participation Area Chart
   const monthlyParticipationData = useMemo(() => {
@@ -296,14 +300,10 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     ];
   }, [suggestions]);
 
-  // 12. Plant Performance Radar Chart
+  // 12. Plant Performance Radar Chart (Dynamic per real DB plant)
   const radarData = useMemo(() => {
-    const plantsInUse = Array.from(new Set(suggestions.map((s) => s.plant).filter((p) => p && p !== "—")));
-    const p1 = plantsInUse[0] || "Plant 1";
-    const p2 = plantsInUse[1] || "Plant 2";
-
-    const p1Sugs = suggestions.filter((s) => s.plant === p1);
-    const p2Sugs = suggestions.filter((s) => s.plant === p2);
+    const plantsInUse = Array.from(new Set(suggestions.map((s) => s.plant).filter((p) => p && p !== "—" && p !== "Unassigned"))).slice(0, 3);
+    const activePlants = plantsInUse.length > 0 ? plantsInUse : ["All Plants"];
 
     const getScore = (sugs: EmployeeSuggestion[], type: string) => {
       if (sugs.length === 0) return 0;
@@ -324,22 +324,32 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     };
 
     const subjects = ["Participation", "Implementation", "Avg Points", "Savings", "Completion %"];
-    return subjects.map((subj) => ({
-      subject: subj,
-      [p1]: getScore(p1Sugs, subj),
-      [p2]: getScore(p2Sugs, subj),
-    }));
+    return subjects.map((subj) => {
+      const row: Record<string, any> = { subject: subj };
+      activePlants.forEach((p) => {
+        const plantSugs = p === "All Plants" ? suggestions : suggestions.filter((s) => s.plant === p);
+        row[p] = getScore(plantSugs, subj);
+      });
+      return row;
+    });
   }, [suggestions]);
+
+  const radarPlantKeys = useMemo(() => {
+    if (radarData.length === 0) return [];
+    return Object.keys(radarData[0]).filter((k) => k !== "subject");
+  }, [radarData]);
 
   // 13. Monthly Area Cost Savings
   const savingsData = useMemo(() => {
     let runningSavings = 0;
-    return MONTHS.map((m) => {
-      const monthSugs = suggestions.filter((s) => s.participationMonth === m);
+    return MONTHS.slice(0, 6).map((m) => {
+      const monthSugs = suggestions.filter(
+        (s) => s.participationMonth === m || (s.createdDate && new Date(s.createdDate).getMonth() === MONTHS.indexOf(m))
+      );
       const mSavings = monthSugs.reduce((acc, s) => acc + (s.savings || 0), 0);
       runningSavings += mSavings;
       return {
-        month: `${m} 26`,
+        month: `${m}`,
         Savings: Number((runningSavings / 100000).toFixed(1)),
       };
     });
@@ -609,12 +619,22 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                 <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
-                <Line type="monotone" dataKey="PGTL" stroke="#3B82F6" strokeWidth={2.5} dot={{ r: 4, fill: "#fff", stroke: "#3B82F6", strokeWidth: 2 }}>
-                  <LabelList dataKey="PGTL" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#1D4ED8" }} />
-                </Line>
-                <Line type="monotone" dataKey="NGM" stroke="#A855F7" strokeWidth={2.5} dot={{ r: 4, fill: "#fff", stroke: "#A855F7", strokeWidth: 2 }}>
-                  <LabelList dataKey="NGM" position="bottom" style={{ fontSize: "9px", fontWeight: "bold", fill: "#7E22CE" }} />
-                </Line>
+                {trendPlantKeys.map((plantKey, idx) => {
+                  const colors = ["#3B82F6", "#A855F7", "#10B981", "#F59E0B", "#EF4444"];
+                  const color = colors[idx % colors.length];
+                  return (
+                    <Line
+                      key={plantKey}
+                      type="monotone"
+                      dataKey={plantKey}
+                      stroke={color}
+                      strokeWidth={2.5}
+                      dot={{ r: 4, fill: "#fff", stroke: color, strokeWidth: 2 }}
+                    >
+                      <LabelList dataKey={plantKey} position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: color }} />
+                    </Line>
+                  );
+                })}
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -744,7 +764,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 12: Plant Performance Radar Chart (PGTL vs NGM) */}
+        {/* Chart 12: Plant Performance Radar Chart */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -761,8 +781,20 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                 <PolarGrid stroke="#E2E8F0" />
                 <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9, fill: "#64748B" }} />
                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 8 }} />
-                <Radar name="PGTL Plant" dataKey="PGTL" stroke="#818CF8" fill="#818CF8" fillOpacity={0.4} />
-                <Radar name="NGM Plant" dataKey="NGM" stroke="#FDE047" fill="#FDE047" fillOpacity={0.4} />
+                {radarPlantKeys.map((plantKey, idx) => {
+                  const colors = ["#818CF8", "#FDE047", "#34D399", "#F472B6", "#FB923C"];
+                  const color = colors[idx % colors.length];
+                  return (
+                    <Radar
+                      key={plantKey}
+                      name={plantKey}
+                      dataKey={plantKey}
+                      stroke={color}
+                      fill={color}
+                      fillOpacity={0.4}
+                    />
+                  );
+                })}
                 <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
                 <Tooltip content={<CustomTooltip />} />
               </RadarChart>
