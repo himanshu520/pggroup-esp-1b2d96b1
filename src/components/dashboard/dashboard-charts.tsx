@@ -207,19 +207,34 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
 
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+  // Helper to resolve suggestion month reliably across database and dummy shapes
+  const getSuggestionMonth = (s: any): string => {
+    if (s.participationMonth && s.participationMonth !== "—") return s.participationMonth;
+    const dateStr = s.createdDate || s.date || s.created_at;
+    if (dateStr) {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        return MONTHS[d.getMonth()];
+      }
+    }
+    return "Jul";
+  };
+
   // 7. Monthly Trend Line Chart (Dynamic per real DB plant)
   const monthlyTrendData = useMemo(() => {
-    const plantsInUse = Array.from(new Set(suggestions.map((s) => s.plant).filter((p) => p && p !== "—" && p !== "Unassigned"))).slice(0, 5);
+    const rawPlants = suggestions.map((s) => s.plant || (s as any).plants?.name || "Main Plant").filter((p) => p && p !== "—" && p !== "Unassigned");
+    const plantsInUse = Array.from(new Set(rawPlants)).slice(0, 5);
+    const activePlants = plantsInUse.length > 0 ? plantsInUse : ["Main Plant"];
 
-    return MONTHS.slice(0, 6).map((m) => {
+    return MONTHS.slice(0, 7).map((m) => {
       const row: Record<string, any> = { month: `${m}` };
-      if (plantsInUse.length === 0) {
-        row["All Plants"] = suggestions.filter((s) => s.participationMonth === m).length;
-      } else {
-        plantsInUse.forEach((plant) => {
-          row[plant] = suggestions.filter((s) => s.participationMonth === m && s.plant === plant).length;
-        });
-      }
+      activePlants.forEach((plant) => {
+        const count = suggestions.filter((s) => {
+          const p = s.plant || (s as any).plants?.name || "Main Plant";
+          return getSuggestionMonth(s) === m && p === plant;
+        }).length;
+        row[plant] = count;
+      });
       return row;
     });
   }, [suggestions]);
@@ -229,14 +244,15 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     return Object.keys(monthlyTrendData[0]).filter((k) => k !== "month");
   }, [monthlyTrendData]);
 
-  // 8. Monthly Participation Area Chart
+  // 8. Monthly Participation Area Chart (6-Month Suggestion Trend)
   const monthlyParticipationData = useMemo(() => {
-    return MONTHS.slice(0, 6).map((m) => {
-      const monthSugs = suggestions.filter((s) => s.participationMonth === m);
-      const uniqueEmps = new Set(monthSugs.map((s) => s.employeeId)).size;
+    return MONTHS.slice(0, 7).map((m) => {
+      const monthSugs = suggestions.filter((s) => getSuggestionMonth(s) === m);
+      const uniqueEmps = new Set(monthSugs.map((s) => s.employeeId || s.employeeName || (s as any).employee_id)).size;
       return {
         month: `${m}`,
         Participants: uniqueEmps || monthSugs.length,
+        Suggestions: monthSugs.length,
       };
     });
   }, [suggestions]);
@@ -361,27 +377,29 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     return Object.keys(radarData[0]).filter((k) => k !== "subject");
   }, [radarData]);
 
-  // 13. Monthly Area Cost Savings
+  // 13. Monthly Area Cost Savings (Cumulative Savings)
   const savingsData = useMemo(() => {
     let runningSavings = 0;
-    return MONTHS.slice(0, 6).map((m) => {
-      const monthSugs = suggestions.filter(
-        (s) => s.participationMonth === m || (s.createdDate && new Date(s.createdDate).getMonth() === MONTHS.indexOf(m))
-      );
-      const mSavings = monthSugs.reduce((acc, s) => acc + (s.savings || 0), 0);
+    return MONTHS.slice(0, 7).map((m) => {
+      const monthSugs = suggestions.filter((s) => getSuggestionMonth(s) === m);
+      const mSavings = monthSugs.reduce((acc, s) => {
+        const val = Number(s.savings ?? (s as any).actual_cost ?? (s as any).expected_saving ?? 0);
+        return acc + val;
+      }, 0);
       runningSavings += mSavings;
       return {
         month: `${m}`,
-        Savings: Number((runningSavings / 100000).toFixed(1)),
+        Savings: Number((runningSavings / 100000).toFixed(2)),
       };
     });
   }, [suggestions]);
 
   // 14. Suggestion Execution Status Timeline
   const timelineData = useMemo(() => {
-    return MONTHS.map((m) => {
-      const submitted = suggestions.filter((s) => s.participationMonth === m).length;
-      const completed = suggestions.filter((s) => s.participationMonth === m && s.status === "implemented").length;
+    return MONTHS.slice(0, 7).map((m) => {
+      const monthSugs = suggestions.filter((s) => getSuggestionMonth(s) === m);
+      const submitted = monthSugs.length;
+      const completed = monthSugs.filter((s) => s.status === "implemented" || s.status === "closed").length;
       return {
         week: `${m} 26`,
         Submitted: submitted,
