@@ -85,7 +85,7 @@ export function DashboardHighlightsSection({ suggestions }: DashboardHighlightsP
         department: emp?.departments?.name || "General",
         plant: emp?.plants?.name || "Plant",
         savings: Number(s.expected_saving || s.actual_cost || 0),
-        points: (s.status === "implemented" || s.status === "closed") ? 450 : 100,
+        points: (s.status === "implemented" || s.status === "closed") ? 5 : ((s.status === "rejected" || s.status === "dropped" || s.status === "fake_closure") ? -2 : 0),
       };
     },
   });

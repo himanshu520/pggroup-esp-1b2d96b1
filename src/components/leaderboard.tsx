@@ -26,13 +26,15 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ];
 
-// Fallback scoring weights
+// Scoring weights: Implemented = 5, Rejected/Dropped/FakeClosure = -2, Pending/Approved/UnderReview = 0
 const DEFAULT_WEIGHTS = {
-  implemented: 450,
-  fake_closure: -200,
-  rejected: 0,
-  pending: 100,
-  approved: 100,
+  implemented: 5,
+  fake_closure: -2,
+  rejected: -2,
+  dropped: -2,
+  pending: 0,
+  approved: 0,
+  under_review: 0,
 };
 
 export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) {

@@ -96,19 +96,16 @@ function createLogicalDataset(): EmployeeSuggestion[] {
     if (status === "implemented") {
       implStatus = "Completed";
       completedDate = `2026-0${monthIndex}-28`;
-      points = 450;
+      points = 5;
       savings = (i % 4 === 0) ? 120000 : (i % 2 === 0 ? 55000 : 25000);
       award = i % 5 === 0 ? "Best Kaizen Award" : "Implementation Certificate";
-    } else if (status === "approved") {
-      implStatus = "In Progress";
-      points = 250;
-      savings = 30000;
-    } else if (status === "under_review") {
-      implStatus = "Pending Review";
-      points = 150;
-    } else if (status === "rejected") {
+    } else if (status === "approved" || status === "under_review" || status === "pending") {
+      implStatus = status === "approved" ? "In Progress" : "Pending Review";
+      points = 0;
+      savings = status === "approved" ? 30000 : 0;
+    } else if (status === "rejected" || status === "dropped" || status === "fake_closure") {
       implStatus = "Rejected";
-      points = 50;
+      points = -2;
     }
 
     // Well-balanced Cost Category Tiering for rich Stacked Bar charts
@@ -207,7 +204,7 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
           reviewer: s.reviewer || "—",
           createdDate,
           completedDate,
-          points: (s.status === "implemented" || s.status === "closed") ? 450 : ((s.status === "rejected" || s.status === "dropped" || s.status === "fake_closure") ? 0 : 100),
+          points: (s.status === "implemented" || s.status === "closed") ? 5 : ((s.status === "rejected" || s.status === "dropped" || s.status === "fake_closure") ? -2 : 0),
           award: s.award || ((s.status === "implemented" || s.status === "closed") ? "Recognition Award" : "None"),
           beforeImage: s.before_image_url || "",
           afterImage: s.after_image_url || "",

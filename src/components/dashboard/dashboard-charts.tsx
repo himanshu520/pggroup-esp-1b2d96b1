@@ -314,7 +314,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       }
       if (type === "Avg Points") {
         const avgPts = sugs.reduce((acc, s) => acc + s.points, 0) / sugs.length;
-        return Math.min(100, Math.round((avgPts / 450) * 100));
+        return Math.min(100, Math.max(0, Math.round((avgPts / 5) * 100)));
       }
       if (type === "Savings") {
         const totalSav = sugs.reduce((acc, s) => acc + s.savings, 0);
