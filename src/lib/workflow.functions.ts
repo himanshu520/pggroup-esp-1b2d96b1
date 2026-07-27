@@ -62,7 +62,7 @@ export const peTransferSuggestion = createServerFn({ method: "POST" })
       target_department_id: z.string().uuid(),
       remarks: z.string().max(2000).optional(),
       budget_tier: z.string(),
-    }).parse(d)
+    }).parse(d ?? {})
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
@@ -95,7 +95,7 @@ export const peRejectSuggestion = createServerFn({ method: "POST" })
     z.object({
       suggestion_id: z.string().uuid(),
       remarks: z.string().max(2000).optional(),
-    }).parse(d)
+    }).parse(d ?? {})
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
@@ -125,7 +125,7 @@ export const peRejectReturn = createServerFn({ method: "POST" })
     z.object({
       suggestion_id: z.string().uuid(),
       remarks: z.string().max(2000).optional(),
-    }).parse(d)
+    }).parse(d ?? {})
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
@@ -177,7 +177,7 @@ export const deptDecide = createServerFn({ method: "POST" })
       decision: z.enum(["approve","reject","transfer","not_related"]),
       target_department_id: z.string().uuid().nullable().optional(),
       remarks: z.string().max(2000).optional(),
-    }).parse(d)
+    }).parse(d ?? {})
   )
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
@@ -233,7 +233,7 @@ export const deptDecide = createServerFn({ method: "POST" })
 // Department starts implementation
 export const deptStartImplementation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ suggestion_id: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) => z.object({ suggestion_id: z.string().uuid() }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
     await requireAnyRole(supabase, userId, ["department_admin", "dept_user", "super_admin", "corporate_admin"]);
@@ -256,7 +256,7 @@ export const deptSubmitEvidence = createServerFn({ method: "POST" })
     benefits_achieved: z.string().optional(),
     attachment_ids: z.array(z.string().uuid()).min(1, "At least one evidence file is required").max(3),
     file_names: z.array(z.string()).min(1).max(3),
-  }).parse(d))
+  }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
     await requireAnyRole(supabase, userId, ["department_admin", "dept_user", "super_admin", "corporate_admin"]);
@@ -340,7 +340,7 @@ export const peVerify = createServerFn({ method: "POST" })
     remarks: z.string().max(2000).optional(),
     attachment_ids: z.array(z.string().uuid()).max(3).optional(),
     file_names: z.array(z.string()).max(3).optional(),
-  }).parse(d))
+  }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
     await requireAnyRole(supabase, userId, ["pe_user", "super_admin", "corporate_admin"]);
@@ -396,7 +396,7 @@ export const peVerify = createServerFn({ method: "POST" })
 // users (and super admins) see it in their notification bell.
 export const notifyNewSuggestion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ suggestion_id: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) => z.object({ suggestion_id: z.string().uuid() }).parse(d ?? {}))
   .handler(async ({ data }) => {
     const { notifyForSuggestion } = await import("./notify.server");
     await notifyForSuggestion({
@@ -418,7 +418,7 @@ export const selectBestSuggestion = createServerFn({ method: "POST" })
       year: z.number().int(),
       reason: z.string().max(1000).optional(),
       remove: z.boolean().optional(),
-    }).parse(d)
+    }).parse(d ?? {})
   )
   .handler(async ({ context, data }) => {
     const { userId } = context;
@@ -525,7 +525,7 @@ export const updateLeaderboardSettings = createServerFn({ method: "POST" })
     z.object({
       key: z.string(),
       value: z.any(),
-    }).parse(d)
+    }).parse(d ?? {})
   )
   .handler(async ({ context, data }) => {
     const { userId } = context;
@@ -568,7 +568,7 @@ export const lockLeaderboardMonth = createServerFn({ method: "POST" })
     z.object({
       month: z.number().int().min(1).max(12),
       year: z.number().int(),
-    }).parse(d)
+    }).parse(d ?? {})
   )
   .handler(async ({ context, data }) => {
     const { userId } = context;

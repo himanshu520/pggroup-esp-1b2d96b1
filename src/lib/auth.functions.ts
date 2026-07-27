@@ -113,8 +113,8 @@ async function generateAndSendOtp(email: string, name?: string | null) {
  * Unknown emails receive a generic error — no user is auto-created.
  */
 export const sendCustomOtp = createServerFn({ method: "POST" })
-  .inputValidator((d: { email: string; name?: string }) =>
-    z.object({ email: z.string().trim().email(), name: z.string().optional() }).parse(d),
+  .inputValidator((d: unknown) =>
+    z.object({ email: z.string().trim().email(), name: z.string().optional() }).parse(d ?? {}),
   )
   .handler(async ({ data }) => {
     const known = await resolveKnownEmail(data.email);
@@ -130,11 +130,11 @@ export const sendCustomOtp = createServerFn({ method: "POST" })
  * Verifies the admin OTP server-side using the 6-to-8 digit mapping in user metadata.
  */
 export const verifyAdminOtp = createServerFn({ method: "POST" })
-  .inputValidator((d: { email: string; token: string }) =>
+  .inputValidator((d: unknown) =>
     z.object({
       email: z.string().trim().email(),
       token: z.string().trim().min(6).max(10),
-    }).parse(d),
+    }).parse(d ?? {}),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -210,11 +210,11 @@ export const verifyAdminOtp = createServerFn({ method: "POST" })
  * number and email server-side and sends the OTP via WhatsApp or Email.
  */
 export const startEmployeeOtp = createServerFn({ method: "POST" })
-  .inputValidator((d: { employee_code: string; send_via?: "email" | "whatsapp" }) =>
+  .inputValidator((d: unknown) =>
     z.object({
       employee_code: z.string().trim().min(1).max(64),
       send_via: z.enum(["email", "whatsapp"]).default("email"),
-    }).parse(d),
+    }).parse(d ?? {}),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -281,13 +281,13 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
  * `supabase.auth.setSession`.
  */
 export const verifyEmployeeOtp = createServerFn({ method: "POST" })
-  .inputValidator((d: { employee_code: string; token: string }) =>
+  .inputValidator((d: unknown) =>
     z
       .object({
         employee_code: z.string().trim().min(1).max(64),
         token: z.string().trim().min(6).max(10),
       })
-      .parse(d),
+      .parse(d ?? {}),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

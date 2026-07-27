@@ -121,7 +121,7 @@ export const addRole = createServerFn({ method: "POST" })
         plant_ids: z.array(z.string().uuid()).nullable().optional(),
         department_id: z.string().uuid().nullable().optional(),
       })
-      .parse(d),
+      .parse(d ?? {})
   )
   .handler(async ({ context, data }) => {
     const supabaseAdmin = await requireAdmin(context.userId);
@@ -146,7 +146,7 @@ export const addRole = createServerFn({ method: "POST" })
 
 export const removeRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     const supabaseAdmin = await requireAdmin(context.userId);
     const { error } = await supabaseAdmin.from("user_roles").delete().eq("id", data.id);
@@ -156,7 +156,7 @@ export const removeRole = createServerFn({ method: "POST" })
 
 export const resendInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ email: z.string().email() }).parse(d))
+  .inputValidator((d: unknown) => z.object({ email: z.string().email() }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     const supabaseAdmin = await requireAdmin(context.userId);
     const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(data.email);
@@ -178,7 +178,7 @@ async function writeAudit(
 export const setEmployeeActive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ employee_id: z.string().uuid(), active: z.boolean() }).parse(d),
+    z.object({ employee_id: z.string().uuid(), active: z.boolean() }).parse(d ?? {}),
   )
   .handler(async ({ context, data }) => {
     const supabaseAdmin = await requireAdmin(context.userId);
@@ -212,7 +212,7 @@ export const setEmployeeActive = createServerFn({ method: "POST" })
 
 export const deleteUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ user_id: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) => z.object({ user_id: z.string().uuid() }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     if (data.user_id === context.userId) throw new Error("You cannot delete your own account.");
     const supabaseAdmin = await requireAdmin(context.userId);
@@ -406,7 +406,7 @@ export const updateEmployee = createServerFn({ method: "POST" })
 
 export const deleteEmployee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     const supabaseAdmin = await requireAdmin(context.userId);
     const { data: before } = await supabaseAdmin
@@ -441,7 +441,7 @@ export const deleteEmployee = createServerFn({ method: "POST" })
 
 export const restoreEmployee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     const supabaseAdmin = await requireAdmin(context.userId);
     const { data: before } = await supabaseAdmin
