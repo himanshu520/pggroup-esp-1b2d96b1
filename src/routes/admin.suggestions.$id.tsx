@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useParams } from "@tanstack/react-router";
 import { AppShell, PageHeader } from "@/components/app-shell";
 import { ADMIN_NAV } from "@/lib/admin-nav";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -40,8 +40,12 @@ export const Route = createFileRoute("/admin/suggestions/$id")({
 });
 
 export function SuggestionDetail({ id }: { id?: string }) {
-  const params = Route.useParams() as any;
-  const targetId = id || params?.id;
+  let routeId = "";
+  try {
+    const params = useParams({ strict: false }) as any;
+    routeId = params?.id || "";
+  } catch {}
+  const targetId = id || routeId;
   return <SuggestionDetailPage targetId={targetId} />;
 }
 
@@ -58,8 +62,12 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 function SuggestionDetailPage({ targetId }: { targetId?: string }) {
-  const routeParams = Route.useParams() as any;
-  const id = targetId || routeParams?.id;
+  let routeId = "";
+  try {
+    const routeParams = useParams({ strict: false }) as any;
+    routeId = routeParams?.id || "";
+  } catch {}
+  const id = targetId || routeId;
   const validId = !!id && UUID_RE.test(id);
   const session = useSession();
   const qc = useQueryClient();
