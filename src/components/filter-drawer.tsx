@@ -60,16 +60,16 @@ export function FilterDrawer({ filters, onApplyFilters, onResetFilters }: Filter
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button
-          variant="outline"
+          variant={activeCount > 0 ? "default" : "outline"}
           size="sm"
-          className="relative h-9 gap-2 border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm font-medium transition-all"
+          className="relative h-8 sm:h-9 gap-1.5 sm:gap-2 font-bold text-xs shadow-xs hover:scale-[1.02] transition-all cursor-pointer"
         >
-          <Filter className="w-4 h-4 text-primary" />
+          <Filter className="w-3.5 h-3.5" />
           <span>Filters</span>
           {activeCount > 0 && (
-            <Badge variant="default" className="ml-1 h-5 min-w-5 px-1.5 rounded-full bg-primary text-white text-[10px] font-bold">
+            <span className="bg-white text-primary dark:bg-primary dark:text-white rounded-full px-1.5 py-0.2 text-[10px] font-extrabold ml-0.5">
               {activeCount}
-            </Badge>
+            </span>
           )}
         </Button>
       </SheetTrigger>

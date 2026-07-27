@@ -136,21 +136,28 @@ function OverviewPage() {
       title="Executive Analytics Dashboard"
       filterSlot={
         <div className="flex items-center gap-2">
-          <Button
-            variant={isFilterBarOpen ? "default" : "outline"}
-            size="sm"
-            onClick={() => setIsFilterBarOpen(!isFilterBarOpen)}
-            className="h-8 px-3 font-bold text-xs gap-1.5 shadow-2xs hover:scale-[1.02] transition-transform"
-          >
-            <Filter className="w-3.5 h-3.5" />
-            Filters
-            {activeFilterCount > 0 && (
-              <span className="bg-white text-primary dark:bg-primary dark:text-white rounded-full px-1.5 py-0.2 text-[10px] font-extrabold">
-                {activeFilterCount}
-              </span>
-            )}
-          </Button>
-          <ExportMenu suggestions={filteredSuggestions} />
+          <FilterDrawer
+            filters={filters}
+            onApplyFilters={(f) => setFilters(f)}
+            onResetFilters={() => setFilters({})}
+          />
+          <ExportMenu
+            data={filteredSuggestions}
+            columns={[
+              { header: "Code", accessor: (s: any) => s.code ?? s.id },
+              { header: "Title", accessor: (s: any) => s.title },
+              { header: "Employee", accessor: (s: any) => s.employeeName },
+              { header: "Department", accessor: (s: any) => s.department },
+              { header: "Plant", accessor: (s: any) => s.plant },
+              { header: "Location", accessor: (s: any) => s.location },
+              { header: "Status", accessor: (s: any) => s.status },
+              { header: "Category", accessor: (s: any) => s.category },
+              { header: "Savings", accessor: (s: any) => s.savings },
+              { header: "Date", accessor: (s: any) => s.createdDate },
+            ]}
+            filename="esp_suggestions_analytics"
+            title="ESP Suggestions Analytics"
+          />
         </div>
       }
     >

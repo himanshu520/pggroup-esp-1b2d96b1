@@ -1,7 +1,5 @@
 import { Link, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
-
-const AppShellContext = createContext(false);
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { ROLE_LABEL } from "@/lib/statuses";
@@ -49,6 +47,16 @@ export type NavItem = {
   section?: string;
 };
 
+type AppShellContextType = {
+  isNested: boolean;
+  setFilterSlot: (slot: ReactNode) => void;
+};
+
+export const AppShellContext = createContext<AppShellContextType>({
+  isNested: false,
+  setFilterSlot: () => {},
+});
+
 export function AppShell(props: {
   navGroups: Array<{ label?: string; items: NavItem[] }>;
   title: string;
@@ -56,11 +64,46 @@ export function AppShell(props: {
   collapsible?: boolean;
   filterSlot?: ReactNode;
 }) {
-  const nested = useContext(AppShellContext);
-  if (nested) return <>{props.children}</>;
+  const parentCtx = useContext(AppShellContext);
+
+  useEffect(() => {
+    if (parentCtx.isNested && props.filterSlot !== undefined) {
+      parentCtx.setFilterSlot(props.filterSlot);
+      return () => {
+        parentCtx.setFilterSlot(null);
+      };
+    }
+  }, [parentCtx.isNested, parentCtx.setFilterSlot, props.filterSlot]);
+
+  if (parentCtx.isNested) {
+    return <>{props.children}</>;
+  }
+
+  return <AppShellRoot {...props} />;
+}
+
+function AppShellRoot(props: {
+  navGroups: Array<{ label?: string; items: NavItem[] }>;
+  title: string;
+  children: ReactNode;
+  collapsible?: boolean;
+  filterSlot?: ReactNode;
+}) {
+  const [nestedFilterSlot, setNestedFilterSlot] = useState<ReactNode>(null);
+
+  const ctxValue = useMemo(
+    () => ({
+      isNested: true,
+      setFilterSlot: setNestedFilterSlot,
+    }),
+    [],
+  );
+
+  const effectiveFilterSlot = props.filterSlot ?? nestedFilterSlot;
+
   return (
-    <AppShellContext.Provider value={true}>
-      <AppShellInner {...props} />
+    <AppShellContext.Provider value={ctxValue}>
+      <AppShellInner {...props} filterSlot={effectiveFilterSlot} />
     </AppShellContext.Provider>
   );
 }

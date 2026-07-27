@@ -163,8 +163,7 @@ const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Se
 
 /**
  * Maps live database records from Supabase into UI-ready EmployeeSuggestion format.
- * If live database records are sparse (< 5 records), seamlessly fall back / merge
- * the rich, mathematically consistent 120-item dataset so cards & charts remain in 100% sync.
+ * Returns strictly 100% exact live database records for full production use.
  */
 export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] {
   const mappedLive = Array.isArray(dbSugs)
@@ -182,7 +181,7 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
 
         let implStatus: "Completed" | "In Progress" | "Pending Review" | "On Hold" | "Rejected" = "Pending Review";
         if (s.status === "implemented" || s.status === "closed") implStatus = "Completed";
-        else if (s.status === "approved" || s.status === "implementation") implStatus = "In Progress";
+        else if (s.status === "approved" || s.status === "implementation" || s.status === "evidence_pending" || s.status === "evidence_submitted" || s.status === "pe_verification") implStatus = "In Progress";
         else if (s.status === "rejected") implStatus = "Rejected";
         else if (s.status === "dropped") implStatus = "On Hold";
 
@@ -193,23 +192,23 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
           employeeId: s.employees?.employee_code || "EMP",
           gender: (s.employees?.gender as "Male" | "Female" | "Others") || "Male",
           employeePhoto: s.employees?.avatar_url || "",
-          department: s.current_departments?.name || s.departments?.name || "Production",
-          plant: s.plants?.name || "PGTL",
-          state: s.plants?.locations?.state || s.locations?.state || "Haryana",
-          location: s.plants?.locations?.location || s.locations?.location || "Bawal Unit",
-          category: s.categories?.name || "Kaizen",
-          suggestionTitle: s.title || "Improvement Idea",
+          department: s.current_departments?.name || s.departments?.name || "—",
+          plant: s.plants?.name || "—",
+          state: s.plants?.locations?.state || s.locations?.state || "—",
+          location: s.plants?.locations?.location || s.locations?.location || "—",
+          category: s.categories?.name || "General",
+          suggestionTitle: s.title || "Suggestion Idea",
           description: s.description || s.title || "",
           costType,
           status: (s.status as any) || "pending",
           implementationStatus: implStatus,
           priority: (s.priority as any) || "Medium",
           suggestionType: s.categories?.name || "Kaizen",
-          reviewer: s.reviewer || "Committee Member",
+          reviewer: s.reviewer || "—",
           createdDate,
           completedDate,
-          points: s.status === "implemented" ? 450 : 100,
-          award: s.award || (s.status === "implemented" ? "Recognition Award" : "None"),
+          points: (s.status === "implemented" || s.status === "closed") ? 450 : 100,
+          award: s.award || ((s.status === "implemented" || s.status === "closed") ? "Recognition Award" : "None"),
           beforeImage: s.before_image_url || "",
           afterImage: s.after_image_url || "",
           remarks: s.remarks || "",
@@ -219,10 +218,6 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
         };
       })
     : [];
-
-  if (mappedLive.length < 5) {
-    return [...mappedLive, ...DUMMY_SUGGESTIONS];
-  }
 
   return mappedLive;
 }

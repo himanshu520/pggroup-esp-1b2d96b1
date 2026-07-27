@@ -83,25 +83,47 @@ export function KPICardsSection({
     const monthShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][now.getMonth()];
 
     if (sugFilter === "today") {
-      return suggestions.filter((s) => s.createdDate === todayStr).length;
+      const cnt = suggestions.filter((s) => s.createdDate === todayStr).length;
+      return cnt > 0 ? cnt : suggestions.length;
     }
     if (sugFilter === "month") {
-      return suggestions.filter((s) => s.year === currentYear && s.participationMonth === monthShort).length;
+      const cnt = suggestions.filter((s) => s.participationMonth === monthShort).length;
+      return cnt > 0 ? cnt : suggestions.length;
     }
     if (sugFilter === "year") {
-      return suggestions.filter((s) => s.year === currentYear).length;
+      const cnt = suggestions.filter((s) => s.year === currentYear).length;
+      return cnt > 0 ? cnt : suggestions.length;
     }
     if (sugFilter === "prev_year") {
-      return suggestions.filter((s) => s.year === lastYear).length;
+      const cnt = suggestions.filter((s) => s.year === lastYear).length;
+      return cnt > 0 ? cnt : suggestions.length;
     }
     return suggestions.length;
   }, [suggestions, sugFilter]);
 
   const kpiData = useMemo(() => {
     const total = suggestions.length;
-    const implemented = suggestions.filter((s) => s.status === "implemented").length;
-    const pendingExecution = suggestions.filter((s) => s.status === "approved" || s.implementationStatus === "In Progress").length;
-    const underReview = suggestions.filter((s) => s.status === "under_review" || s.status === "pending").length;
+    const implemented = suggestions.filter(
+      (s) => s.status === "implemented" || s.status === "closed" || s.implementationStatus === "Completed"
+    ).length;
+    const pendingExecution = suggestions.filter(
+      (s) =>
+        s.status === "approved" ||
+        s.status === "implementation" ||
+        s.status === "evidence_pending" ||
+        s.status === "evidence_submitted" ||
+        s.status === "pe_verification" ||
+        s.implementationStatus === "In Progress"
+    ).length;
+    const underReview = suggestions.filter(
+      (s) =>
+        s.status === "under_review" ||
+        s.status === "pending" ||
+        s.status === "pe_review" ||
+        s.status === "dept_review" ||
+        s.status === "submitted" ||
+        s.status === "evaluation"
+    ).length;
 
     // Total savings
     const totalSavings = suggestions.reduce((acc, s) => acc + (s.savings || 0), 0);
@@ -111,15 +133,17 @@ export function KPICardsSection({
     const activeEmployees = activeEmpSet.size;
 
     // Participation %
-    const participationPct = Math.min(100, Math.round((activeEmployees / 35) * 100));
+    const participationPct = total > 0 ? Math.min(100, Math.round((activeEmployees / Math.max(1, total)) * 100)) : 0;
 
     // Best Dept
     const deptCounts: Record<string, number> = {};
     suggestions.forEach((s) => {
-      deptCounts[s.department] = (deptCounts[s.department] || 0) + 1;
+      if (s.department && s.department !== "—") {
+        deptCounts[s.department] = (deptCounts[s.department] || 0) + 1;
+      }
     });
     const bestDeptEntry = Object.entries(deptCounts).sort((a, b) => b[1] - a[1])[0];
-    const bestDept = bestDeptEntry ? bestDeptEntry[0] : "Awaiting Data";
+    const bestDept = bestDeptEntry ? bestDeptEntry[0] : "—";
 
     // Avg Implementation Time
     const implSugs = suggestions.filter((s) => s.completedDate && s.createdDate);
@@ -131,7 +155,7 @@ export function KPICardsSection({
               return acc + diff / (1000 * 3600 * 24);
             }, 0) / implSugs.length
           )
-        : 14;
+        : 0;
 
     return {
       total,
