@@ -490,7 +490,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
 
   // Admin Mutations
   const lockMutation = useMutation({
-    mutationFn: lockLeaderboardMonth,
+    mutationFn: (data: { month: number; year: number }) => lockLeaderboardMonth({ data }),
     onSuccess: () => {
       toast.success(`Leaderboard locked for ${MONTHS[selectedMonth - 1]} ${selectedYear}`);
       qc.invalidateQueries({ queryKey: ["locked-months"] });
@@ -501,7 +501,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
   });
 
   const saveSettingsMutation = useMutation({
-    mutationFn: updateLeaderboardSettings,
+    mutationFn: (data: { key: string; value: any }) => updateLeaderboardSettings({ data }),
     onSuccess: () => {
       toast.success("Weights and configurations updated successfully!");
       qc.invalidateQueries({ queryKey: ["leaderboard-settings-all"] });
