@@ -433,6 +433,9 @@ export const selectBestSuggestion = createServerFn({ method: "POST" })
       month: z.number().int().min(1).max(12),
       year: z.number().int(),
       reason: z.string().max(1000).optional(),
+      image_url: z.string().optional(),
+      before_image_url: z.string().optional(),
+      after_image_url: z.string().optional(),
       remove: z.boolean().optional(),
     }).parse(d ?? {})
   )
@@ -499,21 +502,34 @@ export const selectBestSuggestion = createServerFn({ method: "POST" })
     }
 
     // 4. Insert the new selection
-    const payload = {
+    const payload: any = {
       suggestion_id: data.suggestion_id,
       month: data.month,
       year: data.year,
       selected_by: userId,
       selection_reason: data.reason || null,
     };
+    if (data.image_url) payload.image_url = data.image_url;
+    if (data.before_image_url) payload.before_image_url = data.before_image_url;
+    if (data.after_image_url) payload.after_image_url = data.after_image_url;
 
     const { error: insErr } = await supabaseAdmin
       .from("best_suggestions")
       .insert({ ...payload, category: category });
 
     if (insErr) {
-      if (insErr.message.includes("category") || insErr.message.includes("schema cache")) {
+      if (insErr.message.includes("image_url") || insErr.message.includes("before_image_url")) {
+        delete payload.image_url;
+        delete payload.before_image_url;
+        delete payload.after_image_url;
+        await supabaseAdmin
+          .from("best_suggestions")
+          .insert({ ...payload, category: category });
+      } else if (insErr.message.includes("category") || insErr.message.includes("schema cache")) {
         // Fallback: insert without category
+        delete payload.image_url;
+        delete payload.before_image_url;
+        delete payload.after_image_url;
         const { error: fallbackErr } = await supabaseAdmin
           .from("best_suggestions")
           .insert(payload);

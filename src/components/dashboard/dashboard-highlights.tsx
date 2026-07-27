@@ -116,8 +116,8 @@ export function DashboardHighlightsSection({ suggestions }: DashboardHighlightsP
         employeePhoto: emp?.avatar_url || "",
         department: emp?.departments?.name || "General",
         plant: emp?.plants?.name || "Plant",
-        beforeImage: s.before_image_url || "",
-        afterImage: s.after_image_url || "",
+        beforeImage: (data as any).before_image_url || s.before_image_url || "",
+        afterImage: (data as any).after_image_url || (data as any).image_url || s.after_image_url || "",
       };
     },
   });
@@ -318,7 +318,7 @@ export function DashboardHighlightsSection({ suggestions }: DashboardHighlightsP
             <div>
               <span className="text-[10px] font-bold text-rose-600 block mb-0.5">BEFORE: Process Image</span>
               {bestFoolProofing?.beforeImage ? (
-                <img src={bestFoolProofing.beforeImage} alt="Before" className="w-full h-20 rounded-md object-cover border border-rose-200" />
+                <img src={bestFoolProofing.beforeImage} alt="Before" className="w-full h-20 rounded-md object-cover border border-rose-200 cursor-pointer hover:scale-105 transition-transform" onClick={() => window.open(bestFoolProofing.beforeImage, "_blank")} />
               ) : (
                 <div className="w-full h-20 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 text-xs">
                   <ImageIcon className="w-5 h-5 mr-1" /> No Image
@@ -328,7 +328,7 @@ export function DashboardHighlightsSection({ suggestions }: DashboardHighlightsP
             <div>
               <span className="text-[10px] font-bold text-emerald-600 block mb-0.5">AFTER: Poka-Yoke Solution</span>
               {bestFoolProofing?.afterImage ? (
-                <img src={bestFoolProofing.afterImage} alt="After" className="w-full h-20 rounded-md object-cover border border-emerald-200" />
+                <img src={bestFoolProofing.afterImage} alt="After" className="w-full h-20 rounded-md object-cover border border-emerald-200 cursor-pointer hover:scale-105 transition-transform" onClick={() => window.open(bestFoolProofing.afterImage, "_blank")} />
               ) : (
                 <div className="w-full h-20 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 text-xs">
                   <ImageIcon className="w-5 h-5 mr-1" /> No Image

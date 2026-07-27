@@ -117,6 +117,10 @@ export function SuggestionDetail({ id }: { id: string }) {
   const [bestMonth, setBestMonth] = useState(new Date().getMonth() + 1);
   const [bestYear, setBestYear] = useState(new Date().getFullYear());
   const [bestReason, setBestReason] = useState("");
+  const [bestImageUrl, setBestImageUrl] = useState("");
+  const [beforeImageUrl, setBeforeImageUrl] = useState("");
+  const [afterImageUrl, setAfterImageUrl] = useState("");
+  const [bestImageUploading, setBestImageUploading] = useState(false);
   const [isEditingBest, setIsEditingBest] = useState(false);
 
   const [remarks, setRemarks] = useState("");
@@ -387,6 +391,9 @@ export function SuggestionDetail({ id }: { id: string }) {
       setBestMonth(existing.month || new Date().getMonth() + 1);
       setBestYear(existing.year || new Date().getFullYear());
       setBestReason(existing.selection_reason || "");
+      setBestImageUrl(existing.image_url || "");
+      setBeforeImageUrl(existing.before_image_url || "");
+      setAfterImageUrl(existing.after_image_url || "");
     }
     setIsEditingBest(true);
   }
@@ -402,6 +409,9 @@ export function SuggestionDetail({ id }: { id: string }) {
           month: bestMonth,
           year: bestYear,
           reason: bestReason || undefined,
+          image_url: bestImageUrl || afterImageUrl || undefined,
+          before_image_url: beforeImageUrl || undefined,
+          after_image_url: afterImageUrl || bestImageUrl || undefined,
           remove,
         },
       });
@@ -414,6 +424,7 @@ export function SuggestionDetail({ id }: { id: string }) {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["best-suggestion-for-id", id] }),
         qc.invalidateQueries({ queryKey: ["best-suggestion-of-month"] }),
+        qc.invalidateQueries({ queryKey: ["best-suggestions-all"] }),
       ]);
     } catch (e: any) {
       toast.error(e.message ?? "Failed to save best suggestion");
@@ -893,6 +904,26 @@ export function SuggestionDetail({ id }: { id: string }) {
                                     "{item.selection_reason}"
                                   </div>
                                 )}
+                                {(item.before_image_url || item.after_image_url || item.image_url) && (
+                                  <div className="grid grid-cols-2 gap-2 mt-2">
+                                    {item.before_image_url && (
+                                      <div>
+                                        <span className="text-[10px] font-bold text-rose-600 block mb-0.5">BEFORE Image</span>
+                                        <div className="rounded border border-rose-300 overflow-hidden h-24 bg-black/10 flex items-center justify-center">
+                                          <img src={item.before_image_url} alt="Before Process" className="w-full h-24 object-cover cursor-pointer hover:scale-[1.03] transition-transform" onClick={() => window.open(item.before_image_url, "_blank")} />
+                                        </div>
+                                      </div>
+                                    )}
+                                    {(item.after_image_url || item.image_url) && (
+                                      <div>
+                                        <span className="text-[10px] font-bold text-emerald-600 block mb-0.5">AFTER Poka-Yoke Image</span>
+                                        <div className="rounded border border-emerald-300 overflow-hidden h-24 bg-black/10 flex items-center justify-center">
+                                          <img src={item.after_image_url || item.image_url} alt="After Poka-Yoke Solution" className="w-full h-24 object-cover cursor-pointer hover:scale-[1.03] transition-transform" onClick={() => window.open(item.after_image_url || item.image_url, "_blank")} />
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                                 <div className="text-[10px] text-muted-foreground pt-0.5">
                                   Selected on {new Date(item.created_at).toLocaleDateString()}
                                 </div>
@@ -957,6 +988,93 @@ export function SuggestionDetail({ id }: { id: string }) {
                               onChange={(e) => setBestReason(e.target.value)}
                               className="text-xs h-16"
                             />
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-bold text-rose-600 flex items-center justify-between">
+                                <span>🔴 BEFORE: Problem / Process Image</span>
+                                {bestImageUploading && <span className="text-[10px] text-amber-600 animate-pulse font-medium">Uploading...</span>}
+                              </label>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  try {
+                                    setBestImageUploading(true);
+                                    const ext = file.name.split(".").pop();
+                                    const path = `best_foolproofing/before_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+                                    const { error: upErr } = await supabase.storage.from("suggestion-files").upload(path, file);
+                                    if (upErr) throw upErr;
+                                    const { data: pubData } = supabase.storage.from("suggestion-files").getPublicUrl(path);
+                                    setBeforeImageUrl(pubData.publicUrl);
+                                    toast.success("BEFORE image attached!");
+                                  } catch (err: any) {
+                                    toast.error("Before image upload failed: " + (err.message || "Unknown error"));
+                                  } finally {
+                                    setBestImageUploading(false);
+                                  }
+                                }}
+                                className="w-full text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-rose-100 file:text-rose-800 hover:file:bg-rose-200 dark:file:bg-rose-950 dark:file:text-rose-200"
+                              />
+                              {beforeImageUrl && (
+                                <div className="relative mt-1 rounded border border-rose-300 dark:border-rose-800 overflow-hidden w-full h-24 bg-slate-900/5 flex items-center justify-center">
+                                  <img src={beforeImageUrl} alt="Before Process" className="w-full h-24 object-cover" />
+                                  <button
+                                    type="button"
+                                    onClick={() => setBeforeImageUrl("")}
+                                    className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow hover:bg-red-700"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-bold text-emerald-600 flex items-center justify-between">
+                                <span>🟢 AFTER: Poka-Yoke Solution Image</span>
+                                {bestImageUploading && <span className="text-[10px] text-amber-600 animate-pulse font-medium">Uploading...</span>}
+                              </label>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  try {
+                                    setBestImageUploading(true);
+                                    const ext = file.name.split(".").pop();
+                                    const path = `best_foolproofing/after_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+                                    const { error: upErr } = await supabase.storage.from("suggestion-files").upload(path, file);
+                                    if (upErr) throw upErr;
+                                    const { data: pubData } = supabase.storage.from("suggestion-files").getPublicUrl(path);
+                                    setAfterImageUrl(pubData.publicUrl);
+                                    setBestImageUrl(pubData.publicUrl);
+                                    toast.success("AFTER Poka-Yoke solution image attached!");
+                                  } catch (err: any) {
+                                    toast.error("After image upload failed: " + (err.message || "Unknown error"));
+                                  } finally {
+                                    setBestImageUploading(false);
+                                  }
+                                }}
+                                className="w-full text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-emerald-100 file:text-emerald-800 hover:file:bg-emerald-200 dark:file:bg-emerald-950 dark:file:text-emerald-200"
+                              />
+                              {afterImageUrl && (
+                                <div className="relative mt-1 rounded border border-emerald-300 dark:border-emerald-800 overflow-hidden w-full h-24 bg-slate-900/5 flex items-center justify-center">
+                                  <img src={afterImageUrl} alt="After Poka-Yoke Solution" className="w-full h-24 object-cover" />
+                                  <button
+                                    type="button"
+                                    onClick={() => setAfterImageUrl("")}
+                                    className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow hover:bg-red-700"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex items-center gap-2 pt-1">
