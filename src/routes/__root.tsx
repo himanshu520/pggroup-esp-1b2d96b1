@@ -91,27 +91,34 @@ function RootComponent() {
 
   useEffect(() => {
     // Automatically recover from stale asset chunk 404s after new Vercel deployments
-    const handleChunkError = (event: ErrorEvent | PromiseRejectionEvent) => {
-      const errorMsg = 'reason' in event ? (event.reason?.message || '') : (event.message || '');
+    const handleChunkError = (event: Event) => {
+      const target = event.target as HTMLElement | null;
+      const isScriptError = target && target.tagName === "SCRIPT";
+      const errorMsg = (event as any).reason?.message || (event as any).message || "";
+
       if (
-        typeof errorMsg === 'string' &&
-        (errorMsg.includes('Failed to fetch dynamically imported module') ||
-          errorMsg.includes('Importing a module script failed') ||
-          errorMsg.includes('404'))
+        isScriptError ||
+        (typeof errorMsg === "string" &&
+          (errorMsg.includes("Failed to fetch dynamically imported module") ||
+            errorMsg.includes("Importing a module script failed") ||
+            errorMsg.includes("Failed to load resource") ||
+            errorMsg.includes("404")))
       ) {
-        const hasReloaded = sessionStorage.getItem('esp_chunk_reload');
-        if (!hasReloaded) {
-          sessionStorage.setItem('esp_chunk_reload', '1');
+        const lastReload = sessionStorage.getItem("esp_chunk_reload_ts");
+        const now = Date.now();
+        // Prevent infinite reload loops within 10 seconds
+        if (!lastReload || now - Number(lastReload) > 10000) {
+          sessionStorage.setItem("esp_chunk_reload_ts", String(now));
           window.location.reload();
         }
       }
     };
 
-    window.addEventListener('error', handleChunkError as EventListener);
-    window.addEventListener('unhandledrejection', handleChunkError as EventListener);
+    window.addEventListener("error", handleChunkError, true);
+    window.addEventListener("unhandledrejection", handleChunkError as EventListener);
     return () => {
-      window.removeEventListener('error', handleChunkError as EventListener);
-      window.removeEventListener('unhandledrejection', handleChunkError as EventListener);
+      window.removeEventListener("error", handleChunkError, true);
+      window.removeEventListener("unhandledrejection", handleChunkError as EventListener);
     };
   }, []);
 
