@@ -178,25 +178,16 @@ export function OfflineDetector() {
             </div>
 
             {/* Interactive Buttons */}
-            <div className="flex gap-2 pt-1">
+            <div className="flex pt-1">
               <Button
                 variant="default"
                 size="sm"
                 onClick={handleManualCheck}
                 disabled={isChecking}
-                className="flex-1 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-md font-semibold h-9 text-xs"
+                className="w-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-md font-semibold h-10 text-xs"
               >
                 <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isChecking ? "animate-spin" : ""}`} />
-                {isChecking ? "Checking..." : "Try Reconnecting"}
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.location.reload()}
-                className="h-9 text-xs font-semibold px-4"
-              >
-                Reload Page
+                {isChecking ? "Checking Connection..." : "Try Reconnecting"}
               </Button>
             </div>
           </div>
