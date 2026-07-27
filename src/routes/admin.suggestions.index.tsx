@@ -16,7 +16,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Search, ExternalLink, Loader2, LayoutGrid, List, Star, Trophy, Medal, Award, Clock, CheckCircle2, XCircle, Filter } from "lucide-react";
+import { Search, ExternalLink, Loader2, LayoutGrid, List, Star, Trophy, Medal, Award, Clock, CheckCircle2, XCircle, Filter, Calendar, X } from "lucide-react";
 import { STATUS_LABEL, getRowColorForStatus, getHistoryActionText, getEffectiveHistory } from "@/lib/statuses";
 import { ExportMenu } from "@/components/export-menu";
 import { EmployeeBadges } from "@/components/employee-badges";
@@ -51,6 +51,9 @@ export function SuggestionsList() {
   const { data: sess } = useSession();
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateType, setDateType] = useState<"created_at" | "completed_at">("created_at");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"table" | "card">("card");
 
@@ -94,18 +97,42 @@ export function SuggestionsList() {
       }
 
       if (statusFilter === "submitted") {
-        return !["implemented", "closed", "rejected", "fake_closure"].includes(s.status);
+        if (["implemented", "closed", "rejected", "fake_closure"].includes(s.status)) return false;
       } else if (statusFilter === "implemented") {
-        return s.status === "implemented" || s.status === "closed";
+        if (s.status !== "implemented" && s.status !== "closed") return false;
       } else if (statusFilter === "fake_closure") {
-        return s.status === "fake_closure" || s.status === "rejected" || s.status === "dropped";
+        if (!["fake_closure", "rejected", "dropped"].includes(s.status)) return false;
       } else if (statusFilter && statusFilter !== "all") {
-        return s.status === statusFilter;
+        if (s.status !== statusFilter) return false;
+      }
+
+      // Date Range Filter (Submission Date vs Implementation Date)
+      const targetDateStr = dateType === "created_at" ? s.created_at : s.completed_at;
+      if (startDate || endDate) {
+        if (!targetDateStr) return false;
+        const targetDate = new Date(targetDateStr).toISOString().split("T")[0];
+        if (startDate && targetDate < startDate) return false;
+        if (endDate && targetDate > endDate) return false;
       }
 
       return true;
     });
-  }, [data, q, statusFilter]);
+  }, [data, q, statusFilter, dateType, startDate, endDate]);
+
+  const exportSubtitle = useMemo(() => {
+    const parts: string[] = [];
+    if (statusFilter === "submitted") parts.push("Status: Submitted / In-Progress");
+    else if (statusFilter === "implemented") parts.push("Status: Implemented");
+    else if (statusFilter === "fake_closure") parts.push("Status: Fake Closures / Rejected");
+
+    if (startDate || endDate) {
+      const typeLabel = dateType === "created_at" ? "Submitted Date" : "Implemented Date";
+      const range = `${startDate || "Beginning"} to ${endDate || "Present"}`;
+      parts.push(`${typeLabel}: ${range}`);
+    }
+
+    return parts.length > 0 ? parts.join(" | ") : "All Suggestions Register";
+  }, [statusFilter, dateType, startDate, endDate]);
 
   return (
     <AppShell navGroups={ADMIN_NAV} title="Admin Console">
@@ -144,27 +171,19 @@ export function SuggestionsList() {
                 { key: "status", header: "Status", format: (s: any) => STATUS_LABEL[s.status as keyof typeof STATUS_LABEL] ?? s.status },
                 { key: "expected_saving", header: "Expected Saving (₹)", format: (s: any) => Number(s.expected_saving ?? 0) },
                 { key: "actual_cost", header: "Verified Actual Cost (₹)", format: (s: any) => Number(s.actual_cost ?? 0) },
-                { key: "created_at", header: "Created", format: (s: any) => new Date(s.created_at).toLocaleDateString() },
-                { key: "completed_at", header: "Completed", format: (s: any) => (s.completed_at ? new Date(s.completed_at).toLocaleDateString() : "") },
+                { key: "created_at", header: "Submission Date", format: (s: any) => new Date(s.created_at).toLocaleDateString() },
+                { key: "completed_at", header: "Implementation Date", format: (s: any) => (s.completed_at ? new Date(s.completed_at).toLocaleDateString() : "—") },
               ]}
-              filename={`suggestions_${statusFilter}`}
+              filename={`suggestions_${statusFilter}_${dateType}`}
               title="Suggestions Register Export"
-              subtitle={
-                statusFilter === "submitted"
-                  ? "Filtered by: Submitted / In-Progress Suggestions"
-                  : statusFilter === "implemented"
-                  ? "Filtered by: Implemented Suggestions"
-                  : statusFilter === "fake_closure"
-                  ? "Filtered by: Fake Closures & Rejected Suggestions"
-                  : "All Statuses"
-              }
+              subtitle={exportSubtitle}
             />
           </div>
         }
       />
 
-      {/* FILTER BAR & STATUS BUTTONS */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+      {/* FILTER BAR 1: SEARCH & QUICK STATUS BUTTONS */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
         <div className="relative flex-1 min-w-[240px] max-w-md">
           <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
           <Input placeholder="Search by code, title, or employee" className="pl-8 text-xs" value={q} onChange={(e) => setQ(e.target.value)} />
@@ -216,6 +235,62 @@ export function SuggestionsList() {
             <XCircle className="w-3.5 h-3.5 mr-1" />
             Fake / Rejected ({counts.fake})
           </Button>
+        </div>
+      </div>
+
+      {/* FILTER BAR 2: DATE TYPE & RANGE FILTERS */}
+      <div className="flex flex-wrap items-center gap-2.5 p-2.5 bg-card border border-border rounded-lg mb-4 text-xs">
+        <div className="flex items-center gap-1.5 font-bold text-foreground shrink-0">
+          <Calendar className="w-4 h-4 text-primary" />
+          <span>Date Filter:</span>
+        </div>
+
+        {/* Date Type Mode: Submission vs Implementation Date */}
+        <select
+          value={dateType}
+          onChange={(e) => setDateType(e.target.value as "created_at" | "completed_at")}
+          className="h-8 border border-input bg-background rounded-md px-2.5 text-xs font-semibold focus:ring-1 focus:ring-primary cursor-pointer"
+        >
+          <option value="created_at">📅 Submission Date (Created)</option>
+          <option value="completed_at">✅ Implementation Date (Completed)</option>
+        </select>
+
+        {/* Start Date */}
+        <div className="flex items-center gap-1">
+          <span className="text-muted-foreground font-medium">From:</span>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="h-8 border border-input bg-background rounded-md px-2 text-xs cursor-pointer"
+          />
+        </div>
+
+        {/* End Date */}
+        <div className="flex items-center gap-1">
+          <span className="text-muted-foreground font-medium">To:</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="h-8 border border-input bg-background rounded-md px-2 text-xs cursor-pointer"
+          />
+        </div>
+
+        {/* Reset Date Filters */}
+        {(startDate || endDate) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => { setStartDate(""); setEndDate(""); }}
+          >
+            <X className="w-3.5 h-3.5 mr-1" /> Clear Dates
+          </Button>
+        )}
+
+        <div className="ml-auto text-[11px] text-muted-foreground font-medium">
+          Showing <span className="font-bold text-foreground">{filtered.length}</span> of {data.length} entries
         </div>
       </div>
 
