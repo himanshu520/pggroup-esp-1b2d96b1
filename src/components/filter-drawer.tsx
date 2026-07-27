@@ -57,25 +57,26 @@ export function FilterDrawer({ filters, onApplyFilters, onResetFilters }: Filter
     },
   });
 
-  const { data: dbStates = [] } = useQuery({
-    queryKey: ["filter-drawer-states"],
-    queryFn: async () => {
-      const { data } = await supabase.from("locations").select("location").eq("active", true).order("location");
-      return (data || []).map((l) => l.location);
-    },
-  });
-
   const { data: dbCategories = [] } = useQuery({
     queryKey: ["filter-drawer-categories"],
     queryFn: async () => {
-      const { data } = await supabase.from("categories").select("name").eq("active", true).order("name");
+      const { data } = await supabase.from("categories").select("name").eq("active", true).is("deleted_at", null).order("name");
       return (data || []).map((c) => c.name);
+    },
+  });
+
+  const { data: dbLocations = [] } = useQuery({
+    queryKey: ["filter-drawer-locations-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("locations").select("location").eq("active", true).is("deleted_at", null).order("location");
+      return (data || []).map((l) => l.location);
     },
   });
 
   const deptOptions = dbDepts.length > 0 ? dbDepts : DEPARTMENTS;
   const stateOptions = dbStates.length > 0 ? dbStates : STATES;
   const categoryOptions = dbCategories.length > 0 ? dbCategories : CATEGORIES;
+  const locationOptions = dbLocations.length > 0 ? dbLocations : ["Bawal", "Karoli", "Manesar", "Gurgaon", "Haridwar", "Chennai", "Pune"];
 
   useEffect(() => {
     setDraft(filters);
@@ -213,12 +214,19 @@ export function FilterDrawer({ filters, onApplyFilters, onResetFilters }: Filter
             <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-primary" /> Location / Unit
             </label>
-            <Input
-              placeholder="Search location..."
-              value={draft.location || ""}
-              onChange={(e) => setDraft({ ...draft, location: e.target.value })}
-              className="h-9 text-xs"
-            />
+            <Select value={draft.location || "all"} onValueChange={(v) => setDraft({ ...draft, location: v })}>
+              <SelectTrigger className="h-9 text-xs">
+                <SelectValue placeholder="All Locations" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Locations</SelectItem>
+                {locationOptions.map((l) => (
+                  <SelectItem key={l} value={l}>
+                    {l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 6. Category & 7. Status */}
