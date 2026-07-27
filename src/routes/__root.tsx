@@ -32,6 +32,20 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    const msg = error?.message || String(error || "");
+    if (
+      msg.includes("Failed to fetch dynamically imported module") ||
+      msg.includes("Importing a module script failed") ||
+      msg.includes("dynamically imported") ||
+      msg.includes("404")
+    ) {
+      const lastReload = sessionStorage.getItem("esp_chunk_reload_ts");
+      const now = Date.now();
+      if (!lastReload || now - Number(lastReload) > 10000) {
+        sessionStorage.setItem("esp_chunk_reload_ts", String(now));
+        window.location.reload();
+      }
+    }
   }, [error]);
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -95,16 +109,20 @@ function RootComponent() {
     const handleChunkError = (event: Event) => {
       const target = event.target as HTMLElement | null;
       const isScriptError = target && target.tagName === "SCRIPT";
-      const errorMsg = (event as any).reason?.message || (event as any).message || "";
+      const reason = (event as any).reason || (event as any).detail || (event as any).error;
+      const errorMsg = reason?.message || (event as any).message || String(event || "");
 
       if (
+        event.type === "vite:preloadError" ||
         isScriptError ||
         (typeof errorMsg === "string" &&
           (errorMsg.includes("Failed to fetch dynamically imported module") ||
             errorMsg.includes("Importing a module script failed") ||
             errorMsg.includes("Failed to load resource") ||
+            errorMsg.includes("dynamically imported") ||
             errorMsg.includes("404")))
       ) {
+        if (event.preventDefault) event.preventDefault();
         const lastReload = sessionStorage.getItem("esp_chunk_reload_ts");
         const now = Date.now();
         // Prevent infinite reload loops within 10 seconds
@@ -115,9 +133,11 @@ function RootComponent() {
       }
     };
 
+    window.addEventListener("vite:preloadError", handleChunkError);
     window.addEventListener("error", handleChunkError, true);
     window.addEventListener("unhandledrejection", handleChunkError as EventListener);
     return () => {
+      window.removeEventListener("vite:preloadError", handleChunkError);
       window.removeEventListener("error", handleChunkError, true);
       window.removeEventListener("unhandledrejection", handleChunkError as EventListener);
     };
