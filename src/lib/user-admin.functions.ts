@@ -286,6 +286,36 @@ export const createEmployee = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => EMPLOYEE_INPUT.parse(d))
   .handler(async ({ context, data }) => {
     const supabaseAdmin = await requireAdmin(context.userId);
+
+    // Pre-check for duplicate employee_code (including soft-deleted records)
+    const { data: existingCode } = await supabaseAdmin
+      .from("employees")
+      .select("id, name, employee_code, deleted_at")
+      .ilike("employee_code", data.employee_code.trim())
+      .maybeSingle();
+
+    if (existingCode) {
+      if (existingCode.deleted_at) {
+        throw new Error(
+          `Employee Code "${data.employee_code}" belongs to trashed employee "${existingCode.name}". Please restore or rename that record.`
+        );
+      }
+      throw new Error(
+        `Employee Code "${data.employee_code}" is already assigned to employee "${existingCode.name}". Please enter a unique code.`
+      );
+    }
+
+    // Pre-check for duplicate email
+    const { data: existingEmail } = await supabaseAdmin
+      .from("employees")
+      .select("id, name, email")
+      .ilike("email", data.email.trim())
+      .maybeSingle();
+
+    if (existingEmail) {
+      throw new Error(`Email "${data.email}" is already assigned to employee "${existingEmail.name}".`);
+    }
+
     const { data: row, error } = await supabaseAdmin
       .from("employees")
       .insert({
@@ -302,7 +332,16 @@ export const createEmployee = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
+
+    if (error) {
+      if (error.code === "23505" || error.message.includes("employees_employee_code_key")) {
+        throw new Error(`Employee Code "${data.employee_code}" is already taken. Please enter a unique Employee Code.`);
+      }
+      if (error.message.includes("employees_email_key")) {
+        throw new Error(`Email "${data.email}" is already assigned to another employee.`);
+      }
+      throw new Error(error.message);
+    }
     return row;
   });
 
@@ -314,6 +353,18 @@ export const updateEmployee = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const supabaseAdmin = await requireAdmin(context.userId);
     const { id, ...rest } = data;
+
+    // Check duplicate code on other employees
+    const { data: existingCode } = await supabaseAdmin
+      .from("employees")
+      .select("id, name")
+      .ilike("employee_code", rest.employee_code.trim())
+      .neq("id", id)
+      .maybeSingle();
+
+    if (existingCode) {
+      throw new Error(`Employee Code "${rest.employee_code}" is already assigned to employee "${existingCode.name}". Please enter a unique code.`);
+    }
 
     // Fetch the current record to check for email updates and linked user_id
     const { data: before } = await supabaseAdmin
@@ -344,7 +395,12 @@ export const updateEmployee = createServerFn({ method: "POST" })
         department_id: rest.department_id ?? null,
       })
       .eq("id", id);
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.code === "23505" || error.message.includes("employees_employee_code_key")) {
+        throw new Error(`Employee Code "${rest.employee_code}" is already taken by another employee.`);
+      }
+      throw new Error(error.message);
+    }
     return { ok: true };
   });
 
