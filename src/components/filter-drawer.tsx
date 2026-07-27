@@ -60,7 +60,7 @@ export function FilterDrawer({ filters, onApplyFilters, onResetFilters }: Filter
   const { data: dbCategories = [] } = useQuery({
     queryKey: ["filter-drawer-categories"],
     queryFn: async () => {
-      const { data } = await supabase.from("categories").select("name").eq("active", true).is("deleted_at", null).order("name");
+      const { data } = await supabase.from("categories").select("name").eq("active", true).order("name");
       return (data || []).map((c) => c.name);
     },
   });

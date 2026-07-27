@@ -36,7 +36,9 @@ export const Route = createFileRoute("/admin/suggestions/$id")({
       throw redirect({ to: "/employee/login" });
     }
   },
-  component: SuggestionDetailPage,
+  component: function RouteComponent() {
+    return <SuggestionDetail />;
+  },
 });
 
 export function SuggestionDetail({ id }: { id?: string }) {
