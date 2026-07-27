@@ -1,3 +1,6 @@
+import { useMemo } from "react";
+import { Award, Crown, ShieldCheck, Sparkles, Building2, TrendingUp, CheckCircle, Flame, ArrowUpRight, User, Image as ImageIcon } from "lucide-react";
+import type { EmployeeSuggestion } from "@/lib/dummy-suggestions";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
