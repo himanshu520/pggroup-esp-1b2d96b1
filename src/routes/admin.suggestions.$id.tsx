@@ -724,14 +724,10 @@ export function SuggestionDetail({ id }: { id: string }) {
             {isCurrentDept && (status === "implementation" || status === "evidence_pending" || status === "fake_closure" || status === "reopened") && (
               <div className="space-y-3">
                 <div className="text-xs font-bold text-foreground">Department — Submit Implementation Evidence & Expected Saving</div>
-                <div className="grid md:grid-cols-3 gap-2 max-w-2xl">
+                <div className="grid md:grid-cols-2 gap-2 max-w-xl">
                   <div>
                     <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">Expected Saving (₹)</label>
-                    <input type="number" placeholder="Expected saving (₹)" value={expectedSaving} onChange={(e) => setExpectedSaving(e.target.value)} className="w-full border border-input rounded-md px-3 py-1.5 text-sm bg-background font-semibold" disabled={uploading || isPending} />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">Actual Cost (₹)</label>
-                    <input type="number" placeholder="Actual cost (₹)" value={actualCost} onChange={(e) => setActualCost(e.target.value)} className="w-full border border-input rounded-md px-3 py-1.5 text-sm bg-background" disabled={uploading || isPending} />
+                    <input type="number" placeholder="Expected saving (₹)" value={expectedSaving} onChange={(e) => setExpectedSaving(e.target.value)} className="w-full border border-input rounded-md px-3 py-1.5 text-sm bg-background font-semibold text-emerald-600 dark:text-emerald-400" disabled={uploading || isPending} />
                   </div>
                   <div>
                     <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">Benefits Achieved</label>
