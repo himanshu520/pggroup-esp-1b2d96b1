@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { STATUS_LABEL, type SuggestionStatus } from "@/lib/statuses";
 import { ExportMenu } from "@/components/export-menu";
+import { exportComprehensiveExecutiveDashboard } from "@/lib/exports";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -155,8 +156,9 @@ function OverviewPage() {
               { header: "Savings", accessor: (s: any) => s.savings },
               { header: "Date", accessor: (s: any) => s.createdDate },
             ]}
-            filename="esp_suggestions_analytics"
-            title="ESP Suggestions Analytics"
+            filename="ESP_Executive_Analytics_Report"
+            title="ESP Comprehensive Analytics Presentation Report"
+            customExport={(format) => exportComprehensiveExecutiveDashboard(format, filteredSuggestions, "ESP_Executive_Analytics_Report")}
           />
         </div>
       }
