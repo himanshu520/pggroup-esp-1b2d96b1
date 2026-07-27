@@ -7,7 +7,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useSession, isSuggestionAccessible } from "@/lib/session";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,11 +16,11 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useState } from "react";
-import { Search, ExternalLink, Loader2, LayoutGrid, List, Star, Trophy, Medal, Award } from "lucide-react";
+import { Search, ExternalLink, Loader2, LayoutGrid, List, Star, Trophy, Medal, Award, Clock, CheckCircle2, XCircle, Filter } from "lucide-react";
 import { STATUS_LABEL, getRowColorForStatus, getHistoryActionText, getEffectiveHistory } from "@/lib/statuses";
 import { ExportMenu } from "@/components/export-menu";
 import { EmployeeBadges } from "@/components/employee-badges";
+import { cn } from "@/lib/utils";
 
 const getDeptDisplay = (dept: any) => {
   if (!dept) return "—";
@@ -50,7 +50,7 @@ export const Route = createFileRoute("/admin/suggestions/")({
 export function SuggestionsList() {
   const { data: sess } = useSession();
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"table" | "card">("card");
 
@@ -60,30 +60,52 @@ export function SuggestionsList() {
   }, [sess?.roles]);
 
   const { data = [] } = useQuery({
-    queryKey: ["admin-suggestions", status],
+    queryKey: ["admin-suggestions"],
     queryFn: async () => {
-      let query = supabase.from("suggestions").select("*, employees(name, employee_code), categories(name), departments!suggestions_department_id_fkey(name, code), current_departments:departments!suggestions_current_department_id_fkey(name, code), plants(name), best_suggestions(category)").order("created_at", { ascending: false }).limit(500);
-      if (status === "under_review") {
-        query = query.not("status", "in", "(approved,implemented,rejected,closed)");
-      } else if (status) {
-        query = query.eq("status", status as any);
-      }
-      const { data } = await query;
+      const { data } = await supabase
+        .from("suggestions")
+        .select("*, employees(name, employee_code), categories(name), departments!suggestions_department_id_fkey(name, code), current_departments:departments!suggestions_current_department_id_fkey(name, code), plants(name), best_suggestions(category)")
+        .order("created_at", { ascending: false })
+        .limit(5000);
       return data ?? [];
     },
   });
 
+  const counts = useMemo(() => {
+    const total = data.length;
+    const submitted = data.filter((s: any) => !["implemented", "closed", "rejected", "fake_closure"].includes(s.status)).length;
+    const implemented = data.filter((s: any) => s.status === "implemented" || s.status === "closed").length;
+    const fake = data.filter((s: any) => s.status === "fake_closure" || s.status === "rejected" || s.status === "dropped").length;
+    return { total, submitted, implemented, fake };
+  }, [data]);
+
   const filtered = useMemo(() => {
-    if (!q) return data;
-    const lowq = q.toLowerCase();
-    return data.filter((s: any) => 
-      s.title?.toLowerCase().includes(lowq) || 
-      s.code?.toLowerCase().includes(lowq) || 
-      s.employees?.name?.toLowerCase().includes(lowq) ||
-      (s.current_departments?.name?.toLowerCase().includes(lowq) || s.departments?.name?.toLowerCase().includes(lowq)) ||
-      (s.current_departments?.code?.toLowerCase().includes(lowq) || s.departments?.code?.toLowerCase().includes(lowq))
-    );
-  }, [data, q]);
+    return data.filter((s: any) => {
+      if (q) {
+        const lowq = q.toLowerCase();
+        const matchesTitle = s.title?.toLowerCase().includes(lowq);
+        const matchesCode = s.code?.toLowerCase().includes(lowq);
+        const matchesEmp = s.employees?.name?.toLowerCase().includes(lowq);
+        const matchesDept = (s.current_departments?.name?.toLowerCase().includes(lowq) || s.departments?.name?.toLowerCase().includes(lowq));
+        const matchesDeptCode = (s.current_departments?.code?.toLowerCase().includes(lowq) || s.departments?.code?.toLowerCase().includes(lowq));
+        if (!matchesTitle && !matchesCode && !matchesEmp && !matchesDept && !matchesDeptCode) {
+          return false;
+        }
+      }
+
+      if (statusFilter === "submitted") {
+        return !["implemented", "closed", "rejected", "fake_closure"].includes(s.status);
+      } else if (statusFilter === "implemented") {
+        return s.status === "implemented" || s.status === "closed";
+      } else if (statusFilter === "fake_closure") {
+        return s.status === "fake_closure" || s.status === "rejected" || s.status === "dropped";
+      } else if (statusFilter && statusFilter !== "all") {
+        return s.status === statusFilter;
+      }
+
+      return true;
+    });
+  }, [data, q, statusFilter]);
 
   return (
     <AppShell navGroups={ADMIN_NAV} title="Admin Console">
@@ -120,29 +142,81 @@ export function SuggestionsList() {
                 { key: "plant", header: "Plant", format: (s: any) => s.plants?.name ?? "" },
                 { key: "category", header: "Category", format: (s: any) => s.categories?.name ?? "" },
                 { key: "status", header: "Status", format: (s: any) => STATUS_LABEL[s.status as keyof typeof STATUS_LABEL] ?? s.status },
-                { key: "actual_cost", header: "Actual cost", format: (s: any) => Number(s.actual_cost ?? 0) },
+                { key: "expected_saving", header: "Expected Saving (₹)", format: (s: any) => Number(s.expected_saving ?? 0) },
+                { key: "actual_cost", header: "Verified Actual Cost (₹)", format: (s: any) => Number(s.actual_cost ?? 0) },
                 { key: "created_at", header: "Created", format: (s: any) => new Date(s.created_at).toLocaleDateString() },
                 { key: "completed_at", header: "Completed", format: (s: any) => (s.completed_at ? new Date(s.completed_at).toLocaleDateString() : "") },
               ]}
-              filename="suggestions"
-              title="Suggestions Register"
-              subtitle={status ? `Filtered by status: ${status === "under_review" ? "Under Review" : STATUS_LABEL[status as keyof typeof STATUS_LABEL]}` : "All statuses"}
+              filename={`suggestions_${statusFilter}`}
+              title="Suggestions Register Export"
+              subtitle={
+                statusFilter === "submitted"
+                  ? "Filtered by: Submitted / In-Progress Suggestions"
+                  : statusFilter === "implemented"
+                  ? "Filtered by: Implemented Suggestions"
+                  : statusFilter === "fake_closure"
+                  ? "Filtered by: Fake Closures & Rejected Suggestions"
+                  : "All Statuses"
+              }
             />
           </div>
         }
       />
-      <div className="flex gap-2 mb-4">
-        <div className="relative flex-1 max-w-md">
+
+      {/* FILTER BAR & STATUS BUTTONS */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="relative flex-1 min-w-[240px] max-w-md">
           <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
-          <Input placeholder="Search by code, title, or employee" className="pl-8" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Input placeholder="Search by code, title, or employee" className="pl-8 text-xs" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <select className="border border-input bg-background rounded-md px-3 text-sm" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">All statuses</option>
-          <option value="under_review">Under Review</option>
-          <option value="approved">{STATUS_LABEL.approved}</option>
-          <option value="implemented">{STATUS_LABEL.implemented}</option>
-          <option value="rejected">{STATUS_LABEL.rejected}</option>
-        </select>
+
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          <Button
+            variant={statusFilter === "all" ? "default" : "outline"}
+            size="sm"
+            className="h-8 px-3 text-xs font-semibold"
+            onClick={() => setStatusFilter("all")}
+          >
+            <Filter className="w-3.5 h-3.5 mr-1" />
+            All ({counts.total})
+          </Button>
+          <Button
+            variant={statusFilter === "submitted" ? "default" : "outline"}
+            size="sm"
+            className={cn(
+              "h-8 px-3 text-xs font-semibold",
+              statusFilter === "submitted" ? "bg-amber-600 hover:bg-amber-700 text-white" : "border-amber-500/30 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
+            )}
+            onClick={() => setStatusFilter("submitted")}
+          >
+            <Clock className="w-3.5 h-3.5 mr-1" />
+            Submitted / Pending ({counts.submitted})
+          </Button>
+          <Button
+            variant={statusFilter === "implemented" ? "default" : "outline"}
+            size="sm"
+            className={cn(
+              "h-8 px-3 text-xs font-semibold",
+              statusFilter === "implemented" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10"
+            )}
+            onClick={() => setStatusFilter("implemented")}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+            Implemented ({counts.implemented})
+          </Button>
+          <Button
+            variant={statusFilter === "fake_closure" ? "default" : "outline"}
+            size="sm"
+            className={cn(
+              "h-8 px-3 text-xs font-semibold",
+              statusFilter === "fake_closure" ? "bg-red-600 hover:bg-red-700 text-white" : "border-red-500/30 text-red-700 dark:text-red-400 hover:bg-red-500/10"
+            )}
+            onClick={() => setStatusFilter("fake_closure")}
+          >
+            <XCircle className="w-3.5 h-3.5 mr-1" />
+            Fake / Rejected ({counts.fake})
+          </Button>
+        </div>
       </div>
 
       {viewMode === "table" ? (
