@@ -83,20 +83,29 @@ export function KPICardsSection({
     const monthShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][now.getMonth()];
 
     if (sugFilter === "today") {
-      const cnt = suggestions.filter((s) => s.createdDate === todayStr).length;
-      return cnt > 0 ? cnt : suggestions.length;
+      return suggestions.filter((s) => s.createdDate === todayStr || s.createdDate?.startsWith(todayStr)).length;
     }
     if (sugFilter === "month") {
-      const cnt = suggestions.filter((s) => s.participationMonth === monthShort).length;
-      return cnt > 0 ? cnt : suggestions.length;
+      return suggestions.filter((s) => {
+        if (s.participationMonth === monthShort) return true;
+        if (!s.createdDate) return false;
+        const d = new Date(s.createdDate);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === currentYear;
+      }).length;
     }
     if (sugFilter === "year") {
-      const cnt = suggestions.filter((s) => s.year === currentYear).length;
-      return cnt > 0 ? cnt : suggestions.length;
+      return suggestions.filter((s) => {
+        if (s.year === currentYear) return true;
+        if (!s.createdDate) return false;
+        return new Date(s.createdDate).getFullYear() === currentYear;
+      }).length;
     }
     if (sugFilter === "prev_year") {
-      const cnt = suggestions.filter((s) => s.year === lastYear).length;
-      return cnt > 0 ? cnt : suggestions.length;
+      return suggestions.filter((s) => {
+        if (s.year === lastYear) return true;
+        if (!s.createdDate) return false;
+        return new Date(s.createdDate).getFullYear() === lastYear;
+      }).length;
     }
     return suggestions.length;
   }, [suggestions, sugFilter]);
@@ -177,8 +186,8 @@ export function KPICardsSection({
       title: "Total Suggestions",
       value: mergedSuggestionsCount,
       suffix: "",
-      growth: "+14.2%",
-      growthType: "up",
+      growth: sugFilter === "today" ? "Today" : sugFilter === "month" ? "This Month" : sugFilter === "year" ? "This Year" : sugFilter === "prev_year" ? "Prev Year" : "All Time",
+      growthType: "neutral",
       icon: Calendar,
       lightBg: "bg-blue-50/90 dark:bg-blue-950/30 border-blue-200/90 dark:border-blue-800/60",
       iconBg: "bg-blue-600 text-white",
