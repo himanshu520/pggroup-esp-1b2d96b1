@@ -312,7 +312,7 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
       const fakeRate = total > 0 ? (fake / total) * 100 : 0;
       
       // Dynamic score calculation
-      const score = (implemented * (scoringRules.implemented ?? 1)) + (fake * (scoringRules.fake_closure ?? -2));
+      const score = (implemented * (scoringRules.implemented ?? 5)) + (fake * (scoringRules.fake_closure ?? -2));
 
       const plant = plants.find((p: any) => p.id === d.plant_id);
       const location = locations.find((l: any) => l.id === d.location_id);
