@@ -93,9 +93,9 @@ export function PlantPerf() {
           />
         }
       />
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-auto max-h-[calc(100vh-240px)] min-h-[300px]">
         <table className="w-full text-sm">
-          <thead className="bg-muted/50 border-b border-border">
+          <thead className="bg-muted/95 border-b border-border sticky top-0 z-20 backdrop-blur-xs">
             <tr>
               {["Sr number", "Plant", "Location", "Total", "Implemented", "Pending", "Fake", "Impl %", "Avg days"].map((h) => (
                 <th key={h} className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">

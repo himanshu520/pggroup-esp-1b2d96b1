@@ -739,9 +739,9 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
               />
             </div>
 
-            <div className="rounded-lg border border-border bg-card overflow-hidden">
+            <div className="rounded-lg border border-border bg-card overflow-auto max-h-[calc(100vh-280px)] min-h-[300px]">
               <table className="w-full text-xs">
-                <thead className="bg-muted/50 border-b border-border">
+                <thead className="bg-muted/95 border-b border-border sticky top-0 z-20 backdrop-blur-xs">
                   <tr className="text-left font-semibold text-muted-foreground">
                     <th className="px-4 py-3 text-center w-12">Rank</th>
                     <th className="px-4 py-3">Department Name</th>
@@ -859,9 +859,9 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
               />
             </div>
 
-            <div className="rounded-lg border border-border bg-card overflow-hidden">
+            <div className="rounded-lg border border-border bg-card overflow-auto max-h-[calc(100vh-280px)] min-h-[300px]">
               <table className="w-full text-xs">
-                <thead className="bg-muted/50 border-b border-border">
+                <thead className="bg-muted/95 border-b border-border sticky top-0 z-20 backdrop-blur-xs">
                   <tr className="text-left font-semibold text-muted-foreground">
                     <th className="px-4 py-3 text-center w-12">Rank</th>
                     <th className="px-4 py-3">Employee Name</th>
