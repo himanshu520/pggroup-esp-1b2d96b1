@@ -65,6 +65,14 @@ export function FilterDrawer({ filters, onApplyFilters, onResetFilters }: Filter
     },
   });
 
+  const { data: dbStates = [] } = useQuery({
+    queryKey: ["filter-drawer-states"],
+    queryFn: async () => {
+      const { data } = await supabase.from("locations").select("state").eq("active", true).is("deleted_at", null).order("state");
+      return Array.from(new Set((data || []).map((l) => l.state).filter((s): s is string => Boolean(s))));
+    },
+  });
+
   const { data: dbLocations = [] } = useQuery({
     queryKey: ["filter-drawer-locations-list"],
     queryFn: async () => {
