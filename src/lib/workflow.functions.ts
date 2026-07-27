@@ -551,6 +551,46 @@ export const selectBestSuggestion = createServerFn({ method: "POST" })
     return { ok: true, action: "saved" };
   });
 
+export const uploadBestFoolproofingImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      suggestion_id: z.string().uuid(),
+      kind: z.enum(["before", "after"]),
+      file_name: z.string(),
+      content_type: z.string(),
+      base64_data: z.string(),
+    }).parse(d ?? {})
+  )
+  .handler(async ({ context, data }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    await requireAnyRole(supabaseAdmin, userId, ["super_admin", "corporate_admin", "admin", "pe_user", "location_admin"]);
+
+    const ext = (data.file_name.split(".").pop() || "png").toLowerCase();
+    const filePath = `${data.suggestion_id}/foolproofing/${data.kind}_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+    const buffer = Buffer.from(data.base64_data, "base64");
+
+    const { error: upErr } = await supabaseAdmin.storage
+      .from("suggestion-files")
+      .upload(filePath, buffer, {
+        contentType: data.content_type || "image/png",
+        upsert: true,
+      });
+
+    if (upErr) {
+      throw new Error("Failed to upload image to storage: " + upErr.message);
+    }
+
+    const { data: pubData } = supabaseAdmin.storage
+      .from("suggestion-files")
+      .getPublicUrl(filePath);
+
+    return { publicUrl: pubData.publicUrl };
+  });
+
 export const updateLeaderboardSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>

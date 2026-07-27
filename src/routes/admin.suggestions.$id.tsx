@@ -12,7 +12,7 @@ import { useSession, isSuggestionAccessible } from "@/lib/session";
 import { STATUS_LABEL, getHistoryActionText, getEffectiveHistory } from "@/lib/statuses";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { peTransferSuggestion, peRejectSuggestion, deptDecide, deptStartImplementation, deptSubmitEvidence, peVerify, peRejectReturn, selectBestSuggestion } from "@/lib/workflow.functions";
+import { peTransferSuggestion, peRejectSuggestion, deptDecide, deptStartImplementation, deptSubmitEvidence, peVerify, peRejectReturn, selectBestSuggestion, uploadBestFoolproofingImage } from "@/lib/workflow.functions";
 import { toast } from "sonner";
 import { Send, ThumbsUp, ThumbsDown, PlayCircle, Upload, Check, AlertTriangle, Loader2, Paperclip, X, FileText, History, Star, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -31,20 +31,37 @@ const MONTHS = [
 ];
 
 export const Route = createFileRoute("/admin/suggestions/$id")({
-  beforeLoad: ({ params }) => {
-    throw redirect({ to: "/admin", search: { section: "suggestion", id: params.id } as any });
+  beforeLoad: async ({ context }: any) => {
+    if (context?.session?.primaryRole === "employee") {
+      throw redirect({ to: "/employee/login" });
+    }
   },
-  component: () => null,
+  component: SuggestionDetailPage,
 });
 
-export function SuggestionDetail({ id }: { id: string }) {
+export function SuggestionDetail({ id }: { id?: string }) {
+  const params = Route.useParams() as any;
+  const targetId = id || params?.id;
+  return <SuggestionDetailPage targetId={targetId} />;
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const res = reader.result as string;
+      resolve(res.split(",")[1]);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+}
+
+function SuggestionDetailPage({ targetId }: { targetId?: string }) {
+  const routeParams = Route.useParams() as any;
+  const id = targetId || routeParams?.id;
   const validId = !!id && UUID_RE.test(id);
-
-  useEffect(() => {
-    if (!validId) toast.error("Invalid suggestion link", { description: "Missing or malformed suggestion ID." });
-  }, [validId]);
-
-  const { data: session } = useSession();
+  const session = useSession();
   const qc = useQueryClient();
 
   const { data: sug, isLoading: sugLoading, isError: sugError } = useQuery({
@@ -100,6 +117,7 @@ export function SuggestionDetail({ id }: { id: string }) {
   const evidenceFn = useServerFn(deptSubmitEvidence);
   const verifyFn = useServerFn(peVerify);
   const selectBestFn = useServerFn(selectBestSuggestion);
+  const uploadBestImageFn = useServerFn(uploadBestFoolproofingImage);
 
   const { data: existingBestList = [] } = useQuery({
     enabled: validId,
@@ -1004,12 +1022,17 @@ export function SuggestionDetail({ id }: { id: string }) {
                                   if (!file) return;
                                   try {
                                     setBestImageUploading(true);
-                                    const ext = file.name.split(".").pop();
-                                    const path = `${id}/foolproofing/before_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-                                    const { error: upErr } = await supabase.storage.from("suggestion-files").upload(path, file, { contentType: file.type, upsert: true });
-                                    if (upErr) throw upErr;
-                                    const { data: pubData } = supabase.storage.from("suggestion-files").getPublicUrl(path);
-                                    setBeforeImageUrl(pubData.publicUrl);
+                                    const base64 = await fileToBase64(file);
+                                    const res = await uploadBestImageFn({
+                                      data: {
+                                        suggestion_id: id,
+                                        kind: "before",
+                                        file_name: file.name,
+                                        content_type: file.type || "image/png",
+                                        base64_data: base64,
+                                      },
+                                    });
+                                    setBeforeImageUrl(res.publicUrl);
                                     toast.success("BEFORE image attached!");
                                   } catch (err: any) {
                                     toast.error("Before image upload failed: " + (err.message || "Unknown error"));
@@ -1046,13 +1069,18 @@ export function SuggestionDetail({ id }: { id: string }) {
                                   if (!file) return;
                                   try {
                                     setBestImageUploading(true);
-                                    const ext = file.name.split(".").pop();
-                                    const path = `${id}/foolproofing/after_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-                                    const { error: upErr } = await supabase.storage.from("suggestion-files").upload(path, file, { contentType: file.type, upsert: true });
-                                    if (upErr) throw upErr;
-                                    const { data: pubData } = supabase.storage.from("suggestion-files").getPublicUrl(path);
-                                    setAfterImageUrl(pubData.publicUrl);
-                                    setBestImageUrl(pubData.publicUrl);
+                                    const base64 = await fileToBase64(file);
+                                    const res = await uploadBestImageFn({
+                                      data: {
+                                        suggestion_id: id,
+                                        kind: "after",
+                                        file_name: file.name,
+                                        content_type: file.type || "image/png",
+                                        base64_data: base64,
+                                      },
+                                    });
+                                    setAfterImageUrl(res.publicUrl);
+                                    setBestImageUrl(res.publicUrl);
                                     toast.success("AFTER Poka-Yoke solution image attached!");
                                   } catch (err: any) {
                                     toast.error("After image upload failed: " + (err.message || "Unknown error"));
