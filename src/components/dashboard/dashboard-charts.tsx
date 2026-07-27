@@ -270,11 +270,11 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
 
     return Object.entries(map)
       .map(([name, stat]) => ({
-        name: name.length > 14 ? name.slice(0, 14) + "..." : name,
-        "Expected Savings (₹)": Math.round(stat.expected),
-        "Verified Actual Cost (₹)": Math.round(stat.actual),
+        name: name.length > 10 ? name.slice(0, 10) + ".." : name,
+        "Expected (₹)": Math.round(stat.expected),
+        "Actual (₹)": Math.round(stat.actual),
       }))
-      .slice(0, 6);
+      .slice(0, 5);
   }, [suggestions]);
 
   // 10. Suggestion Status Donut
@@ -887,29 +887,29 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
         </div>
 
         {/* Chart 15: Expected Savings vs Verified Actual Cost Comparison */}
-        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between md:col-span-2">
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">💰</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Expected Savings vs Verified Actual Cost (₹)</span>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Expected vs Verified Cost (₹)</span>
             </div>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-              Financial Audit & Savings
+              Audit
             </span>
           </div>
-          <div className="h-72 w-full">
+          <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={expectedVsActualData} margin={{ top: 20, right: 20, left: 10, bottom: 5 }}>
+              <BarChart data={expectedVsActualData} margin={{ top: 20, right: 10, left: -18, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748B" }} />
-                <YAxis tick={{ fontSize: 10, fill: "#64748B" }} tickFormatter={(v) => `₹${(v/1000).toFixed(0)}k`} />
+                <XAxis dataKey="name" tick={{ fontSize: 9, fill: "#64748B" }} />
+                <YAxis tick={{ fontSize: 9, fill: "#64748B" }} tickFormatter={(v) => v >= 100000 ? `₹${(v/100000).toFixed(1)}L` : (v >= 1000 ? `₹${(v/1000).toFixed(0)}k` : `₹${v}`)} />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
-                <Bar dataKey="Expected Savings (₹)" fill="#6366F1" radius={[4, 4, 0, 0]} barSize={24}>
-                  <LabelList dataKey="Expected Savings (₹)" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#4338CA" }} formatter={(v: any) => v > 0 ? `₹${(Number(v)/1000).toFixed(0)}k` : "₹0"} />
+                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "10px" }} />
+                <Bar dataKey="Expected (₹)" fill="#6366F1" radius={[3, 3, 0, 0]} barSize={16}>
+                  <LabelList dataKey="Expected (₹)" position="top" style={{ fontSize: "8px", fontWeight: "bold", fill: "#4338CA" }} formatter={(v: any) => v >= 100000 ? `₹${(Number(v)/100000).toFixed(1)}L` : (v >= 1000 ? `₹${(Number(v)/1000).toFixed(0)}k` : (v > 0 ? `₹${v}` : "0"))} />
                 </Bar>
-                <Bar dataKey="Verified Actual Cost (₹)" fill="#10B981" radius={[4, 4, 0, 0]} barSize={24}>
-                  <LabelList dataKey="Verified Actual Cost (₹)" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#047857" }} formatter={(v: any) => v > 0 ? `₹${(Number(v)/1000).toFixed(0)}k` : "₹0"} />
+                <Bar dataKey="Actual (₹)" fill="#10B981" radius={[3, 3, 0, 0]} barSize={16}>
+                  <LabelList dataKey="Actual (₹)" position="top" style={{ fontSize: "8px", fontWeight: "bold", fill: "#047857" }} formatter={(v: any) => v >= 100000 ? `₹${(Number(v)/100000).toFixed(1)}L` : (v >= 1000 ? `₹${(Number(v)/1000).toFixed(0)}k` : (v > 0 ? `₹${v}` : "0"))} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
