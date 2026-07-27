@@ -120,11 +120,11 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     ];
   }, [suggestions]);
 
-  // 2. Plant-wise Distribution (Donut Chart for PGTL & NGM Plants)
+  // 2. Plant-wise Distribution (Donut Chart)
   const plantData = useMemo(() => {
     const counts: Record<string, number> = {};
     suggestions.forEach((s) => {
-      const p = (s.plant || "PGTL").trim();
+      const p = (s.plant && s.plant !== "—" ? s.plant : "Unassigned").trim();
       counts[p] = (counts[p] || 0) + 1;
     });
     return Object.entries(counts).map(([plant, value]) => ({
@@ -137,7 +137,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
   const categoryData = useMemo(() => {
     const counts: Record<string, number> = {};
     suggestions.forEach((s) => {
-      let cat = (s.category || "Kaizen").trim();
+      let cat = (s.category && s.category !== "—" ? s.category : "General").trim();
       if (cat.length > 18) {
         cat = cat.slice(0, 16) + "...";
       }
@@ -161,19 +161,14 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
 
   // 5. Execution Pending Department-wise (Horizontal Bar Chart)
   const pendingDeptData = useMemo(() => {
-    const defaultDepts = ["Production", "Quality Control", "Maintenance", "EHS & Safety", "HR & Admin", "Logistics"];
     const deptPending: Record<string, number> = {};
 
-    defaultDepts.forEach((d) => {
-      deptPending[d] = 0;
-    });
-
     suggestions.forEach((s) => {
-      const dept = s.department || "Production";
+      const dept = (s.department && s.department !== "—" ? s.department : "General").trim();
       if (deptPending[dept] === undefined) {
         deptPending[dept] = 0;
       }
-      if (s.status !== "implemented" && s.status !== "rejected" && s.status !== "dropped") {
+      if (s.status !== "implemented" && s.status !== "closed" && s.status !== "rejected" && s.status !== "dropped") {
         deptPending[dept] += 1;
       }
     });
@@ -183,27 +178,15 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       count,
     }));
 
-    const hasData = result.some((r) => r.count > 0);
-    if (!hasData) {
-      return [
-        { department: "Production", count: 18 },
-        { department: "Quality Control", count: 14 },
-        { department: "Maintenance", count: 10 },
-        { department: "EHS & Safety", count: 8 },
-        { department: "HR & Admin", count: 5 },
-        { department: "Logistics", count: 3 },
-      ];
-    }
-
     return result.sort((a, b) => b.count - a.count).slice(0, 6);
   }, [suggestions]);
 
-  // 6. Cost Category Stacked Column Chart (Thinner Bars & Rich Balanced Seed Data)
+  // 6. Cost Category Stacked Column Chart
   const costCategoryData = useMemo(() => {
     const deptCost: Record<string, { "No Cost": number; "Low Cost": number; "High Cost": number }> = {};
 
     suggestions.forEach((s) => {
-      const dept = s.department || "Production";
+      const dept = (s.department && s.department !== "—" ? s.department : "General").trim();
       if (!deptCost[dept]) {
         deptCost[dept] = { "No Cost": 0, "Low Cost": 0, "High Cost": 0 };
       }
@@ -218,44 +201,36 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       ...costs,
     }));
 
-    const totalItems = res.reduce((acc, r) => acc + r["No Cost"] + r["Low Cost"] + r["High Cost"], 0);
-    if (res.length < 3 || totalItems < 10) {
-      return [
-        { department: "Production", "No Cost": 20, "Low Cost": 14, "High Cost": 8 },
-        { department: "Quality Control", "No Cost": 15, "Low Cost": 9, "High Cost": 4 },
-        { department: "Maintenance", "No Cost": 11, "Low Cost": 6, "High Cost": 3 },
-        { department: "EHS & Safety", "No Cost": 8, "Low Cost": 5, "High Cost": 2 },
-        { department: "HR & Admin", "No Cost": 5, "Low Cost": 4, "High Cost": 1 },
-        { department: "Logistics", "No Cost": 3, "Low Cost": 2, "High Cost": 1 },
-      ];
-    }
-
     return res.slice(0, 6);
   }, [suggestions]);
 
-  const MONTHS = ["Feb", "Mar", "Apr", "May", "Jun", "Jul"];
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  // 7. Monthly Trend Line Chart (PGTL vs NGM Plants)
+  // 7. Monthly Trend Line Chart
   const monthlyTrendData = useMemo(() => {
-    return MONTHS.map((m) => {
-      const pgtlCount = suggestions.filter((s) => s.participationMonth === m && s.plant === "PGTL").length;
-      const ngmCount = suggestions.filter((s) => s.participationMonth === m && s.plant === "NGM").length;
+    const plantsInUse = Array.from(new Set(suggestions.map((s) => s.plant).filter((p) => p && p !== "—")));
+    const p1 = plantsInUse[0] || "Plant 1";
+    const p2 = plantsInUse[1] || "Plant 2";
+
+    return MONTHS.slice(0, 6).map((m) => {
+      const count1 = suggestions.filter((s) => s.participationMonth === m && s.plant === p1).length;
+      const count2 = suggestions.filter((s) => s.participationMonth === m && s.plant === p2).length;
 
       return {
-        month: `${m} 26`,
-        "PGTL": pgtlCount,
-        "NGM": ngmCount,
+        month: `${m}`,
+        [p1]: count1,
+        [p2]: count2,
       };
     });
   }, [suggestions]);
 
   // 8. Monthly Participation Area Chart
   const monthlyParticipationData = useMemo(() => {
-    return MONTHS.map((m) => {
+    return MONTHS.slice(0, 6).map((m) => {
       const monthSugs = suggestions.filter((s) => s.participationMonth === m);
       const uniqueEmps = new Set(monthSugs.map((s) => s.employeeId)).size;
       return {
-        month: `${m} 26`,
+        month: `${m}`,
         Participants: uniqueEmps || monthSugs.length,
       };
     });
@@ -265,7 +240,8 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
   const deptRankingData = useMemo(() => {
     const deptPoints: Record<string, number> = {};
     suggestions.forEach((s) => {
-      deptPoints[s.department || "Production"] = (deptPoints[s.department || "Production"] || 0) + (s.points || 100);
+      const dept = (s.department && s.department !== "—" ? s.department : "General").trim();
+      deptPoints[dept] = (deptPoints[dept] || 0) + (s.points || 100);
     });
     const res = Object.entries(deptPoints).map(([department, points]) => ({
       department: department.length > 14 ? department.slice(0, 14) + "..." : department,
@@ -286,7 +262,10 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     };
     suggestions.forEach((s) => {
       if (s.status === "rejected" || s.status === "dropped") counts.rejected += 1;
-      else counts[s.status] = (counts[s.status] || 0) + 1;
+      else if (s.status === "implemented" || s.status === "closed") counts.implemented += 1;
+      else if (s.status === "approved" || s.status === "implementation") counts.approved += 1;
+      else if (s.status === "under_review" || s.status === "pe_review" || s.status === "dept_review") counts.under_review += 1;
+      else counts.pending += 1;
     });
     return [
       { name: "Implemented", value: counts.implemented },
@@ -299,29 +278,38 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
 
   // 11. Year-wise Comparison (2025 vs 2026)
   const yearComparisonData = useMemo(() => {
-    const total26 = suggestions.length;
-    const impl26 = suggestions.filter((s) => s.status === "implemented").length;
-    const savings26 = Math.round(suggestions.reduce((acc, s) => acc + (s.savings || 0), 0) / 100000);
-    const awards26 = suggestions.filter((s) => s.award && s.award !== "None").length;
+    const total26 = suggestions.filter((s) => s.year === 2026 || !s.year).length;
+    const impl26 = suggestions.filter((s) => (s.year === 2026 || !s.year) && (s.status === "implemented" || s.status === "closed")).length;
+    const savings26 = Math.round(suggestions.filter((s) => s.year === 2026 || !s.year).reduce((acc, s) => acc + (s.savings || 0), 0) / 100000);
+    const awards26 = suggestions.filter((s) => (s.year === 2026 || !s.year) && s.award && s.award !== "None").length;
+
+    const total25 = suggestions.filter((s) => s.year === 2025).length;
+    const impl25 = suggestions.filter((s) => s.year === 2025 && (s.status === "implemented" || s.status === "closed")).length;
+    const savings25 = Math.round(suggestions.filter((s) => s.year === 2025).reduce((acc, s) => acc + (s.savings || 0), 0) / 100000);
+    const awards25 = suggestions.filter((s) => s.year === 2025 && s.award && s.award !== "None").length;
 
     return [
-      { metric: "Total Ideas", "2025": Math.round(total26 * 0.7), "2026": total26 },
-      { metric: "Implemented", "2025": Math.round(impl26 * 0.65), "2026": impl26 },
-      { metric: "Savings (₹L)", "2025": Math.round(savings26 * 0.6), "2026": savings26 },
-      { metric: "Awards Given", "2025": Math.round(awards26 * 0.75), "2026": awards26 },
+      { metric: "Total Ideas", "2025": total25, "2026": total26 },
+      { metric: "Implemented", "2025": impl25, "2026": impl26 },
+      { metric: "Savings (₹L)", "2025": savings25, "2026": savings26 },
+      { metric: "Awards Given", "2025": awards25, "2026": awards26 },
     ];
   }, [suggestions]);
 
-  // 12. Plant Performance Radar Chart (PGTL vs NGM)
+  // 12. Plant Performance Radar Chart
   const radarData = useMemo(() => {
-    const pgtlSugs = suggestions.filter((s) => s.plant === "PGTL");
-    const ngmSugs = suggestions.filter((s) => s.plant === "NGM");
+    const plantsInUse = Array.from(new Set(suggestions.map((s) => s.plant).filter((p) => p && p !== "—")));
+    const p1 = plantsInUse[0] || "Plant 1";
+    const p2 = plantsInUse[1] || "Plant 2";
+
+    const p1Sugs = suggestions.filter((s) => s.plant === p1);
+    const p2Sugs = suggestions.filter((s) => s.plant === p2);
 
     const getScore = (sugs: EmployeeSuggestion[], type: string) => {
-      if (sugs.length === 0) return 70;
-      if (type === "Participation") return Math.min(100, Math.round((sugs.length / 75) * 100));
+      if (sugs.length === 0) return 0;
+      if (type === "Participation") return Math.min(100, Math.round((sugs.length / Math.max(1, suggestions.length)) * 100));
       if (type === "Implementation") {
-        const implCount = sugs.filter((s) => s.status === "implemented").length;
+        const implCount = sugs.filter((s) => s.status === "implemented" || s.status === "closed").length;
         return Math.round((implCount / sugs.length) * 100);
       }
       if (type === "Avg Points") {
@@ -330,16 +318,16 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       }
       if (type === "Savings") {
         const totalSav = sugs.reduce((acc, s) => acc + s.savings, 0);
-        return Math.min(100, Math.round((totalSav / 2500000) * 100));
+        return Math.min(100, Math.round((totalSav / 100000) * 10));
       }
-      return 92; // 5S Compliance
+      return Math.min(100, Math.round((sugs.filter((s) => s.status === "implemented" || s.status === "closed").length / Math.max(1, sugs.length)) * 100));
     };
 
-    const subjects = ["Participation", "Implementation", "Avg Points", "Savings", "5S Compliance"];
+    const subjects = ["Participation", "Implementation", "Avg Points", "Savings", "Completion %"];
     return subjects.map((subj) => ({
       subject: subj,
-      "PGTL": getScore(pgtlSugs, subj),
-      "NGM": getScore(ngmSugs, subj),
+      [p1]: getScore(p1Sugs, subj),
+      [p2]: getScore(p2Sugs, subj),
     }));
   }, [suggestions]);
 

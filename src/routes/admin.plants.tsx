@@ -17,7 +17,7 @@ export function PlantPerf() {
   const { data: plants = [] } = useQuery({
     queryKey: ["plants-perf"],
     queryFn: async () =>
-      (await supabase.from("plants").select("id,name,code, locations(location)")).data ?? [],
+      (await supabase.from("plants").select("id,name,code,location_id, locations(location)")).data ?? [],
   });
   const { data: sugs = [] } = useQuery({
     queryKey: ["all-sugs-plants"],
