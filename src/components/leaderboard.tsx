@@ -362,12 +362,14 @@ export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) 
     const calculated = list.map((e: any) => {
       const total = Number(e.total_suggestions ?? 0);
       const implemented = Number(e.implemented_suggestions ?? 0);
-      const score = implemented * 1;
+      const fake = Number(e.fake_closures ?? 0);
+      const score = (implemented * (scoringRules.implemented ?? 5)) + (fake * (scoringRules.fake_closure ?? -2));
 
       return {
         ...e,
         total_suggestions: total,
         implemented_suggestions: implemented,
+        fake_closures: fake,
         score
       };
     });

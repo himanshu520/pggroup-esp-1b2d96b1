@@ -20,7 +20,7 @@ export function DepartmentPointSystemSection({ suggestions }: DeptPointSystemPro
       if (!deptStats[dept]) {
         deptStats[dept] = { points: 0, total: 0, impl: 0, emps: new Set() };
       }
-      deptStats[dept].points += s.points || 0;
+      deptStats[dept].points += typeof s.points === "number" ? s.points : 0;
       deptStats[dept].total += 1;
       if (s.status === "implemented") deptStats[dept].impl += 1;
       deptStats[dept].emps.add(s.employeeId);

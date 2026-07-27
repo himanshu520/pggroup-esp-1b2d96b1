@@ -245,7 +245,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     const deptPoints: Record<string, number> = {};
     suggestions.forEach((s) => {
       const dept = (s.department && s.department !== "—" ? s.department : "General").trim();
-      deptPoints[dept] = (deptPoints[dept] || 0) + (s.points || 100);
+      deptPoints[dept] = (deptPoints[dept] || 0) + (typeof s.points === "number" ? s.points : 0);
     });
     const res = Object.entries(deptPoints).map(([department, points]) => ({
       department: department.length > 14 ? department.slice(0, 14) + "..." : department,
