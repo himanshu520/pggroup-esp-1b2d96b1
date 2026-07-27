@@ -121,12 +121,14 @@ export function DashboardHighlightsSection({ suggestions }: DashboardHighlightsP
     },
   });
 
-  const bestFoolProofing = nominatedFoolProofing || useMemo(() => {
+  const fallbackFoolProofing = useMemo(() => {
     return (
       suggestions.find((s) => s.category?.toLowerCase().includes("fool") || s.suggestionType?.toLowerCase().includes("fool")) ||
       null
     );
   }, [suggestions]);
+
+  const bestFoolProofing = nominatedFoolProofing || fallbackFoolProofing;
 
   // 5. Dynamic King of Suggestion / Champion
   const kingOfSug = useMemo(() => {
