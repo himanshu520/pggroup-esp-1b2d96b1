@@ -1005,8 +1005,8 @@ export function SuggestionDetail({ id }: { id: string }) {
                                   try {
                                     setBestImageUploading(true);
                                     const ext = file.name.split(".").pop();
-                                    const path = `best_foolproofing/before_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-                                    const { error: upErr } = await supabase.storage.from("suggestion-files").upload(path, file);
+                                    const path = `${id}/foolproofing/before_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+                                    const { error: upErr } = await supabase.storage.from("suggestion-files").upload(path, file, { contentType: file.type, upsert: true });
                                     if (upErr) throw upErr;
                                     const { data: pubData } = supabase.storage.from("suggestion-files").getPublicUrl(path);
                                     setBeforeImageUrl(pubData.publicUrl);
@@ -1047,8 +1047,8 @@ export function SuggestionDetail({ id }: { id: string }) {
                                   try {
                                     setBestImageUploading(true);
                                     const ext = file.name.split(".").pop();
-                                    const path = `best_foolproofing/after_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-                                    const { error: upErr } = await supabase.storage.from("suggestion-files").upload(path, file);
+                                    const path = `${id}/foolproofing/after_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+                                    const { error: upErr } = await supabase.storage.from("suggestion-files").upload(path, file, { contentType: file.type, upsert: true });
                                     if (upErr) throw upErr;
                                     const { data: pubData } = supabase.storage.from("suggestion-files").getPublicUrl(path);
                                     setAfterImageUrl(pubData.publicUrl);
