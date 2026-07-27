@@ -7,6 +7,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescri
 import { Badge } from "@/components/ui/badge";
 import type { DashboardFilters } from "@/lib/dummy-suggestions";
 
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
 interface FilterDrawerProps {
   filters: DashboardFilters;
   onApplyFilters: (filters: DashboardFilters) => void;
@@ -14,7 +17,6 @@ interface FilterDrawerProps {
 }
 
 const DEPARTMENTS = ["Production", "Quality", "Maintenance", "HR", "IT", "Tool Room", "Press Shop", "Assembly", "Purchase", "Stores"];
-const PLANTS = ["Plant 1", "Plant 2", "Plant 3", "Plant 4"];
 const STATES = ["Haryana", "Rajasthan", "UP", "Tamil Nadu", "Karnataka"];
 const CATEGORIES = ["Safety", "Quality", "Cost Reduction", "Productivity", "5S", "Kaizen", "Fool Proofing"];
 const STATUSES = [
@@ -37,6 +39,43 @@ const SUGGESTION_TYPES = ["Kaizen", "Fool Proofing", "Safety", "Quality", "Produ
 export function FilterDrawer({ filters, onApplyFilters, onResetFilters }: FilterDrawerProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<DashboardFilters>(filters);
+
+  // Fetch real master data dynamically from Supabase database
+  const { data: plantOptions = [] } = useQuery({
+    queryKey: ["filter-drawer-plants"],
+    queryFn: async () => {
+      const { data } = await supabase.from("plants").select("name").eq("active", true).order("name");
+      return (data || []).map((p) => p.name);
+    },
+  });
+
+  const { data: dbDepts = [] } = useQuery({
+    queryKey: ["filter-drawer-depts"],
+    queryFn: async () => {
+      const { data } = await supabase.from("departments").select("name").eq("active", true).order("name");
+      return (data || []).map((d) => d.name);
+    },
+  });
+
+  const { data: dbStates = [] } = useQuery({
+    queryKey: ["filter-drawer-states"],
+    queryFn: async () => {
+      const { data } = await supabase.from("locations").select("location").eq("active", true).order("location");
+      return (data || []).map((l) => l.location);
+    },
+  });
+
+  const { data: dbCategories = [] } = useQuery({
+    queryKey: ["filter-drawer-categories"],
+    queryFn: async () => {
+      const { data } = await supabase.from("categories").select("name").eq("active", true).order("name");
+      return (data || []).map((c) => c.name);
+    },
+  });
+
+  const deptOptions = dbDepts.length > 0 ? dbDepts : DEPARTMENTS;
+  const stateOptions = dbStates.length > 0 ? dbStates : STATES;
+  const categoryOptions = dbCategories.length > 0 ? dbCategories : CATEGORIES;
 
   useEffect(() => {
     setDraft(filters);
@@ -119,7 +158,7 @@ export function FilterDrawer({ filters, onApplyFilters, onResetFilters }: Filter
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Departments</SelectItem>
-                {DEPARTMENTS.map((d) => (
+                {deptOptions.map((d) => (
                   <SelectItem key={d} value={d}>
                     {d}
                   </SelectItem>
@@ -140,7 +179,7 @@ export function FilterDrawer({ filters, onApplyFilters, onResetFilters }: Filter
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Plants</SelectItem>
-                  {PLANTS.map((p) => (
+                  {plantOptions.map((p) => (
                     <SelectItem key={p} value={p}>
                       {p}
                     </SelectItem>
@@ -159,7 +198,7 @@ export function FilterDrawer({ filters, onApplyFilters, onResetFilters }: Filter
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All States</SelectItem>
-                  {STATES.map((s) => (
+                  {stateOptions.map((s) => (
                     <SelectItem key={s} value={s}>
                       {s}
                     </SelectItem>
@@ -194,7 +233,7 @@ export function FilterDrawer({ filters, onApplyFilters, onResetFilters }: Filter
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  {CATEGORIES.map((c) => (
+                  {categoryOptions.map((c) => (
                     <SelectItem key={c} value={c}>
                       {c}
                     </SelectItem>

@@ -26,6 +26,9 @@ import type { EmployeeSuggestion, DashboardFilters } from "@/lib/dummy-suggestio
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
 interface KPICardsProps {
   suggestions: EmployeeSuggestion[];
   filters?: DashboardFilters;
@@ -46,7 +49,8 @@ function useAnimatedCount(targetValue: number, duration = 800) {
     const step = (timestamp: number) => {
       if (!startTimestamp) startTimestamp = timestamp;
       const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-      setCount(Math.floor(progress * (targetValue - startValue) + startValue));
+      setCount(Math.floor(progress * (startValue) + startValue));
+      setCount(Math.floor(progress * targetValue));
       if (progress < 1) {
         window.requestAnimationFrame(step);
       }
@@ -66,6 +70,59 @@ export function KPICardsSection({
 }: KPICardsProps) {
   const [sugFilter, setSugFilter] = useState<SugTimeSubFilter>("all");
   const [internalFilterBarOpen, setInternalFilterBarOpen] = useState(false);
+
+  // Dynamic Master Queries from Supabase
+  const { data: dbPlants = [] } = useQuery({
+    queryKey: ["kpi-cards-plants"],
+    queryFn: async () => {
+      const { data } = await supabase.from("plants").select("name").eq("active", true).order("name");
+      return (data || []).map((p) => p.name);
+    },
+  });
+
+  const { data: dbDepts = [] } = useQuery({
+    queryKey: ["kpi-cards-depts"],
+    queryFn: async () => {
+      const { data } = await supabase.from("departments").select("name").eq("active", true).order("name");
+      return (data || []).map((d) => d.name);
+    },
+  });
+
+  const { data: dbStates = [] } = useQuery({
+    queryKey: ["kpi-cards-states"],
+    queryFn: async () => {
+      const { data } = await supabase.from("locations").select("location").eq("active", true).order("location");
+      return (data || []).map((l) => l.location);
+    },
+  });
+
+  const { data: dbCategories = [] } = useQuery({
+    queryKey: ["kpi-cards-categories"],
+    queryFn: async () => {
+      const { data } = await supabase.from("categories").select("name").eq("active", true).order("name");
+      return (data || []).map((c) => c.name);
+    },
+  });
+
+  const uniquePlants = useMemo(() => {
+    const fromSugs = Array.from(new Set(suggestions.map((s) => s.plant).filter((p) => p && p !== "—")));
+    return Array.from(new Set([...dbPlants, ...fromSugs]));
+  }, [dbPlants, suggestions]);
+
+  const uniqueDepts = useMemo(() => {
+    const fromSugs = Array.from(new Set(suggestions.map((s) => s.department).filter((d) => d && d !== "—")));
+    return Array.from(new Set([...dbDepts, ...fromSugs]));
+  }, [dbDepts, suggestions]);
+
+  const uniqueStates = useMemo(() => {
+    const fromSugs = Array.from(new Set(suggestions.map((s) => s.state).filter((st) => st && st !== "—")));
+    return Array.from(new Set([...dbStates, ...fromSugs]));
+  }, [dbStates, suggestions]);
+
+  const uniqueCategories = useMemo(() => {
+    const fromSugs = Array.from(new Set(suggestions.map((s) => s.category).filter((c) => c && c !== "—")));
+    return Array.from(new Set([...dbCategories, ...fromSugs]));
+  }, [dbCategories, suggestions]);
 
   const isFilterBarOpen = externalFilterBarOpen !== undefined ? externalFilterBarOpen : internalFilterBarOpen;
   const toggleFilterBar = onToggleFilterBar || (() => setInternalFilterBarOpen((prev) => !prev));
@@ -341,11 +398,11 @@ export function KPICardsSection({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All States</SelectItem>
-                  <SelectItem value="Haryana">Haryana</SelectItem>
-                  <SelectItem value="Delhi NCR">Delhi NCR</SelectItem>
-                  <SelectItem value="Gujarat">Gujarat</SelectItem>
-                  <SelectItem value="Maharashtra">Maharashtra</SelectItem>
-                  <SelectItem value="Punjab">Punjab</SelectItem>
+                  {uniqueStates.map((st) => (
+                    <SelectItem key={st} value={st}>
+                      {st}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -361,10 +418,11 @@ export function KPICardsSection({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Plants</SelectItem>
-                  <SelectItem value="Plant 1">Plant 1</SelectItem>
-                  <SelectItem value="Plant 2">Plant 2</SelectItem>
-                  <SelectItem value="Plant 3">Plant 3</SelectItem>
-                  <SelectItem value="Plant 4">Plant 4</SelectItem>
+                  {uniquePlants.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -380,13 +438,11 @@ export function KPICardsSection({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
-                  <SelectItem value="Production">Production</SelectItem>
-                  <SelectItem value="Quality">Quality</SelectItem>
-                  <SelectItem value="Maintenance">Maintenance</SelectItem>
-                  <SelectItem value="Safety">Safety</SelectItem>
-                  <SelectItem value="HR">HR</SelectItem>
-                  <SelectItem value="Logistics">Logistics</SelectItem>
-                  <SelectItem value="Finance">Finance</SelectItem>
+                  {uniqueDepts.map((d) => (
+                    <SelectItem key={d} value={d}>
+                      {d}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -402,12 +458,11 @@ export function KPICardsSection({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="5S">5S</SelectItem>
-                  <SelectItem value="Kaizen">Kaizen</SelectItem>
-                  <SelectItem value="Safety">Safety</SelectItem>
-                  <SelectItem value="Cost Reduction">Cost Reduction</SelectItem>
-                  <SelectItem value="Quality">Quality</SelectItem>
-                  <SelectItem value="Productivity">Productivity</SelectItem>
+                  {uniqueCategories.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
