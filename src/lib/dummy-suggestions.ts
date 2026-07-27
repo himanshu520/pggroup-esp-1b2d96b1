@@ -207,7 +207,7 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
           reviewer: s.reviewer || "—",
           createdDate,
           completedDate,
-          points: (s.status === "implemented" || s.status === "closed") ? 450 : 100,
+          points: (s.status === "implemented" || s.status === "closed") ? 450 : ((s.status === "rejected" || s.status === "dropped" || s.status === "fake_closure") ? 0 : 100),
           award: s.award || ((s.status === "implemented" || s.status === "closed") ? "Recognition Award" : "None"),
           beforeImage: s.before_image_url || "",
           afterImage: s.after_image_url || "",

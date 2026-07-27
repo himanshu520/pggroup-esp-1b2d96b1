@@ -28,11 +28,11 @@ const MONTHS = [
 
 // Fallback scoring weights
 const DEFAULT_WEIGHTS = {
-  implemented: 1,
-  fake_closure: -2,
+  implemented: 450,
+  fake_closure: -200,
   rejected: 0,
-  pending: 0,
-  approved: 0,
+  pending: 100,
+  approved: 100,
 };
 
 export function LeaderboardView({ adminMode = false }: { adminMode?: boolean }) {
