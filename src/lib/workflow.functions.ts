@@ -252,6 +252,7 @@ export const deptSubmitEvidence = createServerFn({ method: "POST" })
     suggestion_id: z.string().uuid(),
     remarks: z.string().max(2000).optional(),
     completion_date: z.string().optional(),
+    expected_saving: z.number().nullable().optional(),
     actual_cost: z.number().nullable().optional(),
     benefits_achieved: z.string().optional(),
     attachment_ids: z.array(z.string().uuid()).min(1, "At least one evidence file is required").max(3),
@@ -299,11 +300,16 @@ export const deptSubmitEvidence = createServerFn({ method: "POST" })
       `Evidence v${nextVersion} submitted${data.remarks ? ` — ${data.remarks}` : ""}${data.file_names?.length ? ` (${data.file_names.length} file${data.file_names.length > 1 ? "s" : ""})` : ""}`,
     );
 
-    await supabase.from("suggestions").update({
+    const updateObj: any = {
       status: "pe_verification" as SuggestionStatus,
       actual_cost: data.actual_cost ?? null,
       actual_benefits: data.benefits_achieved ?? null,
-    }).eq("id", data.suggestion_id);
+    };
+    if (data.expected_saving !== undefined && data.expected_saving !== null) {
+      updateObj.expected_saving = data.expected_saving;
+    }
+
+    await supabase.from("suggestions").update(updateObj).eq("id", data.suggestion_id);
 
     // Audit log with file details
     await supabase.from("audit_logs").insert({
@@ -338,6 +344,7 @@ export const peVerify = createServerFn({ method: "POST" })
     suggestion_id: z.string().uuid(),
     outcome: z.enum(["implemented","fake_closure"]),
     remarks: z.string().max(2000).optional(),
+    actual_cost: z.number().nullable().optional(),
     attachment_ids: z.array(z.string().uuid()).max(3).optional(),
     file_names: z.array(z.string()).max(3).optional(),
   }).parse(d ?? {}))
@@ -364,6 +371,7 @@ export const peVerify = createServerFn({ method: "POST" })
       remarks: `[PE Verification: ${data.outcome === "implemented" ? "Implemented" : "Fake Closure"}] ${data.remarks || ""}`,
       submitted_by: userId,
       version: nextVersion,
+      actual_cost: data.actual_cost ?? null,
     } as any).select("id").single();
     if (evErr || !evRow) throw new Error(evErr?.message ?? "Failed to insert verification evidence");
 
@@ -374,11 +382,18 @@ export const peVerify = createServerFn({ method: "POST" })
         .in("id", data.attachment_ids);
     }
 
+    const peUpdateObj: any = {
+      completed_at: new Date().toISOString(),
+    };
+    if (data.actual_cost !== undefined && data.actual_cost !== null) {
+      peUpdateObj.actual_cost = data.actual_cost;
+    }
+
     if (data.outcome === "implemented") {
       await insertHistory(supabaseAdmin, data.suggestion_id, sug?.status ?? null, "implemented", userId, data.remarks ?? "Marked implemented");
       await supabaseAdmin.from("suggestions").update({
         status: "implemented" as SuggestionStatus,
-        completed_at: new Date().toISOString(),
+        ...peUpdateObj,
       }).eq("id", data.suggestion_id);
       await notifyForSuggestion({ suggestion_id: data.suggestion_id, title: "Your suggestion is implemented 🎉", body: data.remarks ?? undefined, event_type: "verification", audience: ["submitter", "current_dept"] });
     } else {
@@ -386,6 +401,7 @@ export const peVerify = createServerFn({ method: "POST" })
       await insertHistory(supabaseAdmin, data.suggestion_id, sug?.status ?? null, "fake_closure", userId, data.remarks ?? "Marked fake closure");
       await supabaseAdmin.from("suggestions").update({
         status: "fake_closure" as SuggestionStatus,
+        ...peUpdateObj,
       }).eq("id", data.suggestion_id);
       await notifyForSuggestion({ suggestion_id: data.suggestion_id, title: "Evidence flagged as fake closure — please re-check", body: data.remarks ?? undefined, event_type: "verification", audience: ["current_dept", "submitter"] });
     }

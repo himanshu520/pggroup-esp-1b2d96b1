@@ -122,7 +122,9 @@ export function SuggestionDetail({ id }: { id: string }) {
   const [remarks, setRemarks] = useState("");
   const [targetDept, setTargetDept] = useState("");
   const [evidenceRemarks, setEvidenceRemarks] = useState("");
+  const [expectedSaving, setExpectedSaving] = useState("");
   const [actualCost, setActualCost] = useState("");
+  const [peActualCost, setPeActualCost] = useState("");
   const [benefits, setBenefits] = useState("");
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -134,6 +136,14 @@ export function SuggestionDetail({ id }: { id: string }) {
   const [suggestedDeptId, setSuggestedDeptId] = useState("");
   const [peVerificationFiles, setPeVerificationFiles] = useState<File[]>([]);
   const [peDragOver, setPeDragOver] = useState(false);
+
+  useEffect(() => {
+    if (sug?.expected_saving != null) setExpectedSaving(String(sug.expected_saving));
+    if (sug?.actual_cost != null) {
+      setActualCost(String(sug.actual_cost));
+      setPeActualCost(String(sug.actual_cost));
+    }
+  }, [sug?.expected_saving, sug?.actual_cost]);
 
   // Find if this suggestion was returned to PE
   const lastReturnHistory = [...history]
@@ -270,6 +280,7 @@ export function SuggestionDetail({ id }: { id: string }) {
       await evidenceFn({ data: {
         suggestion_id: id,
         remarks: evidenceRemarks,
+        expected_saving: expectedSaving ? Number(expectedSaving) : null,
         actual_cost: actualCost ? Number(actualCost) : null,
         benefits_achieved: benefits,
         attachment_ids: attachmentIds,
@@ -277,7 +288,7 @@ export function SuggestionDetail({ id }: { id: string }) {
       } });
       toast.success("Evidence submitted", { description: `${uploadedNames.length} file${uploadedNames.length === 1 ? "" : "s"} attached` });
       setEvidenceFiles([]);
-      setEvidenceRemarks(""); setActualCost(""); setBenefits("");
+      setEvidenceRemarks("");
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["suggestion", id] }),
         qc.invalidateQueries({ queryKey: ["suggestion-history", id] }),
@@ -348,6 +359,7 @@ export function SuggestionDetail({ id }: { id: string }) {
         suggestion_id: id,
         outcome,
         remarks,
+        actual_cost: peActualCost ? Number(peActualCost) : (actualCost ? Number(actualCost) : null),
         attachment_ids: attachmentIds.length > 0 ? attachmentIds : undefined,
         file_names: uploadedNames.length > 0 ? uploadedNames : undefined,
       } });
@@ -710,11 +722,21 @@ export function SuggestionDetail({ id }: { id: string }) {
             )}
 
             {isCurrentDept && (status === "implementation" || status === "evidence_pending" || status === "fake_closure" || status === "reopened") && (
-              <div className="space-y-2">
-                <div className="text-xs text-muted-foreground">Department — Submit evidence</div>
-                <div className="grid md:grid-cols-2 gap-2 max-w-2xl">
-                  <input type="number" placeholder="Actual cost (₹)" value={actualCost} onChange={(e) => setActualCost(e.target.value)} className="border border-input rounded-md px-3 py-1.5 text-sm bg-background" disabled={uploading || isPending} />
-                  <input type="text" placeholder="Benefits achieved" value={benefits} onChange={(e) => setBenefits(e.target.value)} className="border border-input rounded-md px-3 py-1.5 text-sm bg-background" disabled={uploading || isPending} />
+              <div className="space-y-3">
+                <div className="text-xs font-bold text-foreground">Department — Submit Implementation Evidence & Expected Saving</div>
+                <div className="grid md:grid-cols-3 gap-2 max-w-2xl">
+                  <div>
+                    <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">Expected Saving (₹)</label>
+                    <input type="number" placeholder="Expected saving (₹)" value={expectedSaving} onChange={(e) => setExpectedSaving(e.target.value)} className="w-full border border-input rounded-md px-3 py-1.5 text-sm bg-background font-semibold" disabled={uploading || isPending} />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">Actual Cost (₹)</label>
+                    <input type="number" placeholder="Actual cost (₹)" value={actualCost} onChange={(e) => setActualCost(e.target.value)} className="w-full border border-input rounded-md px-3 py-1.5 text-sm bg-background" disabled={uploading || isPending} />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-muted-foreground mb-1 block">Benefits Achieved</label>
+                    <input type="text" placeholder="Benefits achieved" value={benefits} onChange={(e) => setBenefits(e.target.value)} className="w-full border border-input rounded-md px-3 py-1.5 text-sm bg-background" disabled={uploading || isPending} />
+                  </div>
                 </div>
                 <Textarea placeholder="Completion remarks" value={evidenceRemarks} onChange={(e) => setEvidenceRemarks(e.target.value)} className="max-w-2xl" disabled={uploading || isPending} />
                 <label
@@ -761,7 +783,31 @@ export function SuggestionDetail({ id }: { id: string }) {
 
             {isPE && (status === "pe_verification" || status === "evidence_submitted") && (
               <div className="space-y-3">
-                <div className="text-xs text-muted-foreground font-semibold">PE — Final verification (Remarks are mandatory, verification images are optional)</div>
+                <div className="text-xs font-bold text-foreground">PE — Final Verification & Verified Actual Cost/Savings</div>
+
+                <div className="grid md:grid-cols-2 gap-3 max-w-lg">
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1 block">Verified Actual Cost / Savings (₹)</label>
+                    <input
+                      type="number"
+                      placeholder="Enter verified actual cost / savings (₹)"
+                      value={peActualCost}
+                      onChange={(e) => setPeActualCost(e.target.value)}
+                      className="w-full border border-input rounded-md px-3 py-1.5 text-sm bg-background font-bold text-emerald-600 dark:text-emerald-400"
+                      disabled={uploading || isPending}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1 block">Expected Saving (Dept Reference)</label>
+                    <input
+                      type="text"
+                      disabled
+                      value={sug?.expected_saving ? `₹ ${Number(sug.expected_saving).toLocaleString()}` : "Not provided"}
+                      className="w-full border border-input rounded-md px-3 py-1.5 text-sm bg-muted text-muted-foreground font-medium"
+                    />
+                  </div>
+                </div>
+
                 <Textarea placeholder="Verification remarks (mandatory)" value={remarks} onChange={(e) => setRemarks(e.target.value)} className="max-w-lg" disabled={uploading || isPending} />
                 
                 <label
