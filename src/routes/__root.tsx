@@ -94,7 +94,33 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <head><HeadContent /></head>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                function handleChunk404(e) {
+                  var msg = e && (e.message || (e.reason && e.reason.message) || String(e));
+                  var target = e && e.target;
+                  var isScript = target && target.tagName === 'SCRIPT';
+                  if (isScript || (msg && (msg.indexOf('Failed to fetch dynamically imported module') !== -1 || msg.indexOf('Importing a module script failed') !== -1 || msg.indexOf('Failed to load resource') !== -1))) {
+                    var last = sessionStorage.getItem('esp_chunk_reload_ts');
+                    var now = Date.now();
+                    if (!last || (now - Number(last) > 10000)) {
+                      sessionStorage.setItem('esp_chunk_reload_ts', String(now));
+                      window.location.reload();
+                    }
+                  }
+                }
+                window.addEventListener('vite:preloadError', handleChunk404);
+                window.addEventListener('error', handleChunk404, true);
+                window.addEventListener('unhandledrejection', handleChunk404);
+              })();
+            `,
+          }}
+        />
+        <HeadContent />
+      </head>
       <body>{children}<Scripts /></body>
     </html>
   );
