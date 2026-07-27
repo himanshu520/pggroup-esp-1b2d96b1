@@ -112,7 +112,7 @@ function OverviewPage() {
         await supabase
           .from("suggestions")
           .select(
-            "id, code, title, status, priority, created_at, completed_at, actual_cost, department_id, current_department_id, plant_id, location_id, category_id, expected_saving, employees(name, employee_code), departments!suggestions_department_id_fkey(name), current_departments:departments!suggestions_current_department_id_fkey(name), categories(name), plants(name)"
+            "id, code, title, status, priority, created_at, completed_at, actual_cost, department_id, current_department_id, plant_id, location_id, category_id, expected_saving, employees(name, employee_code), departments!suggestions_department_id_fkey(name), current_departments:departments!suggestions_current_department_id_fkey(name), categories(name), plants(name, locations(location, state)), locations(location, state)"
           )
           .order("created_at", { ascending: false })
           .limit(5000)

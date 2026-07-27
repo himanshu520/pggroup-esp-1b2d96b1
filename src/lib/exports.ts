@@ -318,10 +318,29 @@ export function exportComprehensiveExecutiveDashboard(
 
     XLSX.writeFile(wb, `${filename}_${timestamp()}.xlsx`);
   } else if (format === "csv") {
-    const ws = XLSX.utils.json_to_sheet(suggestionRows);
-    let csv = XLSX.utils.sheet_to_csv(ws);
-    const header = `"Report: ESP Executive Dashboard Presentation Report"\n"Generated: ${new Date().toLocaleString()}"\n\n`;
-    download(new Blob([header + csv], { type: "text/csv;charset=utf-8" }), `${filename}_${timestamp()}.csv`);
+    let csvContent = `"ESP EXECUTIVE ANALYTICS PRESENTATION REPORT"\n"Generated On: ${new Date().toLocaleString()}"\n\n`;
+    
+    // 1. KPI Summary
+    csvContent += `"=== 1. EXECUTIVE OVERVIEW KPI SUMMARY ==="\n`;
+    csvContent += XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(summaryRows)) + "\n\n";
+
+    // 2. Location Performance
+    csvContent += `"=== 2. LOCATION PERFORMANCE ANALYSIS ==="\n`;
+    csvContent += XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(locationRows)) + "\n\n";
+
+    // 3. Plant Performance
+    csvContent += `"=== 3. PLANT PERFORMANCE ANALYSIS ==="\n`;
+    csvContent += XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(plantRows)) + "\n\n";
+
+    // 4. Department Breakdown
+    csvContent += `"=== 4. DEPARTMENT PERFORMANCE BREAKDOWN ==="\n`;
+    csvContent += XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(deptRows)) + "\n\n";
+
+    // 5. Suggestions Registry
+    csvContent += `"=== 5. MASTER SUGGESTIONS REGISTRY ==="\n`;
+    csvContent += XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(suggestionRows)) + "\n";
+
+    download(new Blob([csvContent], { type: "text/csv;charset=utf-8" }), `${filename}_${timestamp()}.csv`);
   } else if (format === "pdf") {
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
     doc.setFontSize(16);
@@ -347,15 +366,31 @@ export function exportComprehensiveExecutiveDashboard(
       margin: { left: 40, right: 400 },
     });
 
-    // Section 2: Plant Performance Matrix Table
+    // Section 2: Location Performance Matrix Table
     const finalY1 = (doc as any).lastAutoTable.finalY + 20;
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(37, 63, 122);
-    doc.text("2. Plant Performance Matrix", 40, finalY1);
+    doc.text("2. Location Performance Matrix", 40, finalY1);
 
     autoTable(doc, {
       startY: finalY1 + 10,
+      head: [["Location", "Total Ideas", "Implemented", "Pending", "Fake", "Impl Rate", "Savings (INR)", "Points"]],
+      body: locationRows.map((r) => [r.Location, String(r["Total Suggestions"]), String(r.Implemented), String(r["Pending Review"]), String(r["Fake Closures"]), r["Impl Rate (%)"], r["Cost Savings (INR)"], String(r["Total Points"])]),
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [37, 63, 122], textColor: 255 },
+      margin: { left: 40, right: 40 },
+    });
+
+    // Section 3: Plant Performance Matrix Table
+    doc.addPage();
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(37, 63, 122);
+    doc.text("3. Plant Performance Matrix", 40, 40);
+
+    autoTable(doc, {
+      startY: 50,
       head: [["Plant", "Total Ideas", "Implemented", "Pending", "Fake", "Impl Rate", "Savings (INR)", "Points"]],
       body: plantRows.map((r) => [r.Plant, String(r["Total Suggestions"]), String(r.Implemented), String(r["Pending Review"]), String(r["Fake Closures"]), r["Impl Rate (%)"], r["Cost Savings (INR)"], String(r["Total Points"])]),
       styles: { fontSize: 8, cellPadding: 3 },
@@ -363,17 +398,33 @@ export function exportComprehensiveExecutiveDashboard(
       margin: { left: 40, right: 40 },
     });
 
-    // Section 3: All Suggestions List Table
+    // Section 4: Department Performance Breakdown Table
+    const finalY3 = (doc as any).lastAutoTable.finalY + 20;
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(37, 63, 122);
+    doc.text("4. Department Performance Breakdown", 40, finalY3);
+
+    autoTable(doc, {
+      startY: finalY3 + 10,
+      head: [["Department", "Active Contributors", "Total Ideas", "Implemented", "Impl Rate", "Points"]],
+      body: deptRows.map((r) => [r.Department, String(r["Active Contributors"]), String(r["Total Ideas"]), String(r.Implemented), r["Impl Rate (%)"], String(r["Total Points"])]),
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [37, 63, 122], textColor: 255 },
+      margin: { left: 40, right: 40 },
+    });
+
+    // Section 5: All Suggestions Registry Table
     doc.addPage();
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(37, 63, 122);
-    doc.text("3. Master Suggestions Registry", 40, 40);
+    doc.text("5. Master Suggestions Registry", 40, 40);
 
     autoTable(doc, {
       startY: 50,
       head: [["Code", "Title", "Employee", "Department", "Plant", "Location", "Category", "Status", "Savings"]],
-      body: suggestionRows.map((r) => [r["Idea Code"], r["Idea Title"].slice(0, 30), r.Employee, r.Department, r.Plant, r.Location, r.Category, r.Status, r["Savings (INR)"]]),
+      body: suggestionRows.map((r) => [r["Idea Code"], r["Idea Title"].slice(0, 25), r.Employee, r.Department, r.Plant, r.Location, r.Category, r.Status, r["Savings (INR)"]]),
       styles: { fontSize: 7, cellPadding: 3 },
       headStyles: { fillColor: [37, 63, 122], textColor: 255 },
       margin: { left: 40, right: 40 },
