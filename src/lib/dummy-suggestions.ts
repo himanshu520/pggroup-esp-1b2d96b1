@@ -158,6 +158,14 @@ export const DUMMY_SUGGESTIONS: EmployeeSuggestion[] = createLogicalDataset();
 
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+export function getSuggestionPoints(s: any): number {
+  if (!s) return 0;
+  const status = String(s.status || "").toLowerCase();
+  if (status === "implemented" || status === "closed") return 5;
+  if (status === "fake_closure" || status === "rejected" || status === "dropped") return -2;
+  return 0;
+}
+
 /**
  * Maps live database records from Supabase into UI-ready EmployeeSuggestion format.
  * Returns strictly 100% exact live database records for full production use.
@@ -204,14 +212,16 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
           reviewer: s.reviewer || "—",
           createdDate,
           completedDate,
-          points: (s.status === "implemented" || s.status === "closed") ? 5 : ((s.status === "rejected" || s.status === "dropped" || s.status === "fake_closure") ? -2 : 0),
+          points: getSuggestionPoints(s),
           award: s.award || ((s.status === "implemented" || s.status === "closed") ? "Recognition Award" : "None"),
           beforeImage: s.before_image_url || "",
           afterImage: s.after_image_url || "",
           remarks: s.remarks || "",
           participationMonth: month,
           year,
-          savings: Number(s.expected_saving || s.actual_cost || 0),
+          expectedSaving: Number(s.expected_saving || 0),
+          actualCost: Number(s.actual_cost || 0),
+          savings: Number(s.actual_cost || s.expected_saving || 0),
         };
       })
     : [];

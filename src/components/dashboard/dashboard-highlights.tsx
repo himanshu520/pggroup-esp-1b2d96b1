@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Award, Crown, ShieldCheck, Sparkles, Building2, TrendingUp, CheckCircle, Flame, ArrowUpRight, User, Image as ImageIcon } from "lucide-react";
+import { getSuggestionPoints } from "@/lib/dummy-suggestions";
 import type { EmployeeSuggestion } from "@/lib/dummy-suggestions";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,7 +20,7 @@ export function DashboardHighlightsSection({ suggestions }: DashboardHighlightsP
       plantStats[p].total += 1;
       if (s.status === "implemented" || s.status === "closed") plantStats[p].implemented += 1;
       plantStats[p].savings += s.savings || 0;
-      plantStats[p].points += s.points || 0;
+      plantStats[p].points += getSuggestionPoints(s);
     });
 
     const topEntry = Object.entries(plantStats).filter(([k]) => k !== "Unassigned").sort((a, b) => b[1].points - a[1].points)[0];
@@ -44,7 +45,7 @@ export function DashboardHighlightsSection({ suggestions }: DashboardHighlightsP
     suggestions.forEach((s) => {
       const d = (s.department && s.department !== "—" ? s.department : "General").trim();
       if (!deptStats[d]) deptStats[d] = { points: 0, total: 0, implemented: 0 };
-      deptStats[d].points += s.points || 0;
+      deptStats[d].points += getSuggestionPoints(s);
       deptStats[d].total += 1;
       if (s.status === "implemented" || s.status === "closed") deptStats[d].implemented += 1;
     });

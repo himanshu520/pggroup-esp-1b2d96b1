@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Award, Crown, TrendingUp, TrendingDown, Users, CheckCircle2, Trophy, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { getSuggestionPoints } from "@/lib/dummy-suggestions";
 import type { EmployeeSuggestion } from "@/lib/dummy-suggestions";
 
 interface EmployeeLeaderboardProps {
@@ -39,7 +40,7 @@ export function EmployeeLeaderboardSection({ suggestions }: EmployeeLeaderboardP
           implCount: 0,
         };
       }
-      empStats[empId].points += typeof s.points === "number" ? s.points : 0;
+      empStats[empId].points += getSuggestionPoints(s);
       empStats[empId].sugsCount += 1;
       if (s.status === "implemented") empStats[empId].implCount += 1;
       if (s.award && s.award !== "None") empStats[empId].awards = s.award;

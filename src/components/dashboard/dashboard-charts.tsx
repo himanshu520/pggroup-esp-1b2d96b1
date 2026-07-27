@@ -23,6 +23,7 @@ import {
   LabelList,
 } from "recharts";
 import { Activity } from "lucide-react";
+import { getSuggestionPoints } from "@/lib/dummy-suggestions";
 import type { EmployeeSuggestion } from "@/lib/dummy-suggestions";
 
 interface DashboardChartsProps {
@@ -245,7 +246,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     const deptPoints: Record<string, number> = {};
     suggestions.forEach((s) => {
       const dept = (s.department && s.department !== "—" ? s.department : "General").trim();
-      deptPoints[dept] = (deptPoints[dept] || 0) + (typeof s.points === "number" ? s.points : 0);
+      deptPoints[dept] = (deptPoints[dept] || 0) + getSuggestionPoints(s);
     });
     const res = Object.entries(deptPoints).map(([department, points]) => ({
       department: department.length > 14 ? department.slice(0, 14) + "..." : department,
@@ -253,6 +254,27 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     }));
 
     return res.sort((a, b) => b.points - a.points).slice(0, 6);
+  }, [suggestions]);
+
+  // 15. Expected Savings vs Verified Actual Cost Comparison Chart
+  const expectedVsActualData = useMemo(() => {
+    const map: Record<string, { expected: number; actual: number }> = {};
+    suggestions.forEach((s) => {
+      const p = (s.plant && s.plant !== "—" ? s.plant : s.department || "General").trim();
+      if (!map[p]) map[p] = { expected: 0, actual: 0 };
+      const exp = Number(s.expectedSaving ?? (s as any).expected_saving ?? 0);
+      const act = Number(s.actualCost ?? (s as any).actual_cost ?? s.savings ?? 0);
+      map[p].expected += exp;
+      map[p].actual += act;
+    });
+
+    return Object.entries(map)
+      .map(([name, stat]) => ({
+        name: name.length > 14 ? name.slice(0, 14) + "..." : name,
+        "Expected Savings (₹)": Math.round(stat.expected),
+        "Verified Actual Cost (₹)": Math.round(stat.actual),
+      }))
+      .slice(0, 6);
   }, [suggestions]);
 
   // 10. Suggestion Status Donut
@@ -860,6 +882,36 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                   <LabelList dataKey="Completed" position="bottom" style={{ fontSize: "9px", fontWeight: "bold", fill: "#15803D" }} />
                 </Line>
               </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Chart 15: Expected Savings vs Verified Actual Cost Comparison */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between md:col-span-2">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-base">💰</span>
+              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Expected Savings vs Verified Actual Cost (₹)</span>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+              Financial Audit & Savings
+            </span>
+          </div>
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={expectedVsActualData} margin={{ top: 20, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748B" }} />
+                <YAxis tick={{ fontSize: 10, fill: "#64748B" }} tickFormatter={(v) => `₹${(v/1000).toFixed(0)}k`} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
+                <Bar dataKey="Expected Savings (₹)" fill="#6366F1" radius={[4, 4, 0, 0]} barSize={24}>
+                  <LabelList dataKey="Expected Savings (₹)" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#4338CA" }} formatter={(v: any) => v > 0 ? `₹${(Number(v)/1000).toFixed(0)}k` : "₹0"} />
+                </Bar>
+                <Bar dataKey="Verified Actual Cost (₹)" fill="#10B981" radius={[4, 4, 0, 0]} barSize={24}>
+                  <LabelList dataKey="Verified Actual Cost (₹)" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#047857" }} formatter={(v: any) => v > 0 ? `₹${(Number(v)/1000).toFixed(0)}k` : "₹0"} />
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
