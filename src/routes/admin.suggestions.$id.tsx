@@ -923,32 +923,45 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
                             const cat = item.category || "month";
                             const catLabel = cat === "year" ? "Best Suggestion of the Year" : cat === "foolproofing" ? "Best Foolproofing Suggestion" : "Best Suggestion of the Month";
                             const icon = cat === "year" ? <Trophy className="w-3.5 h-3.5" /> : cat === "foolproofing" ? <Check className="w-3.5 h-3.5" /> : <Star className="w-3.5 h-3.5" />;
+                            
+                            let beforeImg = item.before_image_url || "";
+                            let afterImg = item.after_image_url || item.image_url || "";
+                            let displayReason = item.selection_reason || "";
+                            if (displayReason?.startsWith("POKA_YOKE_IMAGES:")) {
+                              try {
+                                const parsed = JSON.parse(displayReason.substring("POKA_YOKE_IMAGES:".length));
+                                if (!beforeImg && parsed.before_image_url) beforeImg = parsed.before_image_url;
+                                if (!afterImg && parsed.after_image_url) afterImg = parsed.after_image_url;
+                                displayReason = parsed.reason || "";
+                              } catch {}
+                            }
+
                             return (
                               <div key={item.id} className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 space-y-1.5">
                                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-white shadow-sm">
                                   {icon}
                                   {catLabel}: {cat === "year" ? item.year : `${MONTHS[item.month - 1]} ${item.year}`}
                                 </div>
-                                {item.selection_reason && (
+                                {displayReason && (
                                   <div className="text-xs text-foreground/90 italic">
-                                    "{item.selection_reason}"
+                                    "{displayReason}"
                                   </div>
                                 )}
-                                {(item.before_image_url || item.after_image_url || item.image_url) && (
+                                {(beforeImg || afterImg) && (
                                   <div className="grid grid-cols-2 gap-2 mt-2">
-                                    {item.before_image_url && (
+                                    {beforeImg && (
                                       <div>
                                         <span className="text-[10px] font-bold text-rose-600 block mb-0.5">BEFORE Image</span>
                                         <div className="rounded border border-rose-300 overflow-hidden h-24 bg-black/10 flex items-center justify-center">
-                                          <img src={item.before_image_url} alt="Before Process" className="w-full h-24 object-cover cursor-pointer hover:scale-[1.03] transition-transform" onClick={() => window.open(item.before_image_url, "_blank")} />
+                                          <img src={beforeImg} alt="Before Process" className="w-full h-24 object-cover cursor-pointer hover:scale-[1.03] transition-transform" onClick={() => window.open(beforeImg, "_blank")} />
                                         </div>
                                       </div>
                                     )}
-                                    {(item.after_image_url || item.image_url) && (
+                                    {afterImg && (
                                       <div>
                                         <span className="text-[10px] font-bold text-emerald-600 block mb-0.5">AFTER Poka-Yoke Image</span>
                                         <div className="rounded border border-emerald-300 overflow-hidden h-24 bg-black/10 flex items-center justify-center">
-                                          <img src={item.after_image_url || item.image_url} alt="After Poka-Yoke Solution" className="w-full h-24 object-cover cursor-pointer hover:scale-[1.03] transition-transform" onClick={() => window.open(item.after_image_url || item.image_url, "_blank")} />
+                                          <img src={afterImg} alt="After Poka-Yoke Solution" className="w-full h-24 object-cover cursor-pointer hover:scale-[1.03] transition-transform" onClick={() => window.open(afterImg, "_blank")} />
                                         </div>
                                       </div>
                                     )}

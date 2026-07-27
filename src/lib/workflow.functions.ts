@@ -502,12 +502,21 @@ export const selectBestSuggestion = createServerFn({ method: "POST" })
     }
 
     // 4. Insert the new selection
+    let formattedReason = data.reason || null;
+    if (data.before_image_url || data.after_image_url || data.image_url) {
+      formattedReason = "POKA_YOKE_IMAGES:" + JSON.stringify({
+        reason: data.reason || "",
+        before_image_url: data.before_image_url || "",
+        after_image_url: data.after_image_url || data.image_url || "",
+      });
+    }
+
     const payload: any = {
       suggestion_id: data.suggestion_id,
       month: data.month,
       year: data.year,
       selected_by: userId,
-      selection_reason: data.reason || null,
+      selection_reason: formattedReason,
     };
     if (data.image_url) payload.image_url = data.image_url;
     if (data.before_image_url) payload.before_image_url = data.before_image_url;

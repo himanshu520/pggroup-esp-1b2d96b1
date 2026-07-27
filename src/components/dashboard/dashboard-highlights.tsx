@@ -108,6 +108,19 @@ export function DashboardHighlightsSection({ suggestions }: DashboardHighlightsP
       if (!data || !(data as any).suggestions) return null;
       const s = (data as any).suggestions;
       const emp = s.employees;
+
+      let beforeImg = (data as any).before_image_url || s.before_image_url || "";
+      let afterImg = (data as any).after_image_url || (data as any).image_url || s.after_image_url || "";
+      const reason = (data as any).selection_reason || "";
+
+      if ((!beforeImg || !afterImg) && reason.startsWith("POKA_YOKE_IMAGES:")) {
+        try {
+          const parsed = JSON.parse(reason.substring("POKA_YOKE_IMAGES:".length));
+          if (!beforeImg && parsed.before_image_url) beforeImg = parsed.before_image_url;
+          if (!afterImg && parsed.after_image_url) afterImg = parsed.after_image_url;
+        } catch {}
+      }
+
       return {
         id: s.id,
         suggestionTitle: s.title,
@@ -116,8 +129,8 @@ export function DashboardHighlightsSection({ suggestions }: DashboardHighlightsP
         employeePhoto: emp?.avatar_url || "",
         department: emp?.departments?.name || "General",
         plant: emp?.plants?.name || "Plant",
-        beforeImage: (data as any).before_image_url || s.before_image_url || "",
-        afterImage: (data as any).after_image_url || (data as any).image_url || s.after_image_url || "",
+        beforeImage: beforeImg,
+        afterImage: afterImg,
       };
     },
   });
