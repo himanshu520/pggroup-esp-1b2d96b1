@@ -12,7 +12,7 @@ export function DinoGame() {
     }
     return 0;
   });
-  const [muted, setMuted] = useState<boolean>(false);
+  const [muted, setMuted] = useState<boolean>(true);
 
   // Game variables ref for animation frame stability
   const stateRef = useRef({
