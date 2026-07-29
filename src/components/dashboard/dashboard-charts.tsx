@@ -42,6 +42,15 @@ const SCREENSHOT_PALETTE = [
   "#3B82F6", // Bright Blue
 ];
 
+const DEPT_BAR_COLORS = [
+  "#2563EB", // Royal Blue (Production)
+  "#059669", // Emerald Green (Quality Control)
+  "#D97706", // Amber Orange (Maintenance)
+  "#7C3AED", // Violet Purple (EHS & Safety)
+  "#E11D48", // Rose Pink (HR & Admin)
+  "#0891B2", // Cyan Teal (Logistics)
+];
+
 // Custom Tooltip optimized for TV & Big Screen legibility
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -265,16 +274,21 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     });
   }, [suggestions]);
 
-  // 9. Department Ranking Bar Chart
+  // 9. Department Comparison Bar Chart
   const deptRankingData = useMemo(() => {
-    const deptPoints: Record<string, number> = {};
+    const deptPoints: Record<string, { points: number; count: number }> = {};
     suggestions.forEach((s) => {
       const dept = (s.department && s.department !== "—" ? s.department : "General").trim();
-      deptPoints[dept] = (deptPoints[dept] || 0) + getSuggestionPoints(s);
+      if (!deptPoints[dept]) deptPoints[dept] = { points: 0, count: 0 };
+      deptPoints[dept].points += getSuggestionPoints(s);
+      deptPoints[dept].count += 1;
     });
-    const res = Object.entries(deptPoints).map(([department, points]) => ({
-      department: department.length > 14 ? department.slice(0, 14) + "..." : department,
-      points,
+
+    const res = Object.entries(deptPoints).map(([department, stat]) => ({
+      fullName: department,
+      department: department.length > 12 ? department.slice(0, 10) + ".." : department,
+      points: stat.points,
+      count: stat.count,
     }));
 
     return res.sort((a, b) => b.points - a.points).slice(0, 6);
@@ -770,26 +784,29 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 9: Production Line Comparison Bar Chart */}
+        {/* Chart 9: Department Comparison Bar Chart */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">📊</span>
-              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Production Line Comparison</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Department Comparison</span>
             </div>
             <span className="text-xs font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
-              Lines Volume
+              Dept Points
             </span>
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={deptRankingData} margin={{ top: 22, right: 10, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.6} />
-                <XAxis dataKey="department" tick={{ fontSize: 10, fontWeight: "bold", fill: "#334155" }} />
+                <XAxis dataKey="department" tick={{ fontSize: 10, fontWeight: "bold", fill: "#0F172A" }} interval={0} />
                 <YAxis tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="points" fill="#6366F1" radius={[4, 4, 0, 0]} barSize={22}>
-                  <LabelList dataKey="points" position="top" style={{ fontSize: "11px", fontWeight: "800", fill: "#3730A3" }} />
+                <Bar dataKey="points" radius={[4, 4, 0, 0]} barSize={24}>
+                  {deptRankingData.map((_, index) => (
+                    <Cell key={`cell-dept-${index}`} fill={DEPT_BAR_COLORS[index % DEPT_BAR_COLORS.length]} />
+                  ))}
+                  <LabelList dataKey="points" position="top" formatter={(val: number) => `${val} Pts`} style={{ fontSize: "11px", fontWeight: "900", fill: "#0F172A" }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
