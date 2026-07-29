@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, memo } from "react";
 import { Award, TrendingUp, TrendingDown, Building2, Crown, Sparkles, CheckCircle2, ChevronRight } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ interface DeptPointSystemProps {
   suggestions: EmployeeSuggestion[];
 }
 
-export function DepartmentPointSystemSection({ suggestions }: DeptPointSystemProps) {
+function DepartmentPointSystemSectionComponent({ suggestions }: DeptPointSystemProps) {
   const [tab, setTab] = useState("current");
 
   // Dynamic department current month metrics
@@ -187,3 +187,5 @@ export function DepartmentPointSystemSection({ suggestions }: DeptPointSystemPro
     </div>
   );
 }
+
+export const DepartmentPointSystemSection = memo(DepartmentPointSystemSectionComponent);

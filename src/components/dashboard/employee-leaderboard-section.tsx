@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 import { Award, Crown, TrendingUp, TrendingDown, Users, CheckCircle2, Trophy, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getSuggestionPoints } from "@/lib/dummy-suggestions";
@@ -8,7 +8,7 @@ interface EmployeeLeaderboardProps {
   suggestions: EmployeeSuggestion[];
 }
 
-export function EmployeeLeaderboardSection({ suggestions }: EmployeeLeaderboardProps) {
+function EmployeeLeaderboardSectionComponent({ suggestions }: EmployeeLeaderboardProps) {
   const topContributors = useMemo(() => {
     const empStats: Record<
       string,
@@ -153,3 +153,5 @@ export function EmployeeLeaderboardSection({ suggestions }: EmployeeLeaderboardP
     </div>
   );
 }
+
+export const EmployeeLeaderboardSection = memo(EmployeeLeaderboardSectionComponent);

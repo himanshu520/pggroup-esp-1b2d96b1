@@ -1,3 +1,4 @@
+import { useMemo, memo } from "react";
 import { ShieldCheck, DollarSign, Sparkles, Trophy, CheckCircle2, Users, Layers, Award, BarChart2 } from "lucide-react";
 import { normalizeStatusCategory, type EmployeeSuggestion } from "@/lib/dummy-suggestions";
 
@@ -5,30 +6,32 @@ interface StatisticsSectionProps {
   suggestions: EmployeeSuggestion[];
 }
 
-export function StatisticsSection({ suggestions }: StatisticsSectionProps) {
-  const foolProofingCount = suggestions.filter((s) => s.category === "Fool Proofing" || s.suggestionType === "Fool Proofing").length;
-  const lowCostCount = suggestions.filter((s) => s.costType === "Low Cost").length;
-  const noCostCount = suggestions.filter((s) => s.costType === "No Cost").length;
-  const highCostCount = suggestions.filter((s) => s.costType === "High Cost").length;
-  const kaizenCount = suggestions.filter((s) => s.category === "Kaizen" || s.suggestionType === "Kaizen").length;
-  const totalSavings = suggestions.reduce((acc, s) => acc + (s.savings || 0), 0);
-  const totalAwards = suggestions.filter((s) => s.award && s.award !== "None").length;
-  const mdAwards = suggestions.filter((s) => (s.award || "").toLowerCase().includes("md") || (s.award || "").toLowerCase().includes("best")).length;
-  const totalImplemented = suggestions.filter((s) => normalizeStatusCategory(s.status) === "Implemented").length;
-  const activeEmployees = new Set(suggestions.map((s) => s.employeeId)).size;
+function StatisticsSectionComponent({ suggestions }: StatisticsSectionProps) {
+  const stats = useMemo(() => {
+    const foolProofingCount = suggestions.filter((s) => s.category === "Fool Proofing" || s.suggestionType === "Fool Proofing").length;
+    const lowCostCount = suggestions.filter((s) => s.costType === "Low Cost").length;
+    const noCostCount = suggestions.filter((s) => s.costType === "No Cost").length;
+    const highCostCount = suggestions.filter((s) => s.costType === "High Cost").length;
+    const kaizenCount = suggestions.filter((s) => s.category === "Kaizen" || s.suggestionType === "Kaizen").length;
+    const totalSavings = suggestions.reduce((acc, s) => acc + (s.savings || 0), 0);
+    const totalAwards = suggestions.filter((s) => s.award && s.award !== "None").length;
+    const mdAwards = suggestions.filter((s) => (s.award || "").toLowerCase().includes("md") || (s.award || "").toLowerCase().includes("best")).length;
+    const totalImplemented = suggestions.filter((s) => normalizeStatusCategory(s.status) === "Implemented").length;
+    const activeEmployees = new Set(suggestions.map((s) => s.employeeId)).size;
 
-  const stats = [
-    { title: "Total Fool Proofing", value: foolProofingCount, icon: ShieldCheck, color: "text-purple-600 bg-purple-100 dark:bg-purple-950/60" },
-    { title: "Low Cost Suggestions", value: lowCostCount, icon: DollarSign, color: "text-blue-600 bg-blue-100 dark:bg-blue-950/60" },
-    { title: "No Cost Suggestions", value: noCostCount, icon: Sparkles, color: "text-emerald-600 bg-emerald-100 dark:bg-emerald-950/60" },
-    { title: "High Cost Suggestions", value: highCostCount, icon: Layers, color: "text-amber-600 bg-amber-100 dark:bg-amber-950/60" },
-    { title: "Total Kaizen", value: kaizenCount, icon: BarChart2, color: "text-cyan-600 bg-cyan-100 dark:bg-cyan-950/60" },
-    { title: "Total Savings", value: `₹${(totalSavings / 100000).toFixed(1)} Lacs`, icon: DollarSign, color: "text-emerald-700 bg-emerald-100 dark:bg-emerald-950/80" },
-    { title: "Total Awards", value: totalAwards, icon: Trophy, color: "text-amber-500 bg-amber-100 dark:bg-amber-950/60" },
-    { title: "MD Unique Awards", value: mdAwards, icon: Award, color: "text-rose-600 bg-rose-100 dark:bg-rose-950/60" },
-    { title: "Total Implemented", value: totalImplemented, icon: CheckCircle2, color: "text-teal-600 bg-teal-100 dark:bg-teal-950/60" },
-    { title: "Total Active Employees", value: activeEmployees, icon: Users, color: "text-indigo-600 bg-indigo-100 dark:bg-indigo-950/60" },
-  ];
+    return [
+      { title: "Total Fool Proofing", value: foolProofingCount, icon: ShieldCheck, color: "text-purple-600 bg-purple-100 dark:bg-purple-950/60" },
+      { title: "Low Cost Suggestions", value: lowCostCount, icon: DollarSign, color: "text-blue-600 bg-blue-100 dark:bg-blue-950/60" },
+      { title: "No Cost Suggestions", value: noCostCount, icon: Sparkles, color: "text-emerald-600 bg-emerald-100 dark:bg-emerald-950/60" },
+      { title: "High Cost Suggestions", value: highCostCount, icon: Layers, color: "text-amber-600 bg-amber-100 dark:bg-amber-950/60" },
+      { title: "Total Kaizen", value: kaizenCount, icon: BarChart2, color: "text-cyan-600 bg-cyan-100 dark:bg-cyan-950/60" },
+      { title: "Total Savings", value: `₹${(totalSavings / 100000).toFixed(1)} Lacs`, icon: DollarSign, color: "text-emerald-700 bg-emerald-100 dark:bg-emerald-950/80" },
+      { title: "Total Awards", value: totalAwards, icon: Trophy, color: "text-amber-500 bg-amber-100 dark:bg-amber-950/60" },
+      { title: "MD Unique Awards", value: mdAwards, icon: Award, color: "text-rose-600 bg-rose-100 dark:bg-rose-950/60" },
+      { title: "Total Implemented", value: totalImplemented, icon: CheckCircle2, color: "text-teal-600 bg-teal-100 dark:bg-teal-950/60" },
+      { title: "Total Active Employees", value: activeEmployees, icon: Users, color: "text-indigo-600 bg-indigo-100 dark:bg-indigo-950/60" },
+    ];
+  }, [suggestions]);
 
   return (
     <div className="space-y-4">
@@ -63,3 +66,5 @@ export function StatisticsSection({ suggestions }: StatisticsSectionProps) {
     </div>
   );
 }
+
+export const StatisticsSection = memo(StatisticsSectionComponent);

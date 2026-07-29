@@ -297,6 +297,8 @@
 .dashboard-lazy-section {
   content-visibility: auto;
   contain-intrinsic-size: 1px 450px;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 
