@@ -722,7 +722,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 7: Plant-wise Monthly Trend Line Chart */}
+        {/* Chart 7: Plant-wise Monthly Trend Grouped Bar Chart */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -735,9 +735,9 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyTrendData} margin={{ top: 25, right: 28, left: -15, bottom: 10 }}>
+              <BarChart data={monthlyTrendData} margin={{ top: 25, right: 15, left: -15, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.6} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} padding={{ left: 14, right: 18 }} />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} />
                 <YAxis domain={[0, (dataMax: number) => Math.max(30, Math.ceil((dataMax + 6) / 5) * 5)]} tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
@@ -748,27 +748,24 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                 {trendPlantKeys.map((plantKey, idx) => {
                   const colors = ["#2563EB", "#9333EA", "#059669", "#D97706", "#DC2626"];
                   const color = colors[idx % colors.length];
-                  // Alternate label position (top vs bottom) so multi-series line values never collide
-                  const labelPos = idx % 2 === 0 ? "top" : "bottom";
                   return (
-                    <Line
+                    <Bar
                       key={plantKey}
-                      type="monotone"
                       dataKey={plantKey}
-                      stroke={color}
-                      strokeWidth={3}
-                      dot={{ r: 4.5, fill: "#FFF", stroke: color, strokeWidth: 2.5 }}
+                      fill={color}
+                      radius={[4, 4, 0, 0]}
+                      barSize={14}
                     >
                       <LabelList
                         dataKey={plantKey}
-                        position={labelPos}
-                        offset={8}
-                        style={{ fontSize: "11px", fontWeight: "900", fill: color }}
+                        position="top"
+                        formatter={(val: any) => (Number(val) > 0 ? val : "")}
+                        style={{ fontSize: "10px", fontWeight: "900", fill: color }}
                       />
-                    </Line>
+                    </Bar>
                   );
                 })}
-              </LineChart>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
