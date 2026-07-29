@@ -65,7 +65,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 // Outer callout label for Pie & Donut Charts - renders values outside slice with clean leader lines
 const renderOuterPieLabel = ({ cx, cy, midAngle, outerRadius, percent, value }: any) => {
-  if (value === undefined || value === 0) return null;
+  if (value === undefined || value === 0 || (percent !== undefined && percent < 0.03)) return null;
   const RADIAN = Math.PI / 180;
   const radius = outerRadius + 16;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -130,12 +130,29 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     const counts: Record<string, number> = {};
     suggestions.forEach((s) => {
       let cat = (s.category && s.category !== "—" ? s.category : "General").trim();
-      if (cat.length > 18) {
-        cat = cat.slice(0, 16) + "...";
-      }
       counts[cat] = (counts[cat] || 0) + 1;
     });
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+
+    const entries = Object.entries(counts);
+    if (entries.length > 5) {
+      const main: Record<string, number> = {};
+      let others = 0;
+      entries.forEach(([cat, count]) => {
+        if (count <= 2) {
+          others += count;
+        } else {
+          main[cat] = count;
+        }
+      });
+      if (others > 0) main["Others"] = others;
+      return Object.entries(main)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
+    }
+
+    return entries
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
   }, [suggestions]);
 
   // 4. Gender-wise Participation (Donut Chart)
@@ -526,9 +543,10 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                   data={categoryData}
                   cx="50%"
                   cy="42%"
-                  innerRadius={40}
-                  outerRadius={65}
-                  paddingAngle={3}
+                  innerRadius={42}
+                  outerRadius={66}
+                  paddingAngle={4}
+                  minAngle={15}
                   dataKey="value"
                   label={renderOuterPieLabel}
                   labelLine={{ stroke: "#64748B", strokeWidth: 1.5 }}
@@ -537,11 +555,17 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                     <Cell key={`cell-cat-${index}`} fill={SCREENSHOT_PALETTE[(index + 3) % SCREENSHOT_PALETTE.length]} />
                   ))}
                 </Pie>
+                <text x="50%" y="38%" textAnchor="middle" dominantBaseline="central" className="text-sm font-black fill-slate-900 dark:fill-slate-100">
+                  {categoryData.reduce((a, b) => a + b.value, 0)}
+                </text>
+                <text x="50%" y="46%" textAnchor="middle" dominantBaseline="central" className="text-[10px] font-extrabold fill-slate-500 dark:fill-slate-400 uppercase tracking-wide">
+                  Total Ideas
+                </text>
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
                   verticalAlign="bottom"
                   align="center"
-                  formatter={(val: string) => <span className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{val.length > 18 ? val.slice(0, 18) + "..." : val}</span>}
+                  formatter={(val: string) => <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">{val}</span>}
                   wrapperStyle={{ fontSize: "12px", pt: "6px", fontWeight: "700" }}
                 />
               </PieChart>
