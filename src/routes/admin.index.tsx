@@ -189,19 +189,29 @@ function OverviewPage() {
         />
 
         {/* 2. Executive Highlights Cards */}
-        <DashboardHighlightsSection suggestions={filteredSuggestions} />
+        <div className="dashboard-lazy-section">
+          <DashboardHighlightsSection suggestions={filteredSuggestions} />
+        </div>
 
         {/* 3. Statistics Section (10 Animated Metric Cards) */}
-        <StatisticsSection suggestions={filteredSuggestions} />
+        <div className="dashboard-lazy-section">
+          <StatisticsSection suggestions={filteredSuggestions} />
+        </div>
 
-        {/* 4. Dashboard 14 Interactive Recharts */}
-        <DashboardChartsSection suggestions={filteredSuggestions} />
+        {/* 4. Dashboard Interactive Recharts */}
+        <div className="dashboard-lazy-section">
+          <DashboardChartsSection suggestions={filteredSuggestions} />
+        </div>
 
         {/* 5. Department Point System & Leaderboards */}
-        <DepartmentPointSystemSection suggestions={filteredSuggestions} />
+        <div className="dashboard-lazy-section">
+          <DepartmentPointSystemSection suggestions={filteredSuggestions} />
+        </div>
 
         {/* 6. Employee Leaderboard */}
-        <EmployeeLeaderboardSection suggestions={filteredSuggestions} />
+        <div className="dashboard-lazy-section">
+          <EmployeeLeaderboardSection suggestions={filteredSuggestions} />
+        </div>
       </div>
     </AppShell>
   );

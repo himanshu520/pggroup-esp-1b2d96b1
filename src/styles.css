@@ -293,5 +293,11 @@
   background: rgba(100, 116, 139, 0.7);
 }
 
+/* Dashboard render & scroll optimization for buttery smooth 60fps scrolling */
+.dashboard-lazy-section {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 450px;
+}
+
 
 
