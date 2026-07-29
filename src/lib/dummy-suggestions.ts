@@ -158,6 +158,72 @@ function createLogicalDataset(): EmployeeSuggestion[] {
     });
   }
 
+  // Generate 10 dedicated demo entries for PGTL Karoli plant
+  const pgtlKaroliTitles = [
+    "Poka-Yoke Sensor Installation on Karoli Stamping Line #3",
+    "Automated Scrap Conveyor Belt in Karoli Fabrication Yard",
+    "Pneumatic Clamping Safety Interlock at PGTL Karoli Assembly",
+    "LED Energy Conservation & Sensor Lighting in Karoli Warehouse",
+    "Tool Changeover Setup Time Reduction (SMED) - Karoli Line 1",
+    "Ergonomic Material Transfer Trolley for Karoli Press Shop",
+    "Hydraulic Pressure Gauge Digital Monitoring at PGTL Karoli",
+    "Zero Defect Visual Inspection Checklist in Karoli QC Bay",
+    "Heat Energy Recovery from Karoli Paint Shop Exhaust System",
+    "5S Floor Standardization & Tool Shadow Boarding in PGTL Karoli"
+  ];
+
+  for (let k = 1; k <= 10; k++) {
+    const department = depts[(k - 1) % depts.length];
+    const category = categories[(k - 1) % categories.length];
+    const month = months[(k - 1) % months.length];
+    const monthIndex = months.indexOf(month) + 2;
+    const day = String((k % 20) + 5).padStart(2, "0");
+    const createdDate = `2026-0${monthIndex}-${day}`;
+
+    const isImpl = k % 2 === 0;
+    const status = isImpl ? "implemented" : (k % 3 === 0 ? "approved" : "under_review");
+    const implStatus = isImpl ? "Completed" : "In Progress";
+    const completedDate = isImpl ? `2026-0${monthIndex}-25` : null;
+    const savings = isImpl ? 45000 + k * 8000 : 0;
+    const expectedSaving = 60000 + k * 10000;
+    const actualCost = isImpl ? 30000 + k * 5000 : 0;
+    const points = isImpl ? 5 : 0;
+
+    dataset.push({
+      id: `sug-pgtl-karoli-${k}`,
+      code: `SUG-PGTL-KAROLI-2026-${String(k).padStart(3, "0")}`,
+      employeeName: maleNames[(k - 1) % maleNames.length],
+      employeeId: `PGTL-KAROLI-EMP-${200 + k}`,
+      gender: "Male",
+      employeePhoto: "",
+      department,
+      plant: "PGTL-KAROLI",
+      state: "Rajasthan",
+      location: "Karoli Plant",
+      category,
+      suggestionTitle: pgtlKaroliTitles[k - 1],
+      description: `Process improvement initiative implemented at PGTL Karoli plant in ${department}.`,
+      costType: k % 3 === 0 ? "High Cost" : (k % 2 === 0 ? "Low Cost" : "No Cost"),
+      status: status as any,
+      implementationStatus: implStatus,
+      priority: k % 3 === 0 ? "High" : "Medium",
+      suggestionType: category,
+      reviewer: "Karoli Plant Review Committee",
+      createdDate,
+      completedDate,
+      points,
+      award: isImpl ? "Karoli Kaizen Excellence Award" : "None",
+      beforeImage: "",
+      afterImage: "",
+      remarks: "Audited and verified by PGTL Karoli Steering Committee.",
+      participationMonth: month,
+      year: 2026,
+      expectedSaving,
+      actualCost,
+      savings,
+    });
+  }
+
   // Generate 60 previous year (2025) suggestions for YoY Comparison & Y2Y Department Rankings
   for (let j = 1; j <= 60; j++) {
     const isPgtl = j % 2 === 0;
@@ -282,10 +348,16 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
         else if (s.status === "rejected") implStatus = "Rejected";
         else if (s.status === "dropped") implStatus = "On Hold";
 
-        const rawPlantName = String(s.plants?.name || "").toUpperCase();
+        const rawPlantName = String(s.plants?.name || s.plant || "").toUpperCase();
         let mappedPlant = "PGTL-BHIWADI";
-        if (rawPlantName.includes("NGM") || rawPlantName.includes("KAROLI")) {
+        if (rawPlantName.includes("PGTL") && rawPlantName.includes("KAROLI")) {
+          mappedPlant = "PGTL-KAROLI";
+        } else if (rawPlantName.includes("NGM") || rawPlantName.includes("KAROLI")) {
           mappedPlant = "NGM-KAROLI";
+        } else if (rawPlantName.includes("BHIWADI")) {
+          mappedPlant = "PGTL-BHIWADI";
+        } else if (s.plant) {
+          mappedPlant = s.plant;
         }
 
         return {
