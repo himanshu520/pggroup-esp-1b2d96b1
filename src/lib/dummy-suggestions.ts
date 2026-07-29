@@ -151,6 +151,70 @@ function createLogicalDataset(): EmployeeSuggestion[] {
     });
   }
 
+  // Generate 60 previous year (2025) suggestions for YoY Comparison & Y2Y Department Rankings
+  for (let j = 1; j <= 60; j++) {
+    const isPgtl = j % 2 === 0;
+    const plant = isPgtl ? "PGTL" : "NGM";
+    const state = isPgtl ? "Haryana" : "Delhi NCR";
+    const location = isPgtl ? "Bawal Unit" : "Manesar Hub";
+
+    const isFemale = j % 4 === 0;
+    const gender = isFemale ? "Female" : "Male";
+    const employeeName = isFemale ? femaleNames[j % femaleNames.length] : maleNames[j % maleNames.length];
+    const employeeId = `${plant}-EMP-${100 + (j % 35)}`;
+
+    const department = depts[(j - 1) % depts.length];
+    const category = categories[(j - 1) % categories.length];
+    const month = months[(j - 1) % months.length];
+    const monthIndex = months.indexOf(month) + 2;
+    const day = String((j % 25) + 1).padStart(2, "0");
+    const createdDate = `2025-0${monthIndex}-${day}`;
+
+    const isImpl = j % 5 !== 0;
+    const status = isImpl ? "implemented" : (j % 2 === 0 ? "approved" : "under_review");
+    const implStatus = isImpl ? "Completed" : "In Progress";
+    const completedDate = isImpl ? `2025-0${monthIndex}-28` : null;
+    const points = isImpl ? 5 : 0;
+    const savings = isImpl ? (j % 3 === 0 ? 85000 : 35000) : 0;
+    const award = isImpl && j % 4 === 0 ? "Annual Excellence Award 2025" : (isImpl ? "Recognition Award" : "None");
+
+    let costType: "No Cost" | "Low Cost" | "High Cost" = "No Cost";
+    if (j % 4 === 0) costType = "High Cost";
+    else if (j % 2 === 0) costType = "Low Cost";
+
+    dataset.push({
+      id: `sug-logical-2025-${j}`,
+      code: `SUG-${plant}-2025-${String(j).padStart(3, "0")}`,
+      employeeName,
+      employeeId,
+      gender,
+      employeePhoto: "",
+      department,
+      plant,
+      state,
+      location,
+      category,
+      suggestionTitle: `2025 ${category} Kaizen in ${department} #${j}`,
+      description: `Historical 2025 process optimization in ${department} at ${plant} unit.`,
+      costType,
+      status: status as any,
+      implementationStatus: implStatus,
+      priority: j % 3 === 0 ? "High" : "Medium",
+      suggestionType: category,
+      reviewer: `${department} Review Committee`,
+      createdDate,
+      completedDate,
+      points,
+      award,
+      beforeImage: "",
+      afterImage: "",
+      remarks: `2025 Audited record.`,
+      participationMonth: month,
+      year: 2025,
+      savings,
+    });
+  }
+
   return dataset;
 }
 

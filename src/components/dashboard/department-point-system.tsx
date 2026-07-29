@@ -95,9 +95,9 @@ export function DepartmentPointSystemSection({ suggestions }: DeptPointSystemPro
 
       {tab === "current" ? (
         <div className="glass-card rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-72 overflow-y-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider shadow-2xs">
                 <tr>
                   <th className="py-3 px-4">Rank</th>
                   <th className="py-3 px-4">Department</th>
@@ -156,9 +156,9 @@ export function DepartmentPointSystemSection({ suggestions }: DeptPointSystemPro
         </div>
       ) : (
         <div className="glass-card rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-72 overflow-y-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider shadow-2xs">
                 <tr>
                   <th className="py-3 px-4">Rank</th>
                   <th className="py-3 px-4">Department</th>
