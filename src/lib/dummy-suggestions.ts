@@ -188,10 +188,8 @@ export function getSuggestionPoints(s: any): number {
  * Falls back to rich logical dataset if database is empty so demo dashboard is 100% complete.
  */
 export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] {
-  if (!dbSugs || !Array.isArray(dbSugs) || dbSugs.length === 0) {
-    return DUMMY_SUGGESTIONS;
-  }
-  const mappedLive = dbSugs.map((s) => {
+  const mappedLive = Array.isArray(dbSugs)
+    ? dbSugs.map((s) => {
         const createdDate = s.created_at ? s.created_at.split("T")[0] : new Date().toISOString().split("T")[0];
         const completedDate = s.completed_at ? s.completed_at.split("T")[0] : null;
         const dateObj = new Date(s.created_at || Date.now());
@@ -216,11 +214,11 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
           employeeId: s.employees?.employee_code || "EMP",
           gender: (s.employees?.gender as "Male" | "Female" | "Others") || "Male",
           employeePhoto: s.employees?.avatar_url || "",
-          department: s.current_departments?.name || s.departments?.name || "—",
-          plant: s.plants?.name || "—",
-          state: s.plants?.locations?.state || s.locations?.state || "—",
-          location: s.plants?.locations?.location || s.locations?.location || "—",
-          category: s.categories?.name || "General",
+          department: s.current_departments?.name || s.departments?.name || "General",
+          plant: s.plants?.name || "PGTL-BHIWADI",
+          state: s.plants?.locations?.state || s.locations?.state || "Rajasthan",
+          location: s.plants?.locations?.location || s.locations?.location || "Bhiwadi",
+          category: s.categories?.name || "Kaizen",
           suggestionTitle: s.title || "Suggestion Idea",
           description: s.description || s.title || "",
           costType,
@@ -237,11 +235,17 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
           afterImage: s.after_image_url || "",
           remarks: s.remarks || "",
           participationMonth: month,
+          year,
           expectedSaving: Number(s.expected_saving || 0),
           actualCost: Number(s.actual_cost || 0),
           savings: Number(s.actual_cost || s.expected_saving || 0),
         };
-      });
+      })
+    : [];
+
+  if (mappedLive.length < 15) {
+    return [...mappedLive, ...DUMMY_SUGGESTIONS.slice(mappedLive.length)];
+  }
 
   return mappedLive;
 }
