@@ -941,7 +941,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
               <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Execution Status</span>
             </div>
             <span className="text-xs font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
-              Weekly Rate
+              Monthly Rate
             </span>
           </div>
           <div className="h-68 w-full">
