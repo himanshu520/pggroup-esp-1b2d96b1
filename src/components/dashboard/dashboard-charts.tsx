@@ -65,7 +65,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 // Outer callout label for Pie & Donut Charts - renders values outside slice with clean leader lines
 const renderOuterPieLabel = ({ cx, cy, midAngle, outerRadius, percent, value }: any) => {
-  if (value === undefined || value === 0 || (percent !== undefined && percent < 0.03)) return null;
+  if (value === undefined || value === null || value <= 2) return null;
   const RADIAN = Math.PI / 180;
   const radius = outerRadius + 16;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -130,27 +130,27 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     const counts: Record<string, number> = {};
     suggestions.forEach((s) => {
       let cat = (s.category && s.category !== "—" ? s.category : "General").trim();
+      if (cat.includes("Productivity")) cat = "Productivity";
+      else if (cat.includes("Fool")) cat = "Fool Proofing";
+      else if (cat.includes("Welfare") || cat.includes("Safety")) cat = "Safety & Welfare";
+      else if (cat.length > 16) cat = cat.slice(0, 14) + "..";
       counts[cat] = (counts[cat] || 0) + 1;
     });
 
     const entries = Object.entries(counts);
-    if (entries.length > 5) {
-      const main: Record<string, number> = {};
-      let others = 0;
-      entries.forEach(([cat, count]) => {
-        if (count <= 2) {
-          others += count;
-        } else {
-          main[cat] = count;
-        }
-      });
-      if (others > 0) main["Others"] = others;
-      return Object.entries(main)
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value);
-    }
+    const main: Record<string, number> = {};
+    let others = 0;
 
-    return entries
+    entries.forEach(([cat, count]) => {
+      if (count <= 3 || cat === "Others") {
+        others += count;
+      } else {
+        main[cat] = count;
+      }
+    });
+    if (others > 0) main["Others"] = others;
+
+    return Object.entries(main)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
   }, [suggestions]);
