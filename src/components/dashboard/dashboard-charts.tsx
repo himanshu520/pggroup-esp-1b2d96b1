@@ -274,7 +274,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     });
   }, [suggestions]);
 
-  // 9. Department Comparison Bar Chart
+  // 9. Department Comparison Bar Chart (Horizontal layout for 100% clean legibility)
   const deptRankingData = useMemo(() => {
     const deptPoints: Record<string, { points: number; count: number }> = {};
     suggestions.forEach((s) => {
@@ -286,12 +286,13 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
 
     const res = Object.entries(deptPoints).map(([department, stat]) => ({
       fullName: department,
-      department: department.length > 12 ? department.slice(0, 10) + ".." : department,
+      department: department.length > 15 ? department.slice(0, 14) + ".." : department,
       points: stat.points,
       count: stat.count,
     }));
 
-    return res.sort((a, b) => b.points - a.points).slice(0, 6);
+    // Ascending sort so highest rank renders at top of horizontal bar chart
+    return res.sort((a, b) => a.points - b.points).slice(0, 6);
   }, [suggestions]);
 
   // 15. Expected Savings vs Verified Actual Cost Comparison Chart
@@ -784,7 +785,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 9: Department Comparison Bar Chart */}
+        {/* Chart 9: Department Comparison Horizontal Bar Chart */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -797,16 +798,16 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={deptRankingData} margin={{ top: 22, right: 10, left: -15, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.6} />
-                <XAxis dataKey="department" tick={{ fontSize: 10, fontWeight: "bold", fill: "#0F172A" }} interval={0} />
-                <YAxis tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} />
+              <BarChart layout="vertical" data={deptRankingData} margin={{ top: 10, right: 48, left: 15, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.6} horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10, fontWeight: "bold", fill: "#334155" }} />
+                <YAxis dataKey="department" type="category" tick={{ fontSize: 11, fontWeight: "bold", fill: "#0F172A" }} width={90} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="points" radius={[4, 4, 0, 0]} barSize={24}>
+                <Bar dataKey="points" radius={[0, 6, 6, 0]} barSize={20}>
                   {deptRankingData.map((_, index) => (
                     <Cell key={`cell-dept-${index}`} fill={DEPT_BAR_COLORS[index % DEPT_BAR_COLORS.length]} />
                   ))}
-                  <LabelList dataKey="points" position="top" formatter={(val: number) => `${val} Pts`} style={{ fontSize: "11px", fontWeight: "900", fill: "#0F172A" }} />
+                  <LabelList dataKey="points" position="right" formatter={(val: number) => `${val} Pts`} style={{ fontSize: "11px", fontWeight: "900", fill: "#0F172A" }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
