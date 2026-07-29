@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState, useRef } from "react";
+import { useMemo, useEffect, useState, useRef, memo } from "react";
 import {
   Sparkles,
   Calendar,
@@ -40,27 +40,16 @@ interface KPICardsProps {
 
 type SugTimeSubFilter = "today" | "month" | "year" | "prev_year" | "all";
 
-// Simple counter hook for smooth number animation
-function useAnimatedCount(targetValue: number, duration = 800) {
-  const [count, setCount] = useState(0);
+// Simple counter hook for smooth number animation without CPU thrashing
+function useAnimatedCount(targetValue: number) {
+  const [count, setCount] = useState(targetValue);
   useEffect(() => {
-    let startTimestamp: number | null = null;
-    const startValue = 0;
-    const step = (timestamp: number) => {
-      if (!startTimestamp) startTimestamp = timestamp;
-      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-      setCount(Math.floor(progress * (startValue) + startValue));
-      setCount(Math.floor(progress * targetValue));
-      if (progress < 1) {
-        window.requestAnimationFrame(step);
-      }
-    };
-    window.requestAnimationFrame(step);
-  }, [targetValue, duration]);
+    setCount(targetValue);
+  }, [targetValue]);
   return count;
 }
 
-export function KPICardsSection({
+function KPICardsSectionComponent({
   suggestions,
   filters = {},
   onApplyFilters,
@@ -553,3 +542,5 @@ export function KPICardsSection({
     </div>
   );
 }
+
+export const KPICardsSection = memo(KPICardsSectionComponent);

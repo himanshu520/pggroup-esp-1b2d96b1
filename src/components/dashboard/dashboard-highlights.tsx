@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 import { Award, Crown, ShieldCheck, Sparkles, Building2, TrendingUp, CheckCircle, Flame, ArrowUpRight, User, Image as ImageIcon } from "lucide-react";
 import { getSuggestionPoints } from "@/lib/dummy-suggestions";
 import type { EmployeeSuggestion } from "@/lib/dummy-suggestions";
@@ -9,7 +9,7 @@ interface DashboardHighlightsProps {
   suggestions: EmployeeSuggestion[];
 }
 
-export function DashboardHighlightsSection({ suggestions }: DashboardHighlightsProps) {
+function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlightsProps) {
   // 1. Dynamic Best Plant calculation
   const bestPlant = useMemo(() => {
     if (suggestions.length === 0) return null;
@@ -407,3 +407,5 @@ export function DashboardHighlightsSection({ suggestions }: DashboardHighlightsP
     </div>
   );
 }
+
+export const DashboardHighlightsSection = memo(DashboardHighlightsSectionComponent);

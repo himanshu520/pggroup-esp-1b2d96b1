@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, memo } from "react";
 import {
   BarChart,
   Bar,
@@ -23,18 +23,17 @@ import {
   LabelList,
 } from "recharts";
 import { Activity } from "lucide-react";
-import { getSuggestionPoints, normalizeStatusCategory } from "@/lib/dummy-suggestions";
-import type { EmployeeSuggestion } from "@/lib/dummy-suggestions";
+import { getSuggestionPoints, normalizeStatusCategory, type EmployeeSuggestion } from "@/lib/dummy-suggestions";
 
 interface DashboardChartsProps {
   suggestions: EmployeeSuggestion[];
 }
 
-// Color Palette for TV & High-Contrast Displays
+// Executive Color Palette inspired by modern UI mockups
 const SCREENSHOT_PALETTE = [
-  "#6366F1", // Indigo
-  "#A855F7", // Purple
-  "#0EA5E9", // Sky Blue Cyan
+  "#2563EB", // Royal Blue
+  "#7C3AED", // Violet Purple
+  "#0EA5E9", // Sky Cyan
   "#F43F5E", // Rose Red
   "#10B981", // Emerald Green
   "#F59E0B", // Amber Yellow
@@ -51,17 +50,17 @@ const DEPT_BAR_COLORS = [
   "#0891B2", // Cyan Teal (Logistics)
 ];
 
-// Custom Tooltip optimized for TV & Big Screen legibility
+// Custom Tooltip with styled dark glassmorphic UI
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-slate-900/95 text-white border border-slate-700 shadow-2xl rounded-lg p-3 text-xs sm:text-sm backdrop-blur-md z-50">
-        {label && <p className="font-black text-slate-100 mb-1 border-b border-slate-700/80 pb-1 text-sm">{label}</p>}
+      <div className="bg-slate-900/95 text-white p-3 rounded-lg shadow-xl border border-slate-700/80 text-xs backdrop-blur-md z-50">
+        <p className="font-extrabold text-slate-200 border-b border-slate-700/60 pb-1 mb-1.5">{label}</p>
         {payload.map((entry: any, index: number) => (
-          <div key={`item-${index}`} className="flex items-center justify-between gap-4 py-0.5">
-            <span className="flex items-center gap-2 font-semibold text-slate-300">
-              <span className="w-3 h-3 rounded-full inline-block shrink-0 shadow-xs" style={{ backgroundColor: entry.color || entry.fill }} />
-              {entry.name || entry.dataKey}:
+          <div key={`tooltip-${index}`} className="flex items-center justify-between gap-4 py-0.5">
+            <span className="flex items-center gap-1.5 font-medium text-slate-300">
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color || entry.fill }} />
+              {entry.name}:
             </span>
             <span className="font-black text-white text-sm">{entry.value}</span>
           </div>
@@ -96,7 +95,7 @@ const renderOuterPieLabel = ({ cx, cy, midAngle, outerRadius, percent, value }: 
   );
 };
 
-export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
+function DashboardChartsSectionComponent({ suggestions }: DashboardChartsProps) {
   // 1. Suggestion State / Status Breakdown (Pending, Under Review, Approved, Implemented, Rejected)
   const statusStateData = useMemo(() => {
     const statusCounts: Record<string, number> = {
@@ -1051,3 +1050,5 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     </div>
   );
 }
+
+export const DashboardChartsSection = memo(DashboardChartsSectionComponent);

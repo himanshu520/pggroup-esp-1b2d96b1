@@ -104,7 +104,7 @@ function OverviewPage() {
   const [filters, setFilters] = useState<DashboardFilters>({});
   const [isFilterBarOpen, setIsFilterBarOpen] = useState(false);
 
-  // Query database suggestions with 3-second auto-refetching for real-time updates
+  // Query database suggestions with staleTime and disabled window focus refetch for smooth 60fps scrolling
   const { data: sugs = [] } = useQuery({
     queryKey: ["admin-suggestions-overview-export"],
     queryFn: async () =>
@@ -117,7 +117,8 @@ function OverviewPage() {
           .order("created_at", { ascending: false })
           .limit(5000)
       ).data ?? [],
-    refetchInterval: 3000,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
   });
 
   // Map live database records from Supabase
