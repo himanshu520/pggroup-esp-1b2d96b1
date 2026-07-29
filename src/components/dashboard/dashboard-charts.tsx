@@ -23,7 +23,7 @@ import {
   LabelList,
 } from "recharts";
 import { Activity } from "lucide-react";
-import { getSuggestionPoints } from "@/lib/dummy-suggestions";
+import { getSuggestionPoints, normalizeStatusCategory } from "@/lib/dummy-suggestions";
 import type { EmployeeSuggestion } from "@/lib/dummy-suggestions";
 
 interface DashboardChartsProps {
@@ -99,17 +99,8 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     };
 
     suggestions.forEach((s) => {
-      if (s.status === "implemented") {
-        statusCounts["Implemented"] += 1;
-      } else if (s.status === "under_review") {
-        statusCounts["Under Review"] += 1;
-      } else if (s.status === "approved") {
-        statusCounts["Approved"] += 1;
-      } else if (s.status === "rejected" || s.status === "dropped") {
-        statusCounts["Rejected"] += 1;
-      } else {
-        statusCounts["Pending"] += 1;
-      }
+      const cat = normalizeStatusCategory(s.status);
+      statusCounts[cat] = (statusCounts[cat] || 0) + 1;
     });
 
     return [
@@ -296,25 +287,22 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
   // 10. Suggestion Status Donut
   const statusData = useMemo(() => {
     const counts: Record<string, number> = {
-      implemented: 0,
-      approved: 0,
-      pending: 0,
-      under_review: 0,
-      rejected: 0,
+      "Implemented": 0,
+      "Approved": 0,
+      "Pending": 0,
+      "Under Review": 0,
+      "Rejected": 0,
     };
     suggestions.forEach((s) => {
-      if (s.status === "rejected" || s.status === "dropped") counts.rejected += 1;
-      else if (s.status === "implemented" || s.status === "closed") counts.implemented += 1;
-      else if (s.status === "approved" || s.status === "implementation") counts.approved += 1;
-      else if (s.status === "under_review" || s.status === "pe_review" || s.status === "dept_review") counts.under_review += 1;
-      else counts.pending += 1;
+      const cat = normalizeStatusCategory(s.status);
+      counts[cat] = (counts[cat] || 0) + 1;
     });
     return [
-      { name: "Implemented", value: counts.implemented },
-      { name: "Approved", value: counts.approved },
-      { name: "Pending", value: counts.pending },
-      { name: "Under Review", value: counts.under_review },
-      { name: "Rejected", value: counts.rejected },
+      { name: "Implemented", value: counts["Implemented"] },
+      { name: "Approved", value: counts["Approved"] },
+      { name: "Pending", value: counts["Pending"] },
+      { name: "Under Review", value: counts["Under Review"] },
+      { name: "Rejected", value: counts["Rejected"] },
     ];
   }, [suggestions]);
 

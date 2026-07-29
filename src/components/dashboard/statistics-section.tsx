@@ -1,21 +1,21 @@
 import { ShieldCheck, DollarSign, Sparkles, Trophy, CheckCircle2, Users, Layers, Award, BarChart2 } from "lucide-react";
-import type { EmployeeSuggestion } from "@/lib/dummy-suggestions";
+import { normalizeStatusCategory, type EmployeeSuggestion } from "@/lib/dummy-suggestions";
 
 interface StatisticsSectionProps {
   suggestions: EmployeeSuggestion[];
 }
 
 export function StatisticsSection({ suggestions }: StatisticsSectionProps) {
-  const foolProofingCount = suggestions.filter((s) => s.category === "Fool Proofing" || s.suggestionType === "Fool Proofing").length || 3;
-  const lowCostCount = suggestions.filter((s) => s.costType === "Low Cost").length || 6;
-  const noCostCount = suggestions.filter((s) => s.costType === "No Cost").length || 5;
-  const highCostCount = suggestions.filter((s) => s.costType === "High Cost").length || 4;
-  const kaizenCount = suggestions.filter((s) => s.category === "Kaizen" || s.suggestionType === "Kaizen").length || 5;
-  const totalSavings = suggestions.reduce((acc, s) => acc + (s.savings || 0), 0) || 7280000;
-  const totalAwards = suggestions.filter((s) => s.award && s.award !== "None").length || 12;
-  const mdAwards = suggestions.filter((s) => s.award.toLowerCase().includes("md") || s.award.toLowerCase().includes("gold")).length || 4;
-  const totalImplemented = suggestions.filter((s) => s.status === "implemented").length || 10;
-  const activeEmployees = new Set(suggestions.map((s) => s.employeeId)).size || 15;
+  const foolProofingCount = suggestions.filter((s) => s.category === "Fool Proofing" || s.suggestionType === "Fool Proofing").length;
+  const lowCostCount = suggestions.filter((s) => s.costType === "Low Cost").length;
+  const noCostCount = suggestions.filter((s) => s.costType === "No Cost").length;
+  const highCostCount = suggestions.filter((s) => s.costType === "High Cost").length;
+  const kaizenCount = suggestions.filter((s) => s.category === "Kaizen" || s.suggestionType === "Kaizen").length;
+  const totalSavings = suggestions.reduce((acc, s) => acc + (s.savings || 0), 0);
+  const totalAwards = suggestions.filter((s) => s.award && s.award !== "None").length;
+  const mdAwards = suggestions.filter((s) => (s.award || "").toLowerCase().includes("md") || (s.award || "").toLowerCase().includes("best")).length;
+  const totalImplemented = suggestions.filter((s) => normalizeStatusCategory(s.status) === "Implemented").length;
+  const activeEmployees = new Set(suggestions.map((s) => s.employeeId)).size;
 
   const stats = [
     { title: "Total Fool Proofing", value: foolProofingCount, icon: ShieldCheck, color: "text-purple-600 bg-purple-100 dark:bg-purple-950/60" },

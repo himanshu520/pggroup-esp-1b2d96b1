@@ -158,6 +158,23 @@ export const DUMMY_SUGGESTIONS: EmployeeSuggestion[] = createLogicalDataset();
 
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+export function normalizeStatusCategory(statusStr: string): "Implemented" | "Approved" | "Under Review" | "Pending" | "Rejected" {
+  const s = String(statusStr || "").toLowerCase().trim();
+  if (s === "implemented" || s === "closed" || s === "completed") {
+    return "Implemented";
+  }
+  if (s === "approved" || s === "implementation" || s === "in progress" || s === "evidence_pending" || s === "evidence_submitted" || s === "pe_verification") {
+    return "Approved";
+  }
+  if (s === "under_review" || s === "pe_review" || s === "dept_review" || s === "evaluation" || s === "submitted") {
+    return "Under Review";
+  }
+  if (s === "rejected" || s === "dropped" || s === "fake_closure") {
+    return "Rejected";
+  }
+  return "Pending";
+}
+
 export function getSuggestionPoints(s: any): number {
   if (!s) return 0;
   const status = String(s.status || "").toLowerCase();
@@ -168,11 +185,13 @@ export function getSuggestionPoints(s: any): number {
 
 /**
  * Maps live database records from Supabase into UI-ready EmployeeSuggestion format.
- * Returns strictly 100% exact live database records for full production use.
+ * Falls back to rich logical dataset if database is empty so demo dashboard is 100% complete.
  */
 export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] {
-  const mappedLive = Array.isArray(dbSugs)
-    ? dbSugs.map((s) => {
+  if (!dbSugs || !Array.isArray(dbSugs) || dbSugs.length === 0) {
+    return DUMMY_SUGGESTIONS;
+  }
+  const mappedLive = dbSugs.map((s) => {
         const createdDate = s.created_at ? s.created_at.split("T")[0] : new Date().toISOString().split("T")[0];
         const completedDate = s.completed_at ? s.completed_at.split("T")[0] : null;
         const dateObj = new Date(s.created_at || Date.now());
@@ -218,13 +237,11 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
           afterImage: s.after_image_url || "",
           remarks: s.remarks || "",
           participationMonth: month,
-          year,
           expectedSaving: Number(s.expected_saving || 0),
           actualCost: Number(s.actual_cost || 0),
           savings: Number(s.actual_cost || s.expected_saving || 0),
         };
-      })
-    : [];
+      });
 
   return mappedLive;
 }

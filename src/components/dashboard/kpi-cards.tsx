@@ -22,7 +22,7 @@ import {
   Layers,
 } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
-import type { EmployeeSuggestion, DashboardFilters } from "@/lib/dummy-suggestions";
+import { normalizeStatusCategory, type EmployeeSuggestion, type DashboardFilters } from "@/lib/dummy-suggestions";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -169,27 +169,9 @@ export function KPICardsSection({
 
   const kpiData = useMemo(() => {
     const total = suggestions.length;
-    const implemented = suggestions.filter(
-      (s) => s.status === "implemented" || s.status === "closed" || s.implementationStatus === "Completed"
-    ).length;
-    const pendingExecution = suggestions.filter(
-      (s) =>
-        s.status === "approved" ||
-        s.status === "implementation" ||
-        s.status === "evidence_pending" ||
-        s.status === "evidence_submitted" ||
-        s.status === "pe_verification" ||
-        s.implementationStatus === "In Progress"
-    ).length;
-    const underReview = suggestions.filter(
-      (s) =>
-        s.status === "under_review" ||
-        s.status === "pending" ||
-        s.status === "pe_review" ||
-        s.status === "dept_review" ||
-        s.status === "submitted" ||
-        s.status === "evaluation"
-    ).length;
+    const implemented = suggestions.filter((s) => normalizeStatusCategory(s.status) === "Implemented").length;
+    const pendingExecution = suggestions.filter((s) => normalizeStatusCategory(s.status) === "Approved").length;
+    const underReview = suggestions.filter((s) => normalizeStatusCategory(s.status) === "Under Review" || normalizeStatusCategory(s.status) === "Pending").length;
 
     // Total savings
     const totalSavings = suggestions.reduce((acc, s) => acc + (s.savings || 0), 0);
