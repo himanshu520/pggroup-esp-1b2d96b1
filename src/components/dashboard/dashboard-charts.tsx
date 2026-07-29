@@ -128,11 +128,9 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       let rawPlant = (s.plant && s.plant !== "—" ? s.plant : "Unassigned").trim();
       let normalizedPlant = rawPlant;
       const upper = rawPlant.toUpperCase();
-      if (upper.includes("PGTL") && upper.includes("KAROLI")) {
-        normalizedPlant = "PGTL-KAROLI";
-      } else if (upper.includes("NGM") || upper.includes("KAROLI")) {
+      if (upper.includes("NGM")) {
         normalizedPlant = "NGM-KAROLI";
-      } else if (upper.includes("BHIWADI") || upper.includes("PGTL")) {
+      } else {
         normalizedPlant = "PGTL-BHIWADI";
       }
       counts[normalizedPlant] = (counts[normalizedPlant] || 0) + 1;

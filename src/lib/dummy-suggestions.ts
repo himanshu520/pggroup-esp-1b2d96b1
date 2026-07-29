@@ -190,32 +190,32 @@ function createLogicalDataset(): EmployeeSuggestion[] {
     const points = isImpl ? 5 : 0;
 
     dataset.push({
-      id: `sug-pgtl-karoli-${k}`,
-      code: `SUG-PGTL-KAROLI-2026-${String(k).padStart(3, "0")}`,
+      id: `sug-pgtl-bhiwadi-${k}`,
+      code: `SUG-PGTL-2026-${String(k + 120).padStart(3, "0")}`,
       employeeName: maleNames[(k - 1) % maleNames.length],
-      employeeId: `PGTL-KAROLI-EMP-${200 + k}`,
+      employeeId: `PGTL-EMP-${200 + k}`,
       gender: "Male",
       employeePhoto: "",
       department,
-      plant: "PGTL-KAROLI",
+      plant: "PGTL-BHIWADI",
       state: "Rajasthan",
-      location: "Karoli Plant",
+      location: "Bhiwadi Plant",
       category,
       suggestionTitle: pgtlKaroliTitles[k - 1],
-      description: `Process improvement initiative implemented at PGTL Karoli plant in ${department}.`,
+      description: `Process improvement initiative implemented at PGTL Bhiwadi plant in ${department}.`,
       costType: k % 3 === 0 ? "High Cost" : (k % 2 === 0 ? "Low Cost" : "No Cost"),
       status: status as any,
       implementationStatus: implStatus,
       priority: k % 3 === 0 ? "High" : "Medium",
       suggestionType: category,
-      reviewer: "Karoli Plant Review Committee",
+      reviewer: "Bhiwadi Plant Review Committee",
       createdDate,
       completedDate,
       points,
-      award: isImpl ? "Karoli Kaizen Excellence Award" : "None",
+      award: isImpl ? "Bhiwadi Kaizen Excellence Award" : "None",
       beforeImage: "",
       afterImage: "",
-      remarks: "Audited and verified by PGTL Karoli Steering Committee.",
+      remarks: "Audited and verified by PGTL Bhiwadi Steering Committee.",
       participationMonth: month,
       year: 2026,
       expectedSaving,
@@ -350,14 +350,10 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
 
         const rawPlantName = String(s.plants?.name || s.plant || "").toUpperCase();
         let mappedPlant = "PGTL-BHIWADI";
-        if (rawPlantName.includes("PGTL") && rawPlantName.includes("KAROLI")) {
-          mappedPlant = "PGTL-KAROLI";
-        } else if (rawPlantName.includes("NGM") || rawPlantName.includes("KAROLI")) {
+        if (rawPlantName.includes("NGM")) {
           mappedPlant = "NGM-KAROLI";
-        } else if (rawPlantName.includes("BHIWADI")) {
+        } else {
           mappedPlant = "PGTL-BHIWADI";
-        } else if (s.plant) {
-          mappedPlant = s.plant;
         }
 
         return {
