@@ -972,7 +972,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">💰</span>
-              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Expected vs Verified Cost (₹)</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Expected vs Verified Cost by PE (₹)</span>
             </div>
             <span className="text-xs font-bold px-2.5 py-1 rounded bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
               Audit
