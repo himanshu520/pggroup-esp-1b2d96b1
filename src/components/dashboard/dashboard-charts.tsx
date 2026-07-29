@@ -735,10 +735,10 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyTrendData} margin={{ top: 22, right: 28, left: -15, bottom: 5 }}>
+              <LineChart data={monthlyTrendData} margin={{ top: 25, right: 28, left: -15, bottom: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.6} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} padding={{ left: 12, right: 18 }} />
-                <YAxis tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} padding={{ left: 14, right: 18 }} />
+                <YAxis domain={[0, (dataMax: number) => Math.max(30, Math.ceil((dataMax + 6) / 5) * 5)]} tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
                   verticalAlign="bottom"
@@ -748,6 +748,8 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                 {trendPlantKeys.map((plantKey, idx) => {
                   const colors = ["#2563EB", "#9333EA", "#059669", "#D97706", "#DC2626"];
                   const color = colors[idx % colors.length];
+                  // Alternate label position (top vs bottom) so multi-series line values never collide
+                  const labelPos = idx % 2 === 0 ? "top" : "bottom";
                   return (
                     <Line
                       key={plantKey}
@@ -757,7 +759,12 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                       strokeWidth={3}
                       dot={{ r: 4.5, fill: "#FFF", stroke: color, strokeWidth: 2.5 }}
                     >
-                      <LabelList dataKey={plantKey} position="top" style={{ fontSize: "10px", fontWeight: "800", fill: color }} />
+                      <LabelList
+                        dataKey={plantKey}
+                        position={labelPos}
+                        offset={8}
+                        style={{ fontSize: "11px", fontWeight: "900", fill: color }}
+                      />
                     </Line>
                   );
                 })}
