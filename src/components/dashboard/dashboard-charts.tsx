@@ -526,20 +526,26 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                   cy="42%"
                   innerRadius={42}
                   outerRadius={65}
-                  paddingAngle={3}
+                  paddingAngle={4}
                   dataKey="value"
                   label={renderOuterPieLabel}
                   labelLine={{ stroke: "#64748B", strokeWidth: 1.5 }}
                 >
                   {plantData.map((_, index) => (
-                    <Cell key={`cell-plant-${index}`} fill={SCREENSHOT_PALETTE[index % SCREENSHOT_PALETTE.length]} />
+                    <Cell key={`cell-plant-${index}`} fill={SCREENSHOT_PALETTE[(index * 2) % SCREENSHOT_PALETTE.length]} />
                   ))}
                 </Pie>
+                <text x="50%" y="38%" textAnchor="middle" dominantBaseline="central" className="text-sm font-black fill-slate-900 dark:fill-slate-100">
+                  {plantData.reduce((a, b) => a + b.value, 0)}
+                </text>
+                <text x="50%" y="46%" textAnchor="middle" dominantBaseline="central" className="text-[10px] font-extrabold fill-slate-500 dark:fill-slate-400 uppercase tracking-wide">
+                  Total Ideas
+                </text>
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
                   verticalAlign="bottom"
                   align="center"
-                  formatter={(val: string) => <span className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{val.length > 18 ? val.slice(0, 18) + "..." : val}</span>}
+                  formatter={(val: string) => <span className="font-bold text-slate-800 dark:text-slate-200 text-xs">{val}</span>}
                   wrapperStyle={{ fontSize: "12px", pt: "6px", fontWeight: "700" }}
                 />
               </PieChart>

@@ -72,9 +72,9 @@ function createLogicalDataset(): EmployeeSuggestion[] {
   // Generate 120 logically coherent suggestions
   for (let i = 1; i <= 120; i++) {
     const isPgtl = i <= 72; // 60% PGTL, 40% NGM
-    const plant = isPgtl ? "PGTL" : "NGM";
-    const state = isPgtl ? "Haryana" : "Delhi NCR";
-    const location = isPgtl ? "Bawal Unit" : "Manesar Hub";
+    const plant = isPgtl ? "PGTL-BHIWADI" : "NGM-KAROLI";
+    const state = "Rajasthan";
+    const location = isPgtl ? "Bhiwadi Plant" : "Karoli Unit";
 
     const isFemale = i % 3 === 0; // ~33% female participation
     const gender = isFemale ? "Female" : "Male";
@@ -161,9 +161,9 @@ function createLogicalDataset(): EmployeeSuggestion[] {
   // Generate 60 previous year (2025) suggestions for YoY Comparison & Y2Y Department Rankings
   for (let j = 1; j <= 60; j++) {
     const isPgtl = j % 2 === 0;
-    const plant = isPgtl ? "PGTL" : "NGM";
-    const state = isPgtl ? "Haryana" : "Delhi NCR";
-    const location = isPgtl ? "Bawal Unit" : "Manesar Hub";
+    const plant = isPgtl ? "PGTL-BHIWADI" : "NGM-KAROLI";
+    const state = "Rajasthan";
+    const location = isPgtl ? "Bhiwadi Plant" : "Karoli Unit";
 
     const isFemale = j % 4 === 0;
     const gender = isFemale ? "Female" : "Male";
@@ -282,6 +282,12 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
         else if (s.status === "rejected") implStatus = "Rejected";
         else if (s.status === "dropped") implStatus = "On Hold";
 
+        const rawPlantName = String(s.plants?.name || "").toUpperCase();
+        let mappedPlant = "PGTL-BHIWADI";
+        if (rawPlantName.includes("NGM") || rawPlantName.includes("KAROLI")) {
+          mappedPlant = "NGM-KAROLI";
+        }
+
         return {
           id: s.id || `sug-${Math.random()}`,
           code: s.code || `SUG-${s.id?.slice(0, 6)}`,
@@ -290,7 +296,7 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
           gender: (s.employees?.gender as "Male" | "Female" | "Others") || "Male",
           employeePhoto: s.employees?.avatar_url || "",
           department: s.current_departments?.name || s.departments?.name || "General",
-          plant: s.plants?.name || "PGTL-BHIWADI",
+          plant: mappedPlant,
           state: s.plants?.locations?.state || s.locations?.state || "Rajasthan",
           location: s.plants?.locations?.location || s.locations?.location || "Bhiwadi",
           category: s.categories?.name || "Kaizen",
