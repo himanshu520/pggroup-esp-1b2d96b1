@@ -288,7 +288,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       .map(([name, stat]) => ({
         name: name.length > 10 ? name.slice(0, 10) + ".." : name,
         "Expected (₹)": Math.round(stat.expected),
-        "Actual (₹)": Math.round(stat.actual),
+        "Verified Cost by PE (₹)": Math.round(stat.actual),
       }))
       .slice(0, 5);
   }, [suggestions]);
@@ -993,8 +993,8 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                 <Bar dataKey="Expected (₹)" fill="#6366F1" radius={[3, 3, 0, 0]} barSize={18}>
                   <LabelList dataKey="Expected (₹)" position="top" style={{ fontSize: "9px", fontWeight: "800", fill: "#3730A3" }} formatter={(v: any) => v >= 100000 ? `₹${(Number(v)/100000).toFixed(1)}L` : (v >= 1000 ? `₹${(Number(v)/1000).toFixed(0)}k` : (v > 0 ? `₹${v}` : "0"))} />
                 </Bar>
-                <Bar dataKey="Actual (₹)" fill="#10B981" radius={[3, 3, 0, 0]} barSize={18}>
-                  <LabelList dataKey="Actual (₹)" position="top" style={{ fontSize: "9px", fontWeight: "800", fill: "#047857" }} formatter={(v: any) => v >= 100000 ? `₹${(Number(v)/100000).toFixed(1)}L` : (v >= 1000 ? `₹${(Number(v)/1000).toFixed(0)}k` : (v > 0 ? `₹${v}` : "0"))} />
+                <Bar dataKey="Verified Cost by PE (₹)" fill="#10B981" radius={[3, 3, 0, 0]} barSize={18}>
+                  <LabelList dataKey="Verified Cost by PE (₹)" position="top" style={{ fontSize: "9px", fontWeight: "800", fill: "#047857" }} formatter={(v: any) => v >= 100000 ? `₹${(Number(v)/100000).toFixed(1)}L` : (v >= 1000 ? `₹${(Number(v)/1000).toFixed(0)}k` : (v > 0 ? `₹${v}` : "0"))} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
