@@ -251,7 +251,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     const activePlants = plantsInUse.length > 0 ? plantsInUse : ["Main Plant"];
 
     return MONTHS.slice(0, 7).map((m) => {
-      const row: Record<string, any> = { month: `${m}` };
+      const row: Record<string, any> = { month: `${m} '26` };
       activePlants.forEach((plant) => {
         const count = suggestions.filter((s) => {
           const p = s.plant || (s as any).plants?.name || "Main Plant";
@@ -274,7 +274,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       const monthSugs = suggestions.filter((s) => getSuggestionMonth(s) === m);
       const uniqueEmps = new Set(monthSugs.map((s) => s.employeeId || s.employeeName || (s as any).employee_id)).size;
       return {
-        month: `${m}`,
+        month: `${m} '26`,
         Participants: uniqueEmps || monthSugs.length,
         Suggestions: monthSugs.length,
       };
