@@ -339,7 +339,7 @@ export function DashboardHighlightsSection({ suggestions }: DashboardHighlightsP
               )}
             </div>
             <div>
-              <span className="text-[10px] font-bold text-emerald-600 block mb-0.5">AFTER: Poka-Yoke Solution</span>
+              <span className="text-[10px] font-bold text-emerald-600 block mb-0.5">AFTER: Solution Image</span>
               {bestFoolProofing?.afterImage ? (
                 <img src={bestFoolProofing.afterImage} alt="After" className="w-full h-20 rounded-md object-cover border border-emerald-200 cursor-pointer hover:scale-105 transition-transform" onClick={() => window.open(bestFoolProofing.afterImage, "_blank")} />
               ) : (

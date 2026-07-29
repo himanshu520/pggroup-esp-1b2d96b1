@@ -959,9 +959,9 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
                                     )}
                                     {afterImg && (
                                       <div>
-                                        <span className="text-[10px] font-bold text-emerald-600 block mb-0.5">AFTER Poka-Yoke Image</span>
+                                        <span className="text-[10px] font-bold text-emerald-600 block mb-0.5">AFTER Solution Image</span>
                                         <div className="rounded border border-emerald-300 overflow-hidden h-24 bg-black/10 flex items-center justify-center">
-                                          <img src={afterImg} alt="After Poka-Yoke Solution" className="w-full h-24 object-cover cursor-pointer hover:scale-[1.03] transition-transform" onClick={() => window.open(afterImg, "_blank")} />
+                                          <img src={afterImg} alt="After Solution" className="w-full h-24 object-cover cursor-pointer hover:scale-[1.03] transition-transform" onClick={() => window.open(afterImg, "_blank")} />
                                         </div>
                                       </div>
                                     )}
@@ -1083,7 +1083,7 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
 
                             <div className="space-y-1">
                               <label className="text-[11px] font-bold text-emerald-600 flex items-center justify-between">
-                                <span>🟢 AFTER: Poka-Yoke Solution Image</span>
+                                <span>🟢 AFTER: Solution Image</span>
                                 {bestImageUploading && <span className="text-[10px] text-amber-600 animate-pulse font-medium">Uploading...</span>}
                               </label>
                               <input
@@ -1106,7 +1106,7 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
                                     });
                                     setAfterImageUrl(res.publicUrl);
                                     setBestImageUrl(res.publicUrl);
-                                    toast.success("AFTER Poka-Yoke solution image attached!");
+                                    toast.success("AFTER solution image attached!");
                                   } catch (err: any) {
                                     toast.error("After image upload failed: " + (err.message || "Unknown error"));
                                   } finally {
@@ -1117,7 +1117,7 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
                               />
                               {afterImageUrl && (
                                 <div className="relative mt-1 rounded border border-emerald-300 dark:border-emerald-800 overflow-hidden w-full h-24 bg-slate-900/5 flex items-center justify-center">
-                                  <img src={afterImageUrl} alt="After Poka-Yoke Solution" className="w-full h-24 object-cover" />
+                                  <img src={afterImageUrl} alt="After Solution" className="w-full h-24 object-cover" />
                                   <button
                                     type="button"
                                     onClick={() => setAfterImageUrl("")}

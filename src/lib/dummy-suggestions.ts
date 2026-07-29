@@ -324,11 +324,12 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
       })
     : [];
 
-  if (mappedLive.length < 15) {
-    return [...mappedLive, ...DUMMY_SUGGESTIONS.slice(mappedLive.length)];
+  // Combine all live database records with demo dataset so every new user submission increments dashboard totals dynamically
+  if (mappedLive.length > 0) {
+    return [...mappedLive, ...DUMMY_SUGGESTIONS];
   }
 
-  return mappedLive;
+  return DUMMY_SUGGESTIONS;
 }
 
 /**
