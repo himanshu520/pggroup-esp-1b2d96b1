@@ -746,7 +746,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                   wrapperStyle={{ fontSize: "12px", pt: "6px", fontWeight: "700" }}
                 />
                 {trendPlantKeys.map((plantKey, idx) => {
-                  const colors = ["#2563EB", "#9333EA", "#059669", "#D97706", "#DC2626"];
+                  const colors = ["#2563EB", "#059669", "#D97706", "#EC4899", "#8B5CF6"];
                   const color = colors[idx % colors.length];
                   return (
                     <Bar
