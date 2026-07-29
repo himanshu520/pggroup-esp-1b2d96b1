@@ -27,6 +27,8 @@ export interface EmployeeSuggestion {
   remarks: string;
   participationMonth: string; // Jan, Feb, etc.
   year: number;
+  expectedSaving?: number;
+  actualCost?: number;
   savings: number; // in INR
 }
 
@@ -118,6 +120,9 @@ function createLogicalDataset(): EmployeeSuggestion[] {
       costType = "No Cost";
     }
 
+    const expectedSaving = (i % 4 === 0) ? 150000 : (i % 2 === 0 ? 80000 : 40000);
+    const actualCost = status === "implemented" ? (i % 4 === 0 ? 120000 : (i % 2 === 0 ? 55000 : 25000)) : 0;
+
     dataset.push({
       id: `sug-logical-${i}`,
       code: `SUG-${plant}-2026-${String(i).padStart(3, "0")}`,
@@ -147,6 +152,8 @@ function createLogicalDataset(): EmployeeSuggestion[] {
       remarks: `Audited and verified by ${plant} committee.`,
       participationMonth: month,
       year: 2026,
+      expectedSaving,
+      actualCost,
       savings,
     });
   }
@@ -177,6 +184,8 @@ function createLogicalDataset(): EmployeeSuggestion[] {
     const points = isImpl ? 5 : 0;
     const savings = isImpl ? (j % 3 === 0 ? 85000 : 35000) : 0;
     const award = isImpl && j % 4 === 0 ? "Annual Excellence Award 2025" : (isImpl ? "Recognition Award" : "None");
+    const expectedSaving25 = (j % 3 === 0) ? 120000 : (j % 2 === 0 ? 60000 : 30000);
+    const actualCost25 = isImpl ? (j % 3 === 0 ? 85000 : 35000) : 0;
 
     let costType: "No Cost" | "Low Cost" | "High Cost" = "No Cost";
     if (j % 4 === 0) costType = "High Cost";
@@ -211,6 +220,8 @@ function createLogicalDataset(): EmployeeSuggestion[] {
       remarks: `2025 Audited record.`,
       participationMonth: month,
       year: 2025,
+      expectedSaving: expectedSaving25,
+      actualCost: actualCost25,
       savings,
     });
   }
