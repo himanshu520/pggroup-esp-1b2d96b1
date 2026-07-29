@@ -74,7 +74,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 // Outer callout label for Pie & Donut Charts - renders values outside slice with clean leader lines
 const renderOuterPieLabel = ({ cx, cy, midAngle, outerRadius, percent, value }: any) => {
-  if (value === undefined || value === null || value <= 2) return null;
+  if (value === undefined || value === null || value === 0) return null;
   const RADIAN = Math.PI / 180;
   const radius = outerRadius + 16;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -125,13 +125,20 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
   const plantData = useMemo(() => {
     const counts: Record<string, number> = {};
     suggestions.forEach((s) => {
-      const p = (s.plant && s.plant !== "—" ? s.plant : "Unassigned").trim();
-      counts[p] = (counts[p] || 0) + 1;
+      let rawPlant = (s.plant && s.plant !== "—" ? s.plant : "Unassigned").trim();
+      let normalizedPlant = rawPlant;
+      const upper = rawPlant.toUpperCase();
+      if (upper.includes("PGTL") || upper.includes("BHIWADI")) {
+        normalizedPlant = "PGTL-BHIWADI";
+      } else if (upper.includes("NGM") || upper.includes("KAROLI")) {
+        normalizedPlant = "NGM-KAROLI";
+      }
+      counts[normalizedPlant] = (counts[normalizedPlant] || 0) + 1;
     });
-    return Object.entries(counts).map(([plant, value]) => ({
-      name: plant.length > 18 ? plant.slice(0, 18) + "..." : plant,
-      value,
-    }));
+
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
   }, [suggestions]);
 
   // 3. Suggestion Category Distribution (Donut Pie Chart)
