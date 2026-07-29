@@ -30,31 +30,31 @@ interface DashboardChartsProps {
   suggestions: EmployeeSuggestion[];
 }
 
-// Color Palette Extracted Directly from Reference Screenshots
+// Color Palette for TV & High-Contrast Displays
 const SCREENSHOT_PALETTE = [
-  "#A5B4FC", // Soft Periwinkle Blue
-  "#C084FC", // Soft Pastel Lavender
-  "#7DD3FC", // Soft Aqua Cyan
-  "#FCA5A5", // Soft Pastel Salmon / Pink
-  "#A7F3D0", // Soft Mint Green
-  "#FDE047", // Soft Warm Yellow
-  "#F472B6", // Soft Pastel Magenta
-  "#93C5FD", // Soft Sky Blue
+  "#6366F1", // Indigo
+  "#A855F7", // Purple
+  "#0EA5E9", // Sky Blue Cyan
+  "#F43F5E", // Rose Red
+  "#10B981", // Emerald Green
+  "#F59E0B", // Amber Yellow
+  "#EC4899", // Magenta Pink
+  "#3B82F6", // Bright Blue
 ];
 
-// Custom Clean Tooltip matching reference screenshot style
+// Custom Tooltip optimized for TV & Big Screen legibility
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700 shadow-lg rounded-md p-2.5 text-xs backdrop-blur-md z-50">
-        {label && <p className="font-bold text-slate-800 dark:text-slate-200 mb-1 border-b border-slate-100 dark:border-slate-800 pb-0.5">{label}</p>}
+      <div className="bg-slate-900/95 text-white border border-slate-700 shadow-2xl rounded-lg p-3 text-xs sm:text-sm backdrop-blur-md z-50">
+        {label && <p className="font-black text-slate-100 mb-1 border-b border-slate-700/80 pb-1 text-sm">{label}</p>}
         {payload.map((entry: any, index: number) => (
-          <div key={`item-${index}`} className="flex items-center justify-between gap-3 py-0.5">
-            <span className="flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-400">
-              <span className="w-2.5 h-2.5 rounded-sm inline-block shrink-0" style={{ backgroundColor: entry.color || entry.fill }} />
+          <div key={`item-${index}`} className="flex items-center justify-between gap-4 py-0.5">
+            <span className="flex items-center gap-2 font-semibold text-slate-300">
+              <span className="w-3 h-3 rounded-full inline-block shrink-0 shadow-xs" style={{ backgroundColor: entry.color || entry.fill }} />
               {entry.name || entry.dataKey}:
             </span>
-            <span className="font-bold text-slate-900 dark:text-slate-100">{entry.value}</span>
+            <span className="font-black text-white text-sm">{entry.value}</span>
           </div>
         ))}
       </div>
@@ -67,7 +67,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 const renderOuterPieLabel = ({ cx, cy, midAngle, outerRadius, percent, value }: any) => {
   if (value === undefined || value === 0) return null;
   const RADIAN = Math.PI / 180;
-  const radius = outerRadius + 14;
+  const radius = outerRadius + 16;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
   const textAnchor = x > cx ? "start" : "end";
@@ -77,10 +77,10 @@ const renderOuterPieLabel = ({ cx, cy, midAngle, outerRadius, percent, value }: 
     <text
       x={x}
       y={y}
-      fill="#334155"
+      fill="#0F172A"
       textAnchor={textAnchor}
       dominantBaseline="central"
-      className="text-[11px] font-extrabold"
+      className="text-xs sm:text-sm font-black dark:fill-slate-100 drop-shadow-xs"
     >
       {`${value}${pctStr}`}
     </text>
@@ -113,11 +113,11 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     });
 
     return [
-      { state: "Pending", count: statusCounts["Pending"], fill: "#FDE047" },
-      { state: "Under Review", count: statusCounts["Under Review"], fill: "#7DD3FC" },
-      { state: "Approved", count: statusCounts["Approved"], fill: "#C084FC" },
-      { state: "Implemented", count: statusCounts["Implemented"], fill: "#A7F3D0" },
-      { state: "Rejected", count: statusCounts["Rejected"], fill: "#FCA5A5" },
+      { state: "Pending", count: statusCounts["Pending"], fill: "#EAB308" },
+      { state: "Under Review", count: statusCounts["Under Review"], fill: "#0EA5E9" },
+      { state: "Approved", count: statusCounts["Approved"], fill: "#A855F7" },
+      { state: "Implemented", count: statusCounts["Implemented"], fill: "#10B981" },
+      { state: "Rejected", count: statusCounts["Rejected"], fill: "#F43F5E" },
     ];
   }, [suggestions]);
 
@@ -134,7 +134,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     }));
   }, [suggestions]);
 
-  // 3. Suggestion Category Distribution (Pie Chart)
+  // 3. Suggestion Category Distribution (Donut Pie Chart)
   const categoryData = useMemo(() => {
     const counts: Record<string, number> = {};
     suggestions.forEach((s) => {
@@ -377,7 +377,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     return Object.keys(radarData[0]).filter((k) => k !== "subject");
   }, [radarData]);
 
-  // 13. Monthly Area Cost Savings (Cumulative Savings)
+  // 13. Monthly Area Cost Savings (Cumulative Savings) - Includes Year Name "26"
   const savingsData = useMemo(() => {
     let runningSavings = 0;
     return MONTHS.slice(0, 7).map((m) => {
@@ -388,7 +388,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
       }, 0);
       runningSavings += mSavings;
       return {
-        month: `${m}`,
+        month: `${m} 26`, // Displays month + year (e.g. Jan 26, Feb 26)
         Savings: Number((runningSavings / 100000).toFixed(2)),
       };
     });
@@ -408,12 +408,43 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
     });
   }, [suggestions]);
 
+  // Custom Smart Label Renderer for Execution Status Submitted Line
+  const renderExecutionSubmittedLabel = (props: any) => {
+    const { x, y, value, index } = props;
+    if (value === undefined || value === null) return null;
+    const completedVal = timelineData[index]?.Completed;
+    const isEqual = value === completedVal;
+    // If Submitted & Completed overlap at same point (e.g. 0 & 0, 13 & 13), push Submitted label higher up (dy = -22)
+    const dy = isEqual ? -22 : -10;
+    return (
+      <text x={x} y={y + dy} fill="#EA580C" textAnchor="middle" fontSize={11} fontWeight="800">
+        {value}
+      </text>
+    );
+  };
+
+  // Custom Smart Label Renderer for Execution Status Completed Line
+  const renderExecutionCompletedLabel = (props: any) => {
+    const { x, y, value, index } = props;
+    if (value === undefined || value === null) return null;
+    const submittedVal = timelineData[index]?.Submitted;
+    const isEqual = value === submittedVal;
+    // If equal to Submitted, render at dy = -8 so it stacks right under Submitted but ABOVE the node/axis tick label!
+    // If not equal and value > 0, place at dy = 16. If value is 0, place at dy = -8.
+    const dy = isEqual ? -8 : (value > 0 ? 16 : -8);
+    return (
+      <text x={x} y={y + dy} fill="#16A34A" textAnchor="middle" fontSize={11} fontWeight="800">
+        {value}
+      </text>
+    );
+  };
+
   return (
     <div className="space-y-4">
       {/* Executive Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <Activity className="w-5 h-5 text-indigo-500" /> Executive Analytics Charts & Dashboards
+        <h2 className="text-lg font-black tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <Activity className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> Executive Analytics Charts & Dashboards
         </h2>
       </div>
 
@@ -424,24 +455,24 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">📊</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Suggestion State Breakdown</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Suggestion State Breakdown</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="text-xs font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
               Workflow Stages
             </span>
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={statusStateData} margin={{ top: 20, right: 10, left: -15, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis dataKey="state" tick={{ fontSize: 9, fill: "#64748B" }} />
-                <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
+              <BarChart data={statusStateData} margin={{ top: 22, right: 10, left: -15, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.6} />
+                <XAxis dataKey="state" tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} />
+                <YAxis tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={20}>
+                <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={22}>
                   {statusStateData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
-                  <LabelList dataKey="count" position="top" style={{ fontSize: "11px", fontWeight: "bold", fill: "#334155" }} />
+                  <LabelList dataKey="count" position="top" style={{ fontSize: "11px", fontWeight: "800", fill: "#0F172A" }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -453,9 +484,9 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">🏭</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Plant Distribution</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Plant Distribution</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="text-xs font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
               Units Ratio
             </span>
           </div>
@@ -471,7 +502,7 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                   paddingAngle={3}
                   dataKey="value"
                   label={renderOuterPieLabel}
-                  labelLine={{ stroke: "#94A3B8", strokeWidth: 1.5 }}
+                  labelLine={{ stroke: "#64748B", strokeWidth: 1.5 }}
                 >
                   {plantData.map((_, index) => (
                     <Cell key={`cell-plant-${index}`} fill={SCREENSHOT_PALETTE[index % SCREENSHOT_PALETTE.length]} />
@@ -481,22 +512,22 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                 <Legend
                   verticalAlign="bottom"
                   align="center"
-                  formatter={(val: string) => (val.length > 18 ? val.slice(0, 18) + "..." : val)}
-                  wrapperStyle={{ fontSize: "11px", pt: "6px" }}
+                  formatter={(val: string) => <span className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{val.length > 18 ? val.slice(0, 18) + "..." : val}</span>}
+                  wrapperStyle={{ fontSize: "12px", pt: "6px", fontWeight: "700" }}
                 />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Chart 3: Suggestion Category Distribution */}
+        {/* Chart 3: Suggestion Category Distribution (Donut Pie Chart) */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">🔍</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Category Distribution</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Category Distribution</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="text-xs font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
               5S, Kaizen
             </span>
           </div>
@@ -507,10 +538,12 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                   data={categoryData}
                   cx="50%"
                   cy="42%"
+                  innerRadius={40}
                   outerRadius={65}
+                  paddingAngle={3}
                   dataKey="value"
                   label={renderOuterPieLabel}
-                  labelLine={{ stroke: "#94A3B8", strokeWidth: 1.5 }}
+                  labelLine={{ stroke: "#64748B", strokeWidth: 1.5 }}
                 >
                   {categoryData.map((_, index) => (
                     <Cell key={`cell-cat-${index}`} fill={SCREENSHOT_PALETTE[(index + 3) % SCREENSHOT_PALETTE.length]} />
@@ -520,8 +553,8 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                 <Legend
                   verticalAlign="bottom"
                   align="center"
-                  formatter={(val: string) => (val.length > 18 ? val.slice(0, 18) + "..." : val)}
-                  wrapperStyle={{ fontSize: "11px", pt: "6px" }}
+                  formatter={(val: string) => <span className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{val.length > 18 ? val.slice(0, 18) + "..." : val}</span>}
+                  wrapperStyle={{ fontSize: "12px", pt: "6px", fontWeight: "700" }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -533,9 +566,9 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">👥</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Gender Participation</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Gender Participation</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="text-xs font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
               Workforce Ratio
             </span>
           </div>
@@ -551,13 +584,18 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                   paddingAngle={4}
                   dataKey="value"
                   label={renderOuterPieLabel}
-                  labelLine={{ stroke: "#94A3B8", strokeWidth: 1.5 }}
+                  labelLine={{ stroke: "#64748B", strokeWidth: 1.5 }}
                 >
-                  <Cell fill="#A5B4FC" />
-                  <Cell fill="#F472B6" />
+                  <Cell fill="#6366F1" />
+                  <Cell fill="#EC4899" />
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
-                <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: "11px", pt: "6px" }} />
+                <Legend
+                  verticalAlign="bottom"
+                  align="center"
+                  formatter={(val: string) => <span className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{val}</span>}
+                  wrapperStyle={{ fontSize: "12px", pt: "6px", fontWeight: "700" }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -568,71 +606,75 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">🔝</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Pending Dept-Wise</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Pending Dept-Wise</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="text-xs font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
               Pending Queue
             </span>
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart layout="vertical" data={pendingDeptData} margin={{ top: 10, right: 25, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis type="number" tick={{ fontSize: 10, fill: "#64748B" }} />
-                <YAxis dataKey="department" type="category" tick={{ fontSize: 10, fill: "#64748B" }} width={80} />
+              <BarChart layout="vertical" data={pendingDeptData} margin={{ top: 10, right: 30, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.6} />
+                <XAxis type="number" tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} />
+                <YAxis dataKey="department" type="category" tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} width={90} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={16}>
+                <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={18}>
                   {pendingDeptData.map((_, index) => (
                     <Cell key={`cell-pd-${index}`} fill={SCREENSHOT_PALETTE[(index + 2) % SCREENSHOT_PALETTE.length]} />
                   ))}
-                  <LabelList dataKey="count" position="right" style={{ fontSize: "11px", fontWeight: "bold", fill: "#334155" }} />
+                  <LabelList dataKey="count" position="right" style={{ fontSize: "11px", fontWeight: "800", fill: "#0F172A" }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Chart 6: Cost Breakdown Stacked Bar Chart (Sleek Thinner Bars & Balanced Data) */}
+        {/* Chart 6: Cost Breakdown Stacked Bar Chart */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">💰</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Cost Breakdown</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Cost Breakdown</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="text-xs font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
               Investment Tiers
             </span>
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={costCategoryData} margin={{ top: 18, right: 10, left: -15, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis dataKey="department" tick={{ fontSize: 9, fill: "#64748B" }} />
-                <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
+              <BarChart data={costCategoryData} margin={{ top: 20, right: 10, left: -15, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.6} />
+                <XAxis dataKey="department" tick={{ fontSize: 10, fontWeight: "bold", fill: "#334155" }} />
+                <YAxis tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
-                <Bar dataKey="No Cost" stackId="a" fill="#6EE7B7" barSize={16}>
+                <Legend
+                  verticalAlign="bottom"
+                  formatter={(val: string) => <span className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{val}</span>}
+                  wrapperStyle={{ fontSize: "12px", pt: "6px", fontWeight: "700" }}
+                />
+                <Bar dataKey="No Cost" stackId="a" fill="#10B981" barSize={18}>
                   <LabelList
                     dataKey="No Cost"
                     position="center"
                     formatter={(val: any) => (Number(val) > 0 ? val : "")}
-                    style={{ fontSize: "9px", fontWeight: "extrabold", fill: "#065F46" }}
+                    style={{ fontSize: "10px", fontWeight: "900", fill: "#FFFFFF" }}
                   />
                 </Bar>
-                <Bar dataKey="Low Cost" stackId="a" fill="#38BDF8" barSize={16}>
+                <Bar dataKey="Low Cost" stackId="a" fill="#0EA5E9" barSize={18}>
                   <LabelList
                     dataKey="Low Cost"
                     position="center"
                     formatter={(val: any) => (Number(val) > 0 ? val : "")}
-                    style={{ fontSize: "9px", fontWeight: "extrabold", fill: "#0369A1" }}
+                    style={{ fontSize: "10px", fontWeight: "900", fill: "#FFFFFF" }}
                   />
                 </Bar>
-                <Bar dataKey="High Cost" stackId="a" fill="#FBBF24" radius={[3, 3, 0, 0]} barSize={16}>
+                <Bar dataKey="High Cost" stackId="a" fill="#F59E0B" radius={[3, 3, 0, 0]} barSize={18}>
                   <LabelList
                     dataKey="High Cost"
                     position="center"
                     formatter={(val: any) => (Number(val) > 0 ? val : "")}
-                    style={{ fontSize: "9px", fontWeight: "extrabold", fill: "#78350F" }}
+                    style={{ fontSize: "10px", fontWeight: "900", fill: "#0F172A" }}
                   />
                 </Bar>
               </BarChart>
@@ -640,27 +682,31 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           </div>
         </div>
 
-        {/* Chart 7: Plant-wise Monthly Trend Line Chart (PGTL vs NGM) */}
+        {/* Chart 7: Plant-wise Monthly Trend Line Chart */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">🏢</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Plant-wise Monthly Trend</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Plant-wise Monthly Trend</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="text-xs font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
               Monthly Trend
             </span>
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyTrendData} margin={{ top: 20, right: 28, left: -15, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#64748B" }} padding={{ left: 10, right: 15 }} />
-                <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
+              <LineChart data={monthlyTrendData} margin={{ top: 22, right: 28, left: -15, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.6} />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} padding={{ left: 12, right: 18 }} />
+                <YAxis tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
+                <Legend
+                  verticalAlign="bottom"
+                  formatter={(val: string) => <span className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{val}</span>}
+                  wrapperStyle={{ fontSize: "12px", pt: "6px", fontWeight: "700" }}
+                />
                 {trendPlantKeys.map((plantKey, idx) => {
-                  const colors = ["#3B82F6", "#A855F7", "#10B981", "#F59E0B", "#EF4444"];
+                  const colors = ["#2563EB", "#9333EA", "#059669", "#D97706", "#DC2626"];
                   const color = colors[idx % colors.length];
                   return (
                     <Line
@@ -668,10 +714,10 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                       type="monotone"
                       dataKey={plantKey}
                       stroke={color}
-                      strokeWidth={2.5}
-                      dot={{ r: 4, fill: "#fff", stroke: color, strokeWidth: 2 }}
+                      strokeWidth={3}
+                      dot={{ r: 4.5, fill: "#FFF", stroke: color, strokeWidth: 2.5 }}
                     >
-                      <LabelList dataKey={plantKey} position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: color }} />
+                      <LabelList dataKey={plantKey} position="top" style={{ fontSize: "10px", fontWeight: "800", fill: color }} />
                     </Line>
                   );
                 })}
@@ -685,27 +731,27 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">📈</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">6-Month Suggestion Trend</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">6-Month Suggestion Trend</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="text-xs font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
               Volume Trend
             </span>
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyParticipationData} margin={{ top: 20, right: 28, left: -15, bottom: 5 }}>
+              <AreaChart data={monthlyParticipationData} margin={{ top: 22, right: 28, left: -15, bottom: 5 }}>
                 <defs>
                   <linearGradient id="colorPurpleGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#C084FC" stopOpacity={0.6} />
-                    <stop offset="95%" stopColor="#C084FC" stopOpacity={0.05} />
+                    <stop offset="5%" stopColor="#A855F7" stopOpacity={0.7} />
+                    <stop offset="95%" stopColor="#A855F7" stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#64748B" }} padding={{ left: 10, right: 15 }} />
-                <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.6} />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} padding={{ left: 12, right: 18 }} />
+                <YAxis tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="Participants" stroke="#9333EA" strokeWidth={3} fillOpacity={1} fill="url(#colorPurpleGrad)" dot={{ r: 4, fill: "#9333EA", stroke: "#fff", strokeWidth: 2 }}>
-                  <LabelList dataKey="Participants" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#6B21A8" }} />
+                <Area type="monotone" dataKey="Participants" stroke="#7C3AED" strokeWidth={3} fillOpacity={1} fill="url(#colorPurpleGrad)" dot={{ r: 4.5, fill: "#7C3AED", stroke: "#fff", strokeWidth: 2.5 }}>
+                  <LabelList dataKey="Participants" position="top" style={{ fontSize: "10px", fontWeight: "800", fill: "#5B21B6" }} />
                 </Area>
               </AreaChart>
             </ResponsiveContainer>
@@ -717,21 +763,21 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">📊</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Production Line Comparison</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Production Line Comparison</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="text-xs font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
               Lines Volume
             </span>
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={deptRankingData} margin={{ top: 20, right: 10, left: -15, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis dataKey="department" tick={{ fontSize: 9, fill: "#64748B" }} />
-                <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
+              <BarChart data={deptRankingData} margin={{ top: 22, right: 10, left: -15, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.6} />
+                <XAxis dataKey="department" tick={{ fontSize: 10, fontWeight: "bold", fill: "#334155" }} />
+                <YAxis tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="points" fill="#A5B4FC" radius={[4, 4, 0, 0]} barSize={20}>
-                  <LabelList dataKey="points" position="top" style={{ fontSize: "11px", fontWeight: "bold", fill: "#4338CA" }} />
+                <Bar dataKey="points" fill="#6366F1" radius={[4, 4, 0, 0]} barSize={22}>
+                  <LabelList dataKey="points" position="top" style={{ fontSize: "11px", fontWeight: "800", fill: "#3730A3" }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -743,9 +789,9 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">🍩</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Status Breakdown</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Status Breakdown</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="text-xs font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
               Org Summary
             </span>
           </div>
@@ -761,14 +807,19 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                   paddingAngle={3}
                   dataKey="value"
                   label={renderOuterPieLabel}
-                  labelLine={{ stroke: "#94A3B8", strokeWidth: 1.5 }}
+                  labelLine={{ stroke: "#64748B", strokeWidth: 1.5 }}
                 >
                   {statusData.map((_, index) => (
                     <Cell key={`cell-st-${index}`} fill={SCREENSHOT_PALETTE[index % SCREENSHOT_PALETTE.length]} />
                   ))}
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />
-                <Legend verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: "11px", pt: "6px" }} />
+                <Legend
+                  verticalAlign="bottom"
+                  align="center"
+                  formatter={(val: string) => <span className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{val}</span>}
+                  wrapperStyle={{ fontSize: "12px", pt: "6px", fontWeight: "700" }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -779,25 +830,29 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">⚖️</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">YoY Comparison</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">YoY Comparison</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="text-xs font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
               2025 vs 2026
             </span>
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={yearComparisonData} margin={{ top: 20, right: 10, left: -15, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis dataKey="metric" tick={{ fontSize: 9, fill: "#64748B" }} />
-                <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
+              <BarChart data={yearComparisonData} margin={{ top: 22, right: 10, left: -15, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.6} />
+                <XAxis dataKey="metric" tick={{ fontSize: 10, fontWeight: "bold", fill: "#334155" }} />
+                <YAxis tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
-                <Bar dataKey="2025" fill="#CBD5E1" radius={[3, 3, 0, 0]} barSize={16}>
-                  <LabelList dataKey="2025" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#475569" }} />
+                <Legend
+                  verticalAlign="bottom"
+                  formatter={(val: string) => <span className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{val}</span>}
+                  wrapperStyle={{ fontSize: "12px", pt: "6px", fontWeight: "700" }}
+                />
+                <Bar dataKey="2025" fill="#94A3B8" radius={[3, 3, 0, 0]} barSize={18}>
+                  <LabelList dataKey="2025" position="top" style={{ fontSize: "10px", fontWeight: "800", fill: "#334155" }} />
                 </Bar>
-                <Bar dataKey="2026" fill="#818CF8" radius={[3, 3, 0, 0]} barSize={16}>
-                  <LabelList dataKey="2026" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#3730A3" }} />
+                <Bar dataKey="2026" fill="#6366F1" radius={[3, 3, 0, 0]} barSize={18}>
+                  <LabelList dataKey="2026" position="top" style={{ fontSize: "10px", fontWeight: "800", fill: "#312E81" }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -809,20 +864,20 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">🎯</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Plant Performance Matrix</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Plant Performance Matrix</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="text-xs font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
               Radar
             </span>
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart cx="50%" cy="45%" outerRadius={68} data={radarData}>
-                <PolarGrid stroke="#E2E8F0" />
-                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 9, fill: "#64748B" }} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 8 }} />
+                <PolarGrid stroke="#CBD5E1" />
+                <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fontWeight: "bold", fill: "#334155" }} />
+                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fontWeight: "bold" }} />
                 {radarPlantKeys.map((plantKey, idx) => {
-                  const colors = ["#818CF8", "#FDE047", "#34D399", "#F472B6", "#FB923C"];
+                  const colors = ["#6366F1", "#F59E0B", "#10B981", "#EC4899", "#F97316"];
                   const color = colors[idx % colors.length];
                   return (
                     <Radar
@@ -835,69 +890,77 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
                     />
                   );
                 })}
-                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
+                <Legend
+                  verticalAlign="bottom"
+                  formatter={(val: string) => <span className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{val}</span>}
+                  wrapperStyle={{ fontSize: "12px", pt: "6px", fontWeight: "700" }}
+                />
                 <Tooltip content={<CustomTooltip />} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Chart 13: Cumulative Cost Savings Area Chart */}
+        {/* Chart 13: Cumulative Cost Savings Area Chart - With Year Name Shown on X-Axis */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">💵</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Cumulative Savings</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Cumulative Savings</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="text-xs font-bold px-2.5 py-1 rounded bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
               ₹ Lacs
             </span>
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={savingsData} margin={{ top: 20, right: 28, left: -15, bottom: 5 }}>
+              <AreaChart data={savingsData} margin={{ top: 22, right: 28, left: -12, bottom: 10 }}>
                 <defs>
                   <linearGradient id="colorGreenGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6EE7B7" stopOpacity={0.7} />
-                    <stop offset="95%" stopColor="#6EE7B7" stopOpacity={0.05} />
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.75} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#64748B" }} padding={{ left: 10, right: 15 }} />
-                <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.6} />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} tickMargin={6} padding={{ left: 15, right: 20 }} />
+                <YAxis tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="Savings" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorGreenGrad)" dot={{ r: 3, fill: "#10B981" }}>
-                  <LabelList dataKey="Savings" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#047857" }} />
+                <Area type="monotone" dataKey="Savings" stroke="#059669" strokeWidth={3} fillOpacity={1} fill="url(#colorGreenGrad)" dot={{ r: 4, fill: "#059669", stroke: "#FFF", strokeWidth: 2 }}>
+                  <LabelList dataKey="Savings" position="top" style={{ fontSize: "11px", fontWeight: "800", fill: "#047857" }} />
                 </Area>
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Chart 14: Execution Status Timeline */}
+        {/* Chart 14: Execution Status Timeline - Smart Non-Overlapping Labels */}
         <div className="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">⚡</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Execution Status</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Execution Status</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+            <span className="text-xs font-bold px-2.5 py-1 rounded bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
               Weekly Rate
             </span>
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={timelineData} margin={{ top: 20, right: 28, left: -15, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis dataKey="week" tick={{ fontSize: 10, fill: "#64748B" }} padding={{ left: 10, right: 15 }} />
-                <YAxis tick={{ fontSize: 10, fill: "#64748B" }} />
+              <LineChart data={timelineData} margin={{ top: 25, right: 28, left: -12, bottom: 12 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.6} />
+                <XAxis dataKey="week" tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} tickMargin={8} height={35} padding={{ left: 15, right: 20 }} />
+                <YAxis tick={{ fontSize: 11, fontWeight: "bold", fill: "#334155" }} domain={[0, (max: number) => Math.max(max + 3, 5)]} />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "11px" }} />
-                <Line type="monotone" dataKey="Submitted" stroke="#FDBA74" strokeWidth={2} dot={{ r: 3 }}>
-                  <LabelList dataKey="Submitted" position="top" style={{ fontSize: "9px", fontWeight: "bold", fill: "#C2410C" }} />
+                <Legend
+                  verticalAlign="bottom"
+                  formatter={(val: string) => <span className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{val}</span>}
+                  wrapperStyle={{ fontSize: "12px", pt: "6px", fontWeight: "700" }}
+                />
+                <Line type="monotone" dataKey="Submitted" stroke="#EA580C" strokeWidth={3} dot={{ r: 4.5, fill: "#EA580C", stroke: "#FFF", strokeWidth: 2 }}>
+                  <LabelList dataKey="Submitted" content={renderExecutionSubmittedLabel} />
                 </Line>
-                <Line type="monotone" dataKey="Completed" stroke="#86EFAC" strokeWidth={2} dot={{ r: 3 }}>
-                  <LabelList dataKey="Completed" position="bottom" style={{ fontSize: "9px", fontWeight: "bold", fill: "#15803D" }} />
+                <Line type="monotone" dataKey="Completed" stroke="#16A34A" strokeWidth={3} dot={{ r: 4.5, fill: "#16A34A", stroke: "#FFF", strokeWidth: 2 }}>
+                  <LabelList dataKey="Completed" content={renderExecutionCompletedLabel} />
                 </Line>
               </LineChart>
             </ResponsiveContainer>
@@ -909,25 +972,29 @@ export function DashboardChartsSection({ suggestions }: DashboardChartsProps) {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-base">💰</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Expected vs Verified Cost (₹)</span>
+              <span className="text-base font-extrabold text-slate-900 dark:text-slate-100">Expected vs Verified Cost (₹)</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+            <span className="text-xs font-bold px-2.5 py-1 rounded bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
               Audit
             </span>
           </div>
           <div className="h-68 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={expectedVsActualData} margin={{ top: 20, right: 10, left: -18, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" opacity={0.6} />
-                <XAxis dataKey="name" tick={{ fontSize: 9, fill: "#64748B" }} />
-                <YAxis tick={{ fontSize: 9, fill: "#64748B" }} tickFormatter={(v) => v >= 100000 ? `₹${(v/100000).toFixed(1)}L` : (v >= 1000 ? `₹${(v/1000).toFixed(0)}k` : `₹${v}`)} />
+              <BarChart data={expectedVsActualData} margin={{ top: 22, right: 10, left: -18, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" opacity={0.6} />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: "bold", fill: "#334155" }} />
+                <YAxis tick={{ fontSize: 10, fontWeight: "bold", fill: "#334155" }} tickFormatter={(v) => v >= 100000 ? `₹${(v/100000).toFixed(1)}L` : (v >= 1000 ? `₹${(v/1000).toFixed(0)}k` : `₹${v}`)} />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend verticalAlign="bottom" wrapperStyle={{ fontSize: "10px" }} />
-                <Bar dataKey="Expected (₹)" fill="#6366F1" radius={[3, 3, 0, 0]} barSize={16}>
-                  <LabelList dataKey="Expected (₹)" position="top" style={{ fontSize: "8px", fontWeight: "bold", fill: "#4338CA" }} formatter={(v: any) => v >= 100000 ? `₹${(Number(v)/100000).toFixed(1)}L` : (v >= 1000 ? `₹${(Number(v)/1000).toFixed(0)}k` : (v > 0 ? `₹${v}` : "0"))} />
+                <Legend
+                  verticalAlign="bottom"
+                  formatter={(val: string) => <span className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{val}</span>}
+                  wrapperStyle={{ fontSize: "12px", pt: "6px", fontWeight: "700" }}
+                />
+                <Bar dataKey="Expected (₹)" fill="#6366F1" radius={[3, 3, 0, 0]} barSize={18}>
+                  <LabelList dataKey="Expected (₹)" position="top" style={{ fontSize: "9px", fontWeight: "800", fill: "#3730A3" }} formatter={(v: any) => v >= 100000 ? `₹${(Number(v)/100000).toFixed(1)}L` : (v >= 1000 ? `₹${(Number(v)/1000).toFixed(0)}k` : (v > 0 ? `₹${v}` : "0"))} />
                 </Bar>
-                <Bar dataKey="Actual (₹)" fill="#10B981" radius={[3, 3, 0, 0]} barSize={16}>
-                  <LabelList dataKey="Actual (₹)" position="top" style={{ fontSize: "8px", fontWeight: "bold", fill: "#047857" }} formatter={(v: any) => v >= 100000 ? `₹${(Number(v)/100000).toFixed(1)}L` : (v >= 1000 ? `₹${(Number(v)/1000).toFixed(0)}k` : (v > 0 ? `₹${v}` : "0"))} />
+                <Bar dataKey="Actual (₹)" fill="#10B981" radius={[3, 3, 0, 0]} barSize={18}>
+                  <LabelList dataKey="Actual (₹)" position="top" style={{ fontSize: "9px", fontWeight: "800", fill: "#047857" }} formatter={(v: any) => v >= 100000 ? `₹${(Number(v)/100000).toFixed(1)}L` : (v >= 1000 ? `₹${(Number(v)/1000).toFixed(0)}k` : (v > 0 ? `₹${v}` : "0"))} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
