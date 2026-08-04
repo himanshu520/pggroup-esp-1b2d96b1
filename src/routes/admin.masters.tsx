@@ -4,6 +4,7 @@ import { AppShell, PageHeader } from "@/components/app-shell";
 import { ADMIN_NAV } from "@/lib/admin-nav";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ExportMenu } from "@/components/export-menu";
 import { useCanManage } from "@/lib/session";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -194,6 +195,14 @@ function LocationsTab() {
     onError: (e: any) => toast.error(friendlyError(e)),
   });
 
+  const locExportRows = rows.map((r: any) => ({
+    id: r.id,
+    state: r.state,
+    location: r.location,
+    active: r.active ? "Yes" : "No",
+    status: r.deleted_at ? "In Trash" : r.active ? "Active" : "Inactive",
+  }));
+
   return (
     <>
       <TabHeader
@@ -201,10 +210,23 @@ function LocationsTab() {
         onAdd={openNew}
         canAdd={canManage}
         right={
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Switch checked={showDeleted} onCheckedChange={setShowDeleted} />
-            Show Trash
-          </label>
+          <div className="flex items-center gap-2">
+            <ExportMenu
+              data={locExportRows}
+              columns={[
+                { key: "state", header: "State" },
+                { key: "location", header: "Location" },
+                { key: "id", header: "Location ID (UUID)" },
+                { key: "status", header: "Status" },
+              ]}
+              filename="master_locations"
+              title="Locations Master Report"
+            />
+            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+              <Switch checked={showDeleted} onCheckedChange={setShowDeleted} />
+              Show Trash
+            </label>
+          </div>
         }
       />
       <CrudTable
@@ -439,6 +461,15 @@ function PlantsTab() {
     onError: (e: any) => toast.error(friendlyError(e)),
   });
 
+  const plantExportRows = rows.map((r: any) => ({
+    id: r.id,
+    code: r.code,
+    name: r.name,
+    location: r.locations?.location ?? "",
+    active: r.active ? "Yes" : "No",
+    status: r.deleted_at ? "In Trash" : r.active ? "Active" : "Inactive",
+  }));
+
   return (
     <>
       <TabHeader
@@ -446,10 +477,24 @@ function PlantsTab() {
         onAdd={openNew}
         canAdd={canManage}
         right={
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Switch checked={showDeleted} onCheckedChange={setShowDeleted} />
-            Show Trash
-          </label>
+          <div className="flex items-center gap-2">
+            <ExportMenu
+              data={plantExportRows}
+              columns={[
+                { key: "code", header: "Plant Code" },
+                { key: "name", header: "Plant Name" },
+                { key: "location", header: "Location" },
+                { key: "id", header: "Plant ID (UUID)" },
+                { key: "status", header: "Status" },
+              ]}
+              filename="master_plants"
+              title="Plants Master Report"
+            />
+            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+              <Switch checked={showDeleted} onCheckedChange={setShowDeleted} />
+              Show Trash
+            </label>
+          </div>
         }
       />
       <CrudTable
@@ -614,6 +659,16 @@ function DepartmentsTab() {
     onError: (e: any) => toast.error(friendlyError(e)),
   });
 
+  const deptExportRows = rows.map((r: any) => ({
+    id: r.id,
+    code: r.code,
+    name: r.name,
+    plant: r.plants?.name ?? "",
+    is_pe: r.is_pe ? "Yes" : "No",
+    active: r.active ? "Yes" : "No",
+    status: r.deleted_at ? "In Trash" : r.active ? "Active" : "Inactive",
+  }));
+
   return (
     <>
       <TabHeader
@@ -621,10 +676,25 @@ function DepartmentsTab() {
         onAdd={openNew}
         canAdd={canManage}
         right={
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Switch checked={showDeleted} onCheckedChange={setShowDeleted} />
-            Show Trash
-          </label>
+          <div className="flex items-center gap-2">
+            <ExportMenu
+              data={deptExportRows}
+              columns={[
+                { key: "code", header: "Department Code" },
+                { key: "name", header: "Department Name" },
+                { key: "plant", header: "Plant" },
+                { key: "id", header: "Department ID (UUID)" },
+                { key: "is_pe", header: "PE Department" },
+                { key: "status", header: "Status" },
+              ]}
+              filename="master_departments"
+              title="Departments Master Report"
+            />
+            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+              <Switch checked={showDeleted} onCheckedChange={setShowDeleted} />
+              Show Trash
+            </label>
+          </div>
         }
       />
       <CrudTable
