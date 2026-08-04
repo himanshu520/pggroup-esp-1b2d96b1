@@ -42,12 +42,18 @@ export async function loadSession(): Promise<SessionProfile | null> {
       .eq("user_id", user.id),
   ]);
 
-  const roles = (rolesRaw ?? []) as SessionProfile["roles"];
-  const adminRoles: AppRole[] = ["super_admin","corporate_admin","hr","admin","location_admin","plant_admin","department_admin","pe_user","dept_user","mgmt_viewer"];
+  const rawRoles = (rolesRaw ?? []) as SessionProfile["roles"];
+  const roles = rawRoles.map((r) => ({
+    ...r,
+    location_id: r.location_id ?? employee?.location_id ?? null,
+    plant_id: r.plant_id ?? employee?.plant_id ?? null,
+    department_id: r.department_id ?? employee?.department_id ?? null,
+  }));
+  const adminRoles: AppRole[] = ["super_admin","corporate_admin","admin","location_admin","plant_admin","department_admin","pe_user","dept_user","mgmt_viewer"];
   const isAdmin = roles.some((r) => adminRoles.includes(r.role));
   const isPE = roles.some((r) => r.role === "pe_user");
   // Ranked
-  const rank: AppRole[] = ["super_admin","corporate_admin","hr","admin","location_admin","plant_admin","department_admin","pe_user","dept_user","mgmt_viewer","employee"];
+  const rank: AppRole[] = ["super_admin","corporate_admin","admin","location_admin","plant_admin","hr","department_admin","pe_user","dept_user","mgmt_viewer","employee"];
   const primaryRole = rank.find((r) => roles.some((x) => x.role === r)) ?? "employee";
 
   return {
@@ -95,8 +101,8 @@ export function isLocationAccessible(locationId: string | null, roles: SessionPr
   if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin")) return true;
   return roles.some((r) => {
     if (r.location_id === locationId) return true;
-    // If they have admin role assigned to a plant, they can access the location of that plant
-    if (r.role === "admin" && r.plant_id) {
+    // If they have admin or hr role assigned to a plant, they can access the location of that plant
+    if ((r.role === "admin" || r.role === "hr") && r.plant_id) {
       // In this check, locationId matches if they are in same location scope
       return r.location_id === locationId;
     }
@@ -108,7 +114,7 @@ export function isPlantAccessible(plantId: string | null, locationId: string | n
   if (!roles) return false;
   if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin")) return true;
   return roles.some((r) => {
-    if (r.role === "location_admin" || (r.role === "admin" && r.location_id && !r.plant_id)) return r.location_id === locationId;
+    if (r.role === "location_admin" || r.role === "hr" || (r.role === "admin" && r.location_id && !r.plant_id)) return r.location_id === locationId;
     return r.plant_id === plantId;
   });
 }
@@ -117,7 +123,7 @@ export function isDeptAccessible(deptId: string | null, plantId: string | null, 
   if (!roles) return false;
   if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin")) return true;
   return roles.some((r) => {
-    if (r.role === "location_admin" || (r.role === "admin" && r.location_id && !r.plant_id)) return r.location_id === locationId;
+    if (r.role === "location_admin" || r.role === "hr" || (r.role === "admin" && r.location_id && !r.plant_id)) return r.location_id === locationId;
     if (r.role === "plant_admin" || r.role === "pe_user" || r.role === "mgmt_viewer" || r.role === "admin") return r.plant_id === plantId;
     return r.department_id === deptId;
   });
@@ -128,8 +134,9 @@ export function isSuggestionAccessible(sug: { location_id: string | null; plant_
   if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin")) return true;
   return roles.some((r) => {
     if (r.role === "location_admin" || (r.role === "admin" && r.location_id && !r.plant_id)) return r.location_id === sug.location_id;
-    if (r.role === "plant_admin" || r.role === "pe_user" || r.role === "mgmt_viewer" || r.role === "admin") {
-      return r.location_id === sug.location_id && r.plant_id === sug.plant_id;
+    if (r.role === "plant_admin" || r.role === "pe_user" || r.role === "mgmt_viewer" || r.role === "admin" || r.role === "hr") {
+      if (r.plant_id) return r.location_id === sug.location_id && r.plant_id === sug.plant_id;
+      if (r.location_id) return r.location_id === sug.location_id;
     }
     return r.location_id === sug.location_id && r.plant_id === sug.plant_id && r.department_id === sug.current_department_id;
   });

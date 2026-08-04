@@ -166,8 +166,8 @@ export function UsersPage() {
     u.roles.length
       ? u.roles.map((r) => ({
           email: u.email,
-          name: u.employee?.name ?? "",
-          code: u.employee?.employee_code ?? "",
+          name: (u as any).employee?.name ?? "",
+          code: (u as any).employee?.employee_code ?? "",
           role: ROLE_LABEL[r.role],
           location: r.locations?.location ?? "",
           plant: r.plants?.name ?? "",
@@ -177,8 +177,8 @@ export function UsersPage() {
       : [
           {
             email: u.email,
-            name: u.employee?.name ?? "",
-            code: u.employee?.employee_code ?? "",
+            name: (u as any).employee?.name ?? "",
+            code: (u as any).employee?.employee_code ?? "",
             role: "— none —",
             location: "",
             plant: "",
@@ -419,8 +419,8 @@ function ScopePicker({
   value: { location_id: string | null; plant_id: string | null; plant_ids?: string[] | null; department_id: string | null };
   onChange: (v: { location_id: string | null; plant_id: string | null; plant_ids?: string[] | null; department_id: string | null }) => void;
 }) {
-  const needsLoc = role === "location_admin" || role === "admin" || role === "plant_admin" || role === "department_admin" || role === "dept_user" || role === "pe_user" || role === "mgmt_viewer" || role === "employee";
-  const needsPlant = role === "plant_admin" || role === "admin" || role === "department_admin" || role === "dept_user" || role === "pe_user" || role === "mgmt_viewer" || role === "employee";
+  const needsLoc = role === "location_admin" || role === "admin" || role === "plant_admin" || role === "department_admin" || role === "dept_user" || role === "pe_user" || role === "mgmt_viewer" || role === "employee" || role === "hr";
+  const needsPlant = role === "plant_admin" || role === "admin" || role === "department_admin" || role === "dept_user" || role === "pe_user" || role === "mgmt_viewer" || role === "employee" || role === "hr";
   const needsDept = role === "department_admin" || role === "dept_user";
 
   const filteredPlants = value.location_id ? plants.filter((p) => p.location_id === value.location_id) : plants;
