@@ -191,6 +191,24 @@ function AppShellInner({
 
   const initials = (session?.employee?.name ?? session?.email ?? "U").slice(0, 2).toUpperCase();
 
+  const isSuperOrCorp = session?.roles?.some((r) => r.role === "super_admin" || r.role === "corporate_admin") || session?.primaryRole === "super_admin" || session?.primaryRole === "corporate_admin";
+  const isHRRole = session?.roles?.some((r) => r.role === "hr") || session?.primaryRole === "hr";
+
+  const isItemVisible = (item: NavItem) => {
+    if (item.section === "employees") return isSuperOrCorp || isHRRole;
+    if (["masters", "users", "audit", "security", "settings"].includes(item.section ?? "") || item.to === "/admin/database") {
+      return isSuperOrCorp;
+    }
+    return true;
+  };
+
+  const filteredNavGroups = navGroups
+    .map((g) => ({
+      ...g,
+      items: g.items.filter(isItemVisible),
+    }))
+    .filter((g) => g.items.length > 0);
+
   const sidebar = (
     <aside
       className={cn(
@@ -216,9 +234,7 @@ function AppShellInner({
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
-        {navGroups
-          .filter((g) => g.label !== "Administration" || session?.primaryRole === "super_admin")
-          .map((g, gi) => (
+        {filteredNavGroups.map((g, gi) => (
           <div key={gi}>
             {g.label && (
               <div className={cn("px-2.5 pb-2 text-[10px] font-bold uppercase tracking-wider text-sidebar-foreground/50", collapsible && collapsed && "lg:hidden")}>

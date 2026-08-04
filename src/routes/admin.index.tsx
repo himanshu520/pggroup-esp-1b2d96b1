@@ -75,8 +75,15 @@ const ADMIN_ONLY_SECTIONS = new Set(["masters", "employees", "users", "audit", "
 function AdminHome() {
   const { section, id } = Route.useSearch();
   const { data: sess } = useSession();
-  const isSuper = sess?.primaryRole === "super_admin";
-  const effectiveSection = section && ADMIN_ONLY_SECTIONS.has(section) && !isSuper ? undefined : section;
+  const isSuper = sess?.primaryRole === "super_admin" || sess?.primaryRole === "corporate_admin";
+  const isHR = sess?.roles?.some((r) => r.role === "hr") || sess?.primaryRole === "hr";
+  const canAccessSection = (sec: string) => {
+    if (!ADMIN_ONLY_SECTIONS.has(sec)) return true;
+    if (isSuper) return true;
+    if (sec === "employees" && isHR) return true;
+    return false;
+  };
+  const effectiveSection = section && !canAccessSection(section) ? undefined : section;
   switch (effectiveSection) {
     case "suggestions": return <SuggestionsList />;
     case "suggestion":  return id ? <SuggestionDetail id={id} /> : <SuggestionsList />;

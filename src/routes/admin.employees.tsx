@@ -1,11 +1,11 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { AppShell, PageHeader } from "@/components/app-shell";
 import { ADMIN_NAV } from "@/lib/admin-nav";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { useCanManage } from "@/lib/session";
+import { useCanManage, useCanManageEmployees } from "@/lib/session";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   listEmployeesAdmin,
@@ -14,6 +14,7 @@ import {
   deleteEmployee,
   restoreEmployee,
   setEmployeeActive,
+  bulkCreateEmployees,
 } from "@/lib/user-admin.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,8 +37,9 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Search, Plus, Pencil, Trash2, Power, PowerOff, Users, Undo2 } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, Power, PowerOff, Users, Undo2, FileSpreadsheet, Download, Upload, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { ExportMenu } from "@/components/export-menu";
+import * as XLSX from "xlsx";
 
 export const Route = createFileRoute("/admin/employees")({
   beforeLoad: () => { throw redirect({ to: "/admin", search: { section: "employees" } as any }); },
@@ -101,16 +103,27 @@ const EMPTY: Form = {
 
 export function EmployeesPage() {
   const qc = useQueryClient();
-  const canManage = useCanManage();
+  const canManage = useCanManage(); // super_admin & corporate_admin ONLY (can delete & restore)
+  const canManageEmployees = useCanManageEmployees(); // super_admin, corporate_admin & HR (can add, edit, upload excel)
+
   const listFn = useServerFn(listEmployeesAdmin);
   const createFn = useServerFn(createEmployee);
   const updateFn = useServerFn(updateEmployee);
   const deleteFn = useServerFn(deleteEmployee);
   const restoreFn = useServerFn(restoreEmployee);
   const toggleFn = useServerFn(setEmployeeActive);
+  const bulkCreateFn = useServerFn(bulkCreateEmployees);
 
   const [showDeleted, setShowDeleted] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Emp | null>(null);
+
+  // Excel Modal States
+  const [excelModalOpen, setExcelModalOpen] = useState(false);
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [parsedRows, setParsedRows] = useState<any[]>([]);
+  const [parsing, setParsing] = useState(false);
+  const [importResult, setImportResult] = useState<{ successCount: number; skippedCount: number; errors: any[] } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["admin-employees", showDeleted],
@@ -198,6 +211,21 @@ export function EmployeesPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const bulkSave = useMutation({
+    mutationFn: async (employees: any[]) => bulkCreateFn({ data: { employees } }),
+    onSuccess: (res) => {
+      setImportResult(res);
+      if (res.successCount > 0) {
+        toast.success(`Successfully imported ${res.successCount} employee(s).`);
+        invalidate();
+      }
+      if (res.skippedCount > 0) {
+        toast.warning(`${res.skippedCount} employee(s) skipped due to duplicate code or email.`);
+      }
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const exportRows = filtered.map((e) => ({
     employee_code: e.employee_code,
     name: e.name,
@@ -211,6 +239,131 @@ export function EmployeesPage() {
     active: e.active ? "Yes" : "No",
     linked_user: e.user_id ? "Yes" : "No",
   }));
+
+  function downloadExcelTemplate() {
+    const templateData = [
+      {
+        "Employee ID": "EMP001",
+        "Full Name": "Rahul Sharma",
+        "Email": "rahul.sharma@example.com",
+        "Designation": "Senior Engineer",
+        "Mobile": "9876543210",
+        "Gender": "Male",
+        "Location": "Delhi",
+        "Plant": "Main Plant",
+        "Department": "Production",
+      },
+      {
+        "Employee ID": "EMP002",
+        "Full Name": "Priya Singh",
+        "Email": "priya.singh@example.com",
+        "Designation": "HR Manager",
+        "Mobile": "9876543211",
+        "Gender": "Female",
+        "Location": "Mumbai",
+        "Plant": "Unit 2",
+        "Department": "HR",
+      },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    ws["!cols"] = [
+      { wch: 15 },
+      { wch: 22 },
+      { wch: 28 },
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 12 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 20 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Employees Template");
+    XLSX.writeFile(wb, "employee_import_template.xlsx");
+    toast.success("Excel template downloaded successfully.");
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setExcelFile(file);
+    setParsing(true);
+    setImportResult(null);
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheet = workbook.SheetNames[0];
+        const json: any[] = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: "" });
+
+        if (!json || json.length === 0) {
+          toast.error("The selected Excel file is empty.");
+          setParsedRows([]);
+          setParsing(false);
+          return;
+        }
+
+        // Map flexible header names
+        const mapped = json
+          .map((row: any) => {
+            const findVal = (...keys: string[]) => {
+              for (const k of Object.keys(row)) {
+                const cleanKey = k.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+                if (keys.some((target) => cleanKey === target.toLowerCase().replace(/[^a-z0-9]/g, ""))) {
+                  return String(row[k]).trim();
+                }
+              }
+              return "";
+            };
+
+            const code = findVal("Employee ID", "Employee Code", "employee_code", "empcode", "code", "id");
+            const name = findVal("Full Name", "Name", "name", "employee_name");
+            const email = findVal("Email", "Email Address", "email");
+            const designation = findVal("Designation", "Role", "designation", "title");
+            const mobile = findVal("Mobile", "Mobile Number", "Phone", "phone", "mobile");
+            const genderStr = findVal("Gender", "Sex", "gender").toLowerCase();
+            let gender: Gender | null = null;
+            if (["male", "m"].includes(genderStr)) gender = "male";
+            else if (["female", "f"].includes(genderStr)) gender = "female";
+            else if (["other", "o"].includes(genderStr)) gender = "other";
+            else if (["prefer_not_to_say", "prefer not to say"].includes(genderStr)) gender = "prefer_not_to_say";
+
+            const location = findVal("Location", "Location Name", "location");
+            const plant = findVal("Plant", "Plant Name", "plant");
+            const department = findVal("Department", "Department Name", "dept", "department");
+
+            return {
+              employee_code: code,
+              name: name,
+              email: email,
+              designation: designation || null,
+              mobile: mobile || null,
+              gender: gender,
+              location: location || null,
+              plant: plant || null,
+              department: department || null,
+              active: true,
+            };
+          })
+          .filter((r) => r.employee_code || r.name || r.email);
+
+        if (mapped.length === 0) {
+          toast.error("Could not find valid employee rows in file. Please check column headers.");
+        }
+        setParsedRows(mapped);
+      } catch (err: any) {
+        toast.error("Failed to parse Excel file: " + err.message);
+        setParsedRows([]);
+      } finally {
+        setParsing(false);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
 
   function openAdd() {
     setForm(EMPTY);
@@ -240,9 +393,9 @@ export function EmployeesPage() {
     <AppShell navGroups={ADMIN_NAV} title="Admin Console">
       <PageHeader
         title="Employees"
-        description="Add, edit, deactivate, and remove employees. Employees created here can be linked to a sign-in user from Users & Roles."
+        description="Add, edit, deactivate, and import employees. Employees created here can be linked to a sign-in user from Users & Roles."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <ExportMenu
               data={exportRows}
               columns={[
@@ -260,11 +413,31 @@ export function EmployeesPage() {
               filename="employees"
               title="Employees"
             />
-            {canManage && (
-              <Button size="sm" onClick={openAdd}>
-                <Plus className="w-4 h-4 mr-1.5" />
-                Add employee
-              </Button>
+            {canManageEmployees && (
+              <>
+                <Button size="sm" variant="outline" onClick={downloadExcelTemplate} title="Download sample Excel template">
+                  <Download className="w-4 h-4 mr-1.5" />
+                  Template
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setExcelModalOpen(true);
+                    setParsedRows([]);
+                    setImportResult(null);
+                    setExcelFile(null);
+                  }}
+                  title="Bulk upload employees via Excel file"
+                >
+                  <FileSpreadsheet className="w-4 h-4 mr-1.5" />
+                  Upload Excel
+                </Button>
+                <Button size="sm" onClick={openAdd}>
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  Add employee
+                </Button>
+              </>
             )}
           </div>
         }
@@ -280,10 +453,12 @@ export function EmployeesPage() {
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
-        <label className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Switch checked={showDeleted} onCheckedChange={setShowDeleted} />
-          Show Trash
-        </label>
+        {canManage && (
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+            <Switch checked={showDeleted} onCheckedChange={setShowDeleted} />
+            Show Trash
+          </label>
+        )}
         <div className="text-xs text-muted-foreground ml-auto">
           {filtered.length} employee{filtered.length === 1 ? "" : "s"}
         </div>
@@ -352,18 +527,22 @@ export function EmployeesPage() {
                   </td>
                   <td className="px-4 py-3 align-top">
                     <div className="flex items-center gap-1">
-                      {!canManage ? (
+                      {!canManageEmployees ? (
                         <span className="text-[11px] text-muted-foreground">View only</span>
                       ) : e.deleted_at ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => restore.mutate(e.id)}
-                          title="Restore"
-                          disabled={restore.isPending}
-                        >
-                          <Undo2 className="w-3.5 h-3.5" /> Restore
-                        </Button>
+                        canManage ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => restore.mutate(e.id)}
+                            title="Restore"
+                            disabled={restore.isPending}
+                          >
+                            <Undo2 className="w-3.5 h-3.5" /> Restore
+                          </Button>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground">In Trash</span>
+                        )
                       ) : (
                         <>
                           <Button size="sm" variant="ghost" onClick={() => openEdit(e)} title="Edit">
@@ -382,14 +561,16 @@ export function EmployeesPage() {
                               <Power className="w-3.5 h-3.5 text-success" />
                             )}
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setPendingDelete(e)}
-                            title="Move to Trash"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                          </Button>
+                          {canManage && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setPendingDelete(e)}
+                              title="Move to Trash"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                            </Button>
+                          )}
                         </>
                       )}
                     </div>
@@ -416,7 +597,158 @@ export function EmployeesPage() {
         onConfirm={() => { if (pendingDelete) del.mutate(pendingDelete.id); }}
       />
 
+      {/* Excel Upload Modal */}
+      <Dialog
+        open={excelModalOpen}
+        onOpenChange={(v) => {
+          if (!v) {
+            setExcelModalOpen(false);
+            setExcelFile(null);
+            setParsedRows([]);
+            setImportResult(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="w-5 h-5 text-primary" />
+              Upload Employees via Excel
+            </DialogTitle>
+            <DialogDescription>
+              Upload an Excel (.xlsx, .xls) or CSV file containing employee records to import them into the database.
+            </DialogDescription>
+          </DialogHeader>
 
+          <div className="space-y-4 py-2 flex-1 overflow-y-auto">
+            <div className="flex items-center justify-between gap-4 p-4 border border-dashed border-border rounded-lg bg-muted/20">
+              <div className="flex items-center gap-3">
+                <Upload className="w-6 h-6 text-muted-foreground shrink-0" />
+                <div>
+                  <div className="text-sm font-medium">Select Excel File</div>
+                  <div className="text-xs text-muted-foreground">Supported formats: .xlsx, .xls, .csv</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                  Browse File
+                </Button>
+                <Button size="sm" variant="ghost" onClick={downloadExcelTemplate} title="Download Template">
+                  <Download className="w-4 h-4 mr-1" />
+                  Template
+                </Button>
+              </div>
+            </div>
+
+            {excelFile && (
+              <div className="text-xs text-muted-foreground flex items-center justify-between px-1">
+                <span>File: <strong>{excelFile.name}</strong> ({(excelFile.size / 1024).toFixed(1)} KB)</span>
+                {parsing && (
+                  <span className="flex items-center gap-1 text-primary">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Parsing file…
+                  </span>
+                )}
+              </div>
+            )}
+
+            {importResult && (
+              <div className="space-y-2 p-3 rounded-lg border bg-card text-xs">
+                <div className="flex items-center gap-2 font-semibold">
+                  <CheckCircle2 className="w-4 h-4 text-success" />
+                  Import Summary: {importResult.successCount} imported successfully, {importResult.skippedCount} skipped.
+                </div>
+                {importResult.errors.length > 0 && (
+                  <div className="mt-2 space-y-1 max-h-32 overflow-y-auto text-destructive border-t pt-2">
+                    <div className="font-semibold flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" /> Errors / Skipped Rows:
+                    </div>
+                    {importResult.errors.map((err, idx) => (
+                      <div key={idx} className="pl-4">
+                        Row {err.index} ({err.code || err.name || "N/A"}): {err.error}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {parsedRows.length > 0 && !importResult && (
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-foreground flex items-center justify-between">
+                  <span>Parsed Records ({parsedRows.length})</span>
+                  <span className="text-muted-foreground font-normal">Review before importing</span>
+                </div>
+                <div className="border rounded-md overflow-x-auto max-h-60 text-xs">
+                  <table className="w-full text-left">
+                    <thead className="bg-muted sticky top-0 border-b">
+                      <tr>
+                        <th className="px-3 py-2">Emp ID</th>
+                        <th className="px-3 py-2">Name</th>
+                        <th className="px-3 py-2">Email</th>
+                        <th className="px-3 py-2">Designation</th>
+                        <th className="px-3 py-2">Location</th>
+                        <th className="px-3 py-2">Plant</th>
+                        <th className="px-3 py-2">Department</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {parsedRows.map((r, idx) => (
+                        <tr key={idx} className="hover:bg-muted/30">
+                          <td className="px-3 py-1.5 font-medium">{r.employee_code || "—"}</td>
+                          <td className="px-3 py-1.5">{r.name || "—"}</td>
+                          <td className="px-3 py-1.5 text-muted-foreground">{r.email || "—"}</td>
+                          <td className="px-3 py-1.5">{r.designation || "—"}</td>
+                          <td className="px-3 py-1.5">{r.location || "—"}</td>
+                          <td className="px-3 py-1.5">{r.plant || "—"}</td>
+                          <td className="px-3 py-1.5">{r.department || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setExcelModalOpen(false);
+                setExcelFile(null);
+                setParsedRows([]);
+                setImportResult(null);
+              }}
+              disabled={bulkSave.isPending}
+            >
+              Close
+            </Button>
+            {parsedRows.length > 0 && !importResult && (
+              <Button
+                onClick={() => bulkSave.mutate(parsedRows)}
+                disabled={bulkSave.isPending || parsing}
+              >
+                {bulkSave.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Importing…
+                  </>
+                ) : (
+                  `Import ${parsedRows.length} Employee(s)`
+                )}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Add / Edit Employee Dialog */}
       <Dialog open={open} onOpenChange={(v) => { if (!v) { setOpen(false); setForm(EMPTY); } }}>
         <DialogContent className="max-w-xl">
           <DialogHeader>

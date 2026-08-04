@@ -43,11 +43,11 @@ export async function loadSession(): Promise<SessionProfile | null> {
   ]);
 
   const roles = (rolesRaw ?? []) as SessionProfile["roles"];
-  const adminRoles: AppRole[] = ["super_admin","corporate_admin","admin","location_admin","plant_admin","department_admin","pe_user","dept_user","mgmt_viewer"];
+  const adminRoles: AppRole[] = ["super_admin","corporate_admin","hr","admin","location_admin","plant_admin","department_admin","pe_user","dept_user","mgmt_viewer"];
   const isAdmin = roles.some((r) => adminRoles.includes(r.role));
   const isPE = roles.some((r) => r.role === "pe_user");
   // Ranked
-  const rank: AppRole[] = ["super_admin","corporate_admin","admin","location_admin","plant_admin","department_admin","pe_user","dept_user","mgmt_viewer","employee"];
+  const rank: AppRole[] = ["super_admin","corporate_admin","hr","admin","location_admin","plant_admin","department_admin","pe_user","dept_user","mgmt_viewer","employee"];
   const primaryRole = rank.find((r) => roles.some((x) => x.role === r)) ?? "employee";
 
   return {
@@ -78,6 +78,16 @@ export function useCanManage(): boolean {
   const { data } = useSession();
   const roles = data?.roles ?? [];
   return roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin");
+}
+
+/**
+ * True when the current user can view/add/edit employees (including Excel upload):
+ * super_admin, corporate_admin, or hr.
+ */
+export function useCanManageEmployees(): boolean {
+  const { data } = useSession();
+  const roles = data?.roles ?? [];
+  return roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin" || r.role === "hr");
 }
 
 export function isLocationAccessible(locationId: string | null, roles: SessionProfile["roles"] | undefined): boolean {

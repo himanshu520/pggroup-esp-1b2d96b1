@@ -5,6 +5,7 @@ import { z } from "zod";
 const ROLE = z.enum([
   "super_admin",
   "corporate_admin",
+  "hr",
   "admin",
   "location_admin",
   "plant_admin",
@@ -20,6 +21,14 @@ async function requireAdmin(userId: string) {
   const { data } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
   const ok = (data ?? []).some((r) => r.role === "super_admin" || r.role === "corporate_admin");
   if (!ok) throw new Error("Forbidden — admin access required.");
+  return supabaseAdmin;
+}
+
+async function requireEmployeeAdmin(userId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
+  const ok = (data ?? []).some((r) => r.role === "super_admin" || r.role === "corporate_admin" || r.role === "hr");
+  if (!ok) throw new Error("Forbidden — HR or Admin access required.");
   return supabaseAdmin;
 }
 
@@ -181,7 +190,7 @@ export const setEmployeeActive = createServerFn({ method: "POST" })
     z.object({ employee_id: z.string().uuid(), active: z.boolean() }).parse(d ?? {}),
   )
   .handler(async ({ context, data }) => {
-    const supabaseAdmin = await requireAdmin(context.userId);
+    const supabaseAdmin = await requireEmployeeAdmin(context.userId);
     const { data: before } = await supabaseAdmin
       .from("employees")
       .select("name,email,active,location_id,plant_id,department_id")
@@ -232,7 +241,7 @@ export const listEmployeesAdmin = createServerFn({ method: "POST" })
     z.object({ showDeleted: z.boolean().optional() }).optional().parse(d ?? {}),
   )
   .handler(async ({ context, data }) => {
-    const supabaseAdmin = await requireAdmin(context.userId);
+    const supabaseAdmin = await requireEmployeeAdmin(context.userId);
     let q = supabaseAdmin
       .from("employees")
       .select(
@@ -285,7 +294,7 @@ export const createEmployee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => EMPLOYEE_INPUT.parse(d))
   .handler(async ({ context, data }) => {
-    const supabaseAdmin = await requireAdmin(context.userId);
+    const supabaseAdmin = await requireEmployeeAdmin(context.userId);
 
     // Pre-check for duplicate employee_code (including soft-deleted records)
     const { data: existingCode } = await supabaseAdmin
@@ -351,7 +360,7 @@ export const updateEmployee = createServerFn({ method: "POST" })
     EMPLOYEE_INPUT.extend({ id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ context, data }) => {
-    const supabaseAdmin = await requireAdmin(context.userId);
+    const supabaseAdmin = await requireEmployeeAdmin(context.userId);
     const { id, ...rest } = data;
 
     // Check duplicate code on other employees
@@ -456,4 +465,145 @@ export const restoreEmployee = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     await writeAudit(context.userId, "employee.restore", "employees", data.id, before ?? {});
     return { ok: true };
+  });
+
+/* ============ BULK CREATE EMPLOYEES ============ */
+
+export const bulkCreateEmployees = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        employees: z.array(
+          z.object({
+            name: z.string().trim().min(1, "Name is required"),
+            email: z.string().email("Invalid email").transform((s) => s.trim().toLowerCase()),
+            employee_code: z.string().trim().min(1, "Employee ID is required"),
+            designation: z.string().trim().nullable().optional(),
+            mobile: z.string().trim().nullable().optional(),
+            gender: GENDER.nullable().optional(),
+            location: z.string().trim().nullable().optional(),
+            plant: z.string().trim().nullable().optional(),
+            department: z.string().trim().nullable().optional(),
+            location_id: z.string().uuid().nullable().optional(),
+            plant_id: z.string().uuid().nullable().optional(),
+            department_id: z.string().uuid().nullable().optional(),
+            active: z.boolean().default(true),
+          })
+        ),
+      })
+      .parse(d ?? {})
+  )
+  .handler(async ({ context, data }) => {
+    const supabaseAdmin = await requireEmployeeAdmin(context.userId);
+
+    const [{ data: locations }, { data: plants }, { data: depts }, { data: existingEmps }] = await Promise.all([
+      supabaseAdmin.from("locations").select("id,location").is("deleted_at", null),
+      supabaseAdmin.from("plants").select("id,name,location_id").is("deleted_at", null),
+      supabaseAdmin.from("departments").select("id,name,plant_id").is("deleted_at", null),
+      supabaseAdmin.from("employees").select("employee_code,email"),
+    ]);
+
+    const existingCodeSet = new Set((existingEmps ?? []).map((e) => e.employee_code.toLowerCase()));
+    const existingEmailSet = new Set((existingEmps ?? []).map((e) => e.email.toLowerCase()));
+
+    const locMap = new Map<string, string>();
+    (locations ?? []).forEach((l) => {
+      locMap.set(l.id.toLowerCase(), l.id);
+      locMap.set(l.location.toLowerCase(), l.id);
+    });
+
+    const plantMap = new Map<string, { id: string; location_id: string | null }>();
+    (plants ?? []).forEach((p) => {
+      plantMap.set(p.id.toLowerCase(), { id: p.id, location_id: p.location_id });
+      plantMap.set(p.name.toLowerCase(), { id: p.id, location_id: p.location_id });
+    });
+
+    const deptMap = new Map<string, { id: string; plant_id: string | null }>();
+    (depts ?? []).forEach((d) => {
+      deptMap.set(d.id.toLowerCase(), { id: d.id, plant_id: d.plant_id });
+      deptMap.set(d.name.toLowerCase(), { id: d.name, plant_id: d.plant_id });
+    });
+
+    const rowsToInsert: any[] = [];
+    const errors: Array<{ index: number; code?: string; name?: string; error: string }> = [];
+
+    const processedCodesInBatch = new Set<string>();
+    const processedEmailsInBatch = new Set<string>();
+
+    data.employees.forEach((emp, index) => {
+      const codeKey = emp.employee_code.toLowerCase();
+      const emailKey = emp.email.toLowerCase();
+
+      if (existingCodeSet.has(codeKey) || processedCodesInBatch.has(codeKey)) {
+        errors.push({ index: index + 1, code: emp.employee_code, name: emp.name, error: `Employee Code "${emp.employee_code}" already exists.` });
+        return;
+      }
+      if (existingEmailSet.has(emailKey) || processedEmailsInBatch.has(emailKey)) {
+        errors.push({ index: index + 1, code: emp.employee_code, name: emp.name, error: `Email "${emp.email}" already exists.` });
+        return;
+      }
+
+      // Match Location
+      let locId: string | null = emp.location_id ?? null;
+      if (!locId && emp.location) {
+        locId = locMap.get(emp.location.toLowerCase()) ?? null;
+      }
+
+      // Match Plant
+      let plantId: string | null = emp.plant_id ?? null;
+      if (!plantId && emp.plant) {
+        const found = plantMap.get(emp.plant.toLowerCase());
+        if (found) {
+          plantId = found.id;
+          if (!locId && found.location_id) locId = found.location_id;
+        }
+      }
+
+      // Match Dept
+      let deptId: string | null = emp.department_id ?? null;
+      if (!deptId && emp.department) {
+        const found = deptMap.get(emp.department.toLowerCase());
+        if (found) {
+          deptId = found.id;
+          if (!plantId && found.plant_id) {
+            plantId = found.plant_id;
+            const pInfo = plants?.find((p) => p.id === plantId);
+            if (!locId && pInfo?.location_id) locId = pInfo.location_id;
+          }
+        }
+      }
+
+      processedCodesInBatch.add(codeKey);
+      processedEmailsInBatch.add(emailKey);
+
+      rowsToInsert.push({
+        name: emp.name,
+        email: emp.email,
+        employee_code: emp.employee_code,
+        designation: emp.designation ?? null,
+        mobile: emp.mobile ?? null,
+        gender: emp.gender ?? null,
+        location_id: locId,
+        plant_id: plantId,
+        department_id: deptId,
+        active: emp.active ?? true,
+      });
+    });
+
+    let insertedCount = 0;
+    if (rowsToInsert.length > 0) {
+      const { error: insertError } = await supabaseAdmin.from("employees").insert(rowsToInsert);
+      if (insertError) {
+        throw new Error(`Bulk insert failed: ${insertError.message}`);
+      }
+      insertedCount = rowsToInsert.length;
+      await writeAudit(context.userId, "employee.bulk_import", "employees", "bulk", { count: insertedCount });
+    }
+
+    return {
+      successCount: insertedCount,
+      skippedCount: errors.length,
+      errors,
+    };
   });
