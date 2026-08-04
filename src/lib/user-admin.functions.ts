@@ -511,30 +511,14 @@ export const bulkCreateEmployees = createServerFn({ method: "POST" })
     const [{ data: locations }, { data: plants }, { data: depts }, { data: existingEmps }] = await Promise.all([
       supabaseAdmin.from("locations").select("id,location").is("deleted_at", null),
       supabaseAdmin.from("plants").select("id,name,location_id").is("deleted_at", null),
-      supabaseAdmin.from("departments").select("id,name,plant_id").is("deleted_at", null),
+      supabaseAdmin.from("departments").select("id,name,code,plant_id").is("deleted_at", null),
       supabaseAdmin.from("employees").select("employee_code,email"),
     ]);
 
     const existingCodeSet = new Set((existingEmps ?? []).map((e) => e.employee_code.toLowerCase()));
     const existingEmailSet = new Set((existingEmps ?? []).map((e) => e.email.toLowerCase()));
 
-    const locMap = new Map<string, string>();
-    (locations ?? []).forEach((l) => {
-      locMap.set(l.id.toLowerCase(), l.id);
-      locMap.set(l.location.toLowerCase(), l.id);
-    });
-
-    const plantMap = new Map<string, { id: string; location_id: string | null }>();
-    (plants ?? []).forEach((p) => {
-      plantMap.set(p.id.toLowerCase(), { id: p.id, location_id: p.location_id });
-      plantMap.set(p.name.toLowerCase(), { id: p.id, location_id: p.location_id });
-    });
-
-    const deptMap = new Map<string, { id: string; plant_id: string | null }>();
-    (depts ?? []).forEach((d) => {
-      deptMap.set(d.id.toLowerCase(), { id: d.id, plant_id: d.plant_id });
-      deptMap.set(d.name.toLowerCase(), { id: d.name, plant_id: d.plant_id });
-    });
+    const cleanStr = (s: string | null | undefined) => (s ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
     const rowsToInsert: any[] = [];
     const errors: Array<{ index: number; code?: string; name?: string; error: string }> = [];
@@ -555,31 +539,64 @@ export const bulkCreateEmployees = createServerFn({ method: "POST" })
         return;
       }
 
-      // Match Location
+      // 1. Match Location
       let locId: string | null = emp.location_id ?? null;
       if (!locId && emp.location) {
-        locId = locMap.get(emp.location.toLowerCase()) ?? null;
+        const cleanLoc = cleanStr(emp.location);
+        const foundLoc = (locations ?? []).find(
+          (l) => l.id === emp.location || cleanStr(l.location) === cleanLoc
+        );
+        if (foundLoc) locId = foundLoc.id;
       }
 
-      // Match Plant
+      // 2. Match Plant (prefer plant in matched location)
       let plantId: string | null = emp.plant_id ?? null;
       if (!plantId && emp.plant) {
-        const found = plantMap.get(emp.plant.toLowerCase());
-        if (found) {
-          plantId = found.id;
-          if (!locId && found.location_id) locId = found.location_id;
+        const cleanPlt = cleanStr(emp.plant);
+        let foundPlt = (plants ?? []).find(
+          (p) => (p.id === emp.plant || cleanStr(p.name) === cleanPlt) && (locId ? p.location_id === locId : true)
+        );
+        if (!foundPlt) {
+          foundPlt = (plants ?? []).find(
+            (p) => p.id === emp.plant || cleanStr(p.name) === cleanPlt
+          );
+        }
+        if (foundPlt) {
+          plantId = foundPlt.id;
+          if (!locId && foundPlt.location_id) locId = foundPlt.location_id;
         }
       }
 
-      // Match Dept
+      // 3. Match Department (prefer department under matched plant / location)
       let deptId: string | null = emp.department_id ?? null;
       if (!deptId && emp.department) {
-        const found = deptMap.get(emp.department.toLowerCase());
-        if (found) {
-          deptId = found.id;
-          if (!plantId && found.plant_id) {
-            plantId = found.plant_id;
-            const pInfo = plants?.find((p) => p.id === plantId);
+        const cleanDept = cleanStr(emp.department);
+        // Stage A: Match by plantId + name or code
+        let foundDept = (depts ?? []).find(
+          (d) =>
+            (d.id === emp.department || cleanStr(d.name) === cleanDept || cleanStr(d.code) === cleanDept) &&
+            (plantId ? d.plant_id === plantId : true)
+        );
+        // Stage B: Match by name or code across all departments
+        if (!foundDept) {
+          foundDept = (depts ?? []).find(
+            (d) => d.id === emp.department || cleanStr(d.name) === cleanDept || cleanStr(d.code) === cleanDept
+          );
+        }
+        // Stage C: Partial name match under plantId
+        if (!foundDept && plantId) {
+          foundDept = (depts ?? []).find(
+            (d) =>
+              d.plant_id === plantId &&
+              (cleanStr(d.name).includes(cleanDept) || cleanDept.includes(cleanStr(d.name)))
+          );
+        }
+
+        if (foundDept) {
+          deptId = foundDept.id;
+          if (!plantId && foundDept.plant_id) {
+            plantId = foundDept.plant_id;
+            const pInfo = (plants ?? []).find((p) => p.id === plantId);
             if (!locId && pInfo?.location_id) locId = pInfo.location_id;
           }
         }
