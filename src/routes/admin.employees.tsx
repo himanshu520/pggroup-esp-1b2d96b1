@@ -325,12 +325,12 @@ export function EmployeesPage() {
             const email = findVal("Email", "Email Address", "email");
             const designation = findVal("Designation", "Role", "designation", "title");
             const mobile = findVal("Mobile", "Mobile Number", "Phone", "phone", "mobile");
-            const genderStr = findVal("Gender", "Sex", "gender").toLowerCase();
+            const genderStr = findVal("Gender", "Sex", "gender", "sex", "Gender/Sex", "Sex/Gender").trim().toLowerCase();
             let gender: Gender | null = null;
-            if (["male", "m"].includes(genderStr)) gender = "male";
-            else if (["female", "f"].includes(genderStr)) gender = "female";
-            else if (["other", "o"].includes(genderStr)) gender = "other";
-            else if (["prefer_not_to_say", "prefer not to say"].includes(genderStr)) gender = "prefer_not_to_say";
+            if (["male", "m", "man", "boy", "purush", "पुरुष"].includes(genderStr)) gender = "male";
+            else if (["female", "f", "woman", "girl", "mahila", "महिला"].includes(genderStr)) gender = "female";
+            else if (["other", "o", "anya"].includes(genderStr)) gender = "other";
+            else if (["prefer_not_to_say", "prefer not to say", "prefer_not", "n/a", "na", "not specified"].includes(genderStr)) gender = "prefer_not_to_say";
 
             const location = findVal("Location", "Location Name", "location");
             const plant = findVal("Plant", "Plant Name", "plant");

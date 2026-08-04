@@ -275,7 +275,18 @@ export const listEmployeesAdmin = createServerFn({ method: "POST" })
     return filteredRows;
   });
 
+function parseGender(val: unknown): "male" | "female" | "other" | "prefer_not_to_say" | null {
+  if (!val || typeof val !== "string") return null;
+  const s = val.trim().toLowerCase();
+  if (["male", "m", "man", "boy", "purush", "पुरुष"].includes(s)) return "male";
+  if (["female", "f", "woman", "girl", "mahila", "महिला"].includes(s)) return "female";
+  if (["other", "o", "anya"].includes(s)) return "other";
+  if (["prefer_not_to_say", "prefer not to say", "prefer_not", "n/a", "na", "not specified"].includes(s)) return "prefer_not_to_say";
+  return null;
+}
+
 const GENDER = z.enum(["male", "female", "other", "prefer_not_to_say"]);
+const GENDER_INPUT = z.preprocess(parseGender, GENDER.nullable().optional());
 
 const EMPLOYEE_INPUT = z.object({
   name: z.string().trim().min(1),
@@ -283,7 +294,7 @@ const EMPLOYEE_INPUT = z.object({
   employee_code: z.string().trim().min(1),
   designation: z.string().trim().nullable().optional(),
   mobile: z.string().trim().nullable().optional(),
-  gender: GENDER.nullable().optional(),
+  gender: GENDER_INPUT,
   location_id: z.string().uuid().nullable().optional(),
   plant_id: z.string().uuid().nullable().optional(),
   department_id: z.string().uuid().nullable().optional(),
@@ -481,7 +492,7 @@ export const bulkCreateEmployees = createServerFn({ method: "POST" })
             employee_code: z.string().trim().min(1, "Employee ID is required"),
             designation: z.string().trim().nullable().optional(),
             mobile: z.string().trim().nullable().optional(),
-            gender: GENDER.nullable().optional(),
+            gender: GENDER_INPUT,
             location: z.string().trim().nullable().optional(),
             plant: z.string().trim().nullable().optional(),
             department: z.string().trim().nullable().optional(),
