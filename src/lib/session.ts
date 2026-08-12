@@ -49,7 +49,7 @@ export async function loadSession(): Promise<SessionProfile | null> {
     plant_id: r.plant_id ?? employee?.plant_id ?? null,
     department_id: r.department_id ?? employee?.department_id ?? null,
   }));
-  const adminRoles: AppRole[] = ["super_admin","corporate_admin","admin","location_admin","plant_admin","department_admin","pe_user","dept_user","mgmt_viewer"];
+  const adminRoles: AppRole[] = ["super_admin","corporate_admin","hr","admin","location_admin","plant_admin","department_admin","pe_user","dept_user","mgmt_viewer"];
   const isAdmin = roles.some((r) => adminRoles.includes(r.role));
   const isPE = roles.some((r) => r.role === "pe_user");
   // Ranked
