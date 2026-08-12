@@ -421,7 +421,7 @@ function ScopePicker({
 }) {
   const needsLoc = role === "location_admin" || role === "admin" || role === "plant_admin" || role === "department_admin" || role === "dept_user" || role === "pe_user" || role === "mgmt_viewer" || role === "employee" || role === "hr";
   const needsPlant = role === "plant_admin" || role === "admin" || role === "department_admin" || role === "dept_user" || role === "pe_user" || role === "mgmt_viewer" || role === "employee" || role === "hr";
-  const needsDept = role === "department_admin" || role === "dept_user";
+  const needsDept = role === "department_admin" || role === "dept_user" || role === "hr";
 
   const filteredPlants = value.location_id ? plants.filter((p) => p.location_id === value.location_id) : plants;
   const filteredDepts = value.plant_id ? departments.filter((d) => d.plant_id === value.plant_id) : departments;

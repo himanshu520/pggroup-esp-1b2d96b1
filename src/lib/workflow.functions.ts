@@ -38,7 +38,9 @@ async function requireAnyRole(supabase: any, userId: string, allowedRoles: strin
     .from("user_roles")
     .select("role")
     .eq("user_id", userId);
-  const hasAllowed = (data ?? []).some((r: any) => allowedRoles.includes(r.role));
+  const userRoles = (data ?? []).map((r: any) => r.role);
+  const isSuperOrHr = userRoles.includes("super_admin") || userRoles.includes("corporate_admin") || userRoles.includes("hr");
+  const hasAllowed = isSuperOrHr || userRoles.some((r: any) => allowedRoles.includes(r));
   if (!hasAllowed) {
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
