@@ -11,6 +11,8 @@ import {
   inviteUser,
   addRole,
   removeRole,
+  updateRole,
+  updateUserEmail,
   deleteUser,
 } from "@/lib/user-admin.functions";
 import { ROLE_LABEL, type AppRole } from "@/lib/statuses";
@@ -36,7 +38,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { toast } from "sonner";
-import { Search, UserPlus, Shield, Trash2, Plus, UserX } from "lucide-react";
+import { Search, UserPlus, Shield, Trash2, Plus, UserX, Pencil } from "lucide-react";
 import { ExportMenu } from "@/components/export-menu";
 
 export const Route = createFileRoute("/admin/users")({
@@ -97,6 +99,8 @@ export function UsersPage() {
   const [q, setQ] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [addRoleFor, setAddRoleFor] = useState<{ user_id: string; email: string } | null>(null);
+  const [editRoleFor, setEditRoleFor] = useState<RoleRow | null>(null);
+  const [editUserFor, setEditUserFor] = useState<{ user_id: string; email: string } | null>(null);
   const [revokeRole, setRevokeRole] = useState<{ id: string; label: string } | null>(null);
   const [deleteUserFor, setDeleteUserFor] = useState<{ user_id: string; email: string } | null>(null);
 
@@ -303,7 +307,15 @@ export function UsersPage() {
                             </span>
                             <button
                               type="button"
-                              className="text-muted-foreground hover:text-destructive"
+                              className="text-muted-foreground hover:text-primary transition-colors"
+                              onClick={() => setEditRoleFor(r)}
+                              title="Edit role & scope"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              className="text-muted-foreground hover:text-destructive transition-colors"
                               onClick={() => setRevokeRole({ id: r.id, label: ROLE_LABEL[r.role] })}
                               title="Revoke role"
                             >
@@ -319,6 +331,16 @@ export function UsersPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditUserFor({ user_id: u.user_id, email: u.email })}
+                        title="Edit user email"
+                      >
+                        <Pencil className="w-3.5 h-3.5 mr-1" />
+                        Edit
+                      </Button>
+
                       <Button
                         size="sm"
                         variant="outline"
@@ -357,6 +379,33 @@ export function UsersPage() {
           onAdded={() => {
             invalidate();
             setAddRoleFor(null);
+          }}
+        />
+      )}
+
+      {editRoleFor && (
+        <EditRoleDialog
+          open={!!editRoleFor}
+          onClose={() => setEditRoleFor(null)}
+          roleRow={editRoleFor}
+          locations={locations}
+          plants={plants}
+          departments={departments}
+          onUpdated={() => {
+            invalidate();
+            setEditRoleFor(null);
+          }}
+        />
+      )}
+
+      {editUserFor && (
+        <EditUserDialog
+          open={!!editUserFor}
+          onClose={() => setEditUserFor(null)}
+          user={editUserFor}
+          onUpdated={() => {
+            invalidate();
+            setEditUserFor(null);
           }}
         />
       )}
@@ -708,6 +757,174 @@ function AddRoleDialog({
           </Button>
           <Button onClick={submit} disabled={busy}>
             {busy ? "Saving…" : "Assign role"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditRoleDialog({
+  open,
+  onClose,
+  roleRow,
+  onUpdated,
+  locations,
+  plants,
+  departments,
+}: {
+  open: boolean;
+  onClose: () => void;
+  roleRow: RoleRow;
+  onUpdated: () => void;
+  locations: Loc[];
+  plants: Plt[];
+  departments: Dept[];
+}) {
+  const updateRoleFn = useServerFn(updateRole);
+  const [role, setRole] = useState<AppRole>(roleRow.role);
+  const [scope, setScope] = useState<{
+    location_id: string | null;
+    plant_id: string | null;
+    plant_ids?: string[] | null;
+    department_id: string | null;
+  }>({
+    location_id: roleRow.location_id,
+    plant_id: roleRow.plant_id,
+    department_id: roleRow.department_id,
+  });
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    setBusy(true);
+    try {
+      await updateRoleFn({
+        data: {
+          id: roleRow.id,
+          role,
+          location_id: scope.location_id,
+          plant_id: scope.plant_id,
+          department_id: scope.department_id,
+        },
+      });
+      toast.success("Role & Scope updated in database.");
+      onUpdated();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Role & Scope</DialogTitle>
+          <DialogDescription>Modify assigned role type or location/plant/department scope in database.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 py-2">
+          <div>
+            <Label className="text-xs">Role</Label>
+            <Select
+              value={role}
+              onValueChange={(v) => {
+                setRole(v as AppRole);
+                setScope({ location_id: null, plant_id: null, plant_ids: [], department_id: null });
+              }}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLES.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <ScopePicker
+            role={role}
+            locations={locations}
+            plants={plants}
+            departments={departments}
+            value={scope}
+            onChange={setScope}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button onClick={submit} disabled={busy}>
+            {busy ? "Updating…" : "Save changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditUserDialog({
+  open,
+  onClose,
+  user,
+  onUpdated,
+}: {
+  open: boolean;
+  onClose: () => void;
+  user: { user_id: string; email: string };
+  onUpdated: () => void;
+}) {
+  const updateUserEmailFn = useServerFn(updateUserEmail);
+  const [email, setEmail] = useState(user.email);
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    if (!email.trim()) return toast.error("Email is required.");
+    setBusy(true);
+    try {
+      await updateUserEmailFn({
+        data: {
+          user_id: user.user_id,
+          email: email.trim(),
+        },
+      });
+      toast.success("User email updated in database.");
+      onUpdated();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit User Email</DialogTitle>
+          <DialogDescription>Update the primary email address for this user.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 py-2">
+          <div>
+            <Label className="text-xs">Email address</Label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@company.com"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button onClick={submit} disabled={busy}>
+            {busy ? "Saving…" : "Save email"}
           </Button>
         </DialogFooter>
       </DialogContent>

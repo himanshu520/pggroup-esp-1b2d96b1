@@ -163,6 +163,70 @@ export const removeRole = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const updateRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        role: ROLE,
+        location_id: z.string().uuid().nullable().optional(),
+        plant_id: z.string().uuid().nullable().optional(),
+        department_id: z.string().uuid().nullable().optional(),
+      })
+      .parse(d ?? {})
+  )
+  .handler(async ({ context, data }) => {
+    const supabaseAdmin = await requireAdmin(context.userId);
+    const { error } = await supabaseAdmin
+      .from("user_roles")
+      .update({
+        role: data.role,
+        location_id: data.location_id ?? null,
+        plant_id: data.plant_id ?? null,
+        department_id: data.department_id ?? null,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await writeAudit(context.userId, "user_role.update", "user_roles", data.id, {
+      role: data.role,
+      location_id: data.location_id,
+      plant_id: data.plant_id,
+      department_id: data.department_id,
+    });
+    return { ok: true };
+  });
+
+export const updateUserEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        user_id: z.string().uuid(),
+        email: z.string().email().transform((s) => s.trim().toLowerCase()),
+      })
+      .parse(d ?? {})
+  )
+  .handler(async ({ context, data }) => {
+    const supabaseAdmin = await requireAdmin(context.userId);
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, {
+      email: data.email,
+      email_confirm: true,
+    });
+    if (error) throw new Error(error.message);
+
+    await supabaseAdmin
+      .from("employees")
+      .update({ email: data.email })
+      .eq("user_id", data.user_id);
+
+    await writeAudit(context.userId, "user.update_email", "auth.users", data.user_id, {
+      new_email: data.email,
+    });
+
+    return { ok: true };
+  });
+
 export const resendInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ email: z.string().email() }).parse(d ?? {}))
