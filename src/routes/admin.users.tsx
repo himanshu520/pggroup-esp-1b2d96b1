@@ -57,6 +57,7 @@ const ROLES: AppRole[] = [
   "pe_user",
   "dept_user",
   "mgmt_viewer",
+  "md",
   "employee",
 ];
 

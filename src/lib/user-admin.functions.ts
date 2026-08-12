@@ -14,6 +14,7 @@ const ROLE = z.enum([
   "dept_user",
   "mgmt_viewer",
   "employee",
+  "md",
 ]);
 
 async function requireAdmin(userId: string) {

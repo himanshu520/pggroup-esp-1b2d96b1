@@ -22,6 +22,7 @@ export type SessionProfile = {
   }>;
   isAdmin: boolean;
   isPE: boolean;
+  isMD: boolean;
   primaryRole: AppRole;
 };
 
@@ -49,11 +50,12 @@ export async function loadSession(): Promise<SessionProfile | null> {
     plant_id: r.plant_id ?? employee?.plant_id ?? null,
     department_id: r.department_id ?? employee?.department_id ?? null,
   }));
-  const adminRoles: AppRole[] = ["super_admin","corporate_admin","hr","admin","location_admin","plant_admin","department_admin","pe_user","dept_user","mgmt_viewer"];
+  const adminRoles: AppRole[] = ["super_admin","corporate_admin","hr","admin","location_admin","plant_admin","department_admin","pe_user","dept_user","mgmt_viewer","md"];
   const isAdmin = roles.some((r) => adminRoles.includes(r.role));
   const isPE = roles.some((r) => r.role === "pe_user");
+  const isMD = roles.some((r) => r.role === "md");
   // Ranked
-  const rank: AppRole[] = ["super_admin","corporate_admin","admin","location_admin","plant_admin","hr","department_admin","pe_user","dept_user","mgmt_viewer","employee"];
+  const rank: AppRole[] = ["super_admin","corporate_admin","md","admin","location_admin","plant_admin","hr","department_admin","pe_user","dept_user","mgmt_viewer","employee"];
   const primaryRole = rank.find((r) => roles.some((x) => x.role === r)) ?? "employee";
 
   return {
@@ -63,6 +65,7 @@ export async function loadSession(): Promise<SessionProfile | null> {
     roles,
     isAdmin,
     isPE,
+    isMD,
     primaryRole,
   };
 }
@@ -129,9 +132,10 @@ export function isDeptAccessible(deptId: string | null, plantId: string | null, 
   });
 }
 
-export function isSuggestionAccessible(sug: { location_id: string | null; plant_id: string | null; department_id: string | null; current_department_id?: string | null } | null, roles: SessionProfile["roles"] | undefined): boolean {
+export function isSuggestionAccessible(sug: { location_id: string | null; plant_id: string | null; department_id: string | null; current_department_id?: string | null; status?: string } | null, roles: SessionProfile["roles"] | undefined): boolean {
   if (!sug || !roles) return false;
-  if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin")) return true;
+  if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin" || r.role === "pe_user")) return true;
+  if (roles.some((r) => r.role === "md") && (sug.status === "implemented" || sug.status === "closed")) return true;
   return roles.some((r) => {
     if (!r.location_id && !r.plant_id && !r.department_id) return true;
     if (r.department_id) {

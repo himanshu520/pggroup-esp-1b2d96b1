@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { peTransferSuggestion, peRejectSuggestion, deptDecide, deptStartImplementation, deptSubmitEvidence, peVerify, peRejectReturn, selectBestSuggestion, uploadBestFoolproofingImage } from "@/lib/workflow.functions";
 import { toast } from "sonner";
-import { Send, ThumbsUp, ThumbsDown, PlayCircle, Upload, Check, AlertTriangle, Loader2, Paperclip, X, FileText, History, Star, Trophy } from "lucide-react";
+import { Send, ThumbsUp, ThumbsDown, PlayCircle, Upload, Check, AlertTriangle, Loader2, Paperclip, X, FileText, History, Star, Trophy, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmployeeBadges } from "@/components/employee-badges";
 
@@ -141,7 +141,7 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
     },
   });
 
-  const [bestCategory, setBestCategory] = useState<"month" | "year" | "foolproofing">("month");
+  const [bestCategory, setBestCategory] = useState<"month" | "year" | "foolproofing" | "md_unique">("month");
   const [bestMonth, setBestMonth] = useState(new Date().getMonth() + 1);
   const [bestYear, setBestYear] = useState(new Date().getFullYear());
   const [bestReason, setBestReason] = useState("");
@@ -415,7 +415,7 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
 
   function startEditBest(existing?: any) {
     if (existing) {
-      setBestCategory(existing.category || "month");
+      setBestCategory(existing.category || (isMD ? "md_unique" : "month"));
       setBestMonth(existing.month || new Date().getMonth() + 1);
       setBestYear(existing.year || new Date().getFullYear());
       setBestReason(existing.selection_reason || "");
@@ -512,12 +512,24 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
     );
   }
 
-  const isPE = session?.isPE || session?.primaryRole === "super_admin" || session?.primaryRole === "corporate_admin";
-  const isCurrentDept = session?.roles?.some(r => 
+  const isMD = session?.isMD || session?.roles?.some(r => r.role === "md");
+  const isPE = (session?.isPE || session?.primaryRole === "super_admin" || session?.primaryRole === "corporate_admin") && !isMD;
+  const isCurrentDept = !isMD && (session?.roles?.some(r => 
     r.role === "super_admin" || 
     r.role === "corporate_admin" || 
     (!!sug.current_department_id && r.department_id === sug.current_department_id)
-  ) || session?.primaryRole === "super_admin" || session?.primaryRole === "corporate_admin";
+  ) || session?.primaryRole === "super_admin" || session?.primaryRole === "corporate_admin");
+  
+  const isSuperAdmin = session?.primaryRole === "super_admin" || session?.primaryRole === "corporate_admin" || session?.roles?.some(r => r.role === "super_admin" || r.role === "corporate_admin");
+  const isAdminScoped = session?.roles?.some(r => {
+    if (r.role === "admin" || r.role === "location_admin" || r.role === "plant_admin") {
+      if (r.plant_id) return r.plant_id === sug.plant_id;
+      if (r.location_id) return r.location_id === sug.location_id;
+      return true;
+    }
+    return false;
+  });
+  const canSelectBestSuggestion = (isSuperAdmin || isAdminScoped || isMD);
   const status = sug.status;
 
 
@@ -901,14 +913,14 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
               </div>
             )}
 
-            {(session?.isAdmin || session?.isPE || Boolean(session?.primaryRole)) && (status === "implemented" || status === "closed" || status === "under_pe_verification" || existingBestList.length > 0) && (
+            {(canSelectBestSuggestion || existingBestList.length > 0) && (status === "implemented" || status === "closed" || existingBestList.length > 0) && (
               <div className="rounded-xl border-2 border-amber-500/60 bg-gradient-to-r from-amber-500/10 via-background to-amber-500/5 p-5 space-y-4 max-w-xl shadow-sm mt-4">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
                     <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
                     Recognition & Best Suggestion Selection
                   </div>
-                  {existingBestList.length > 0 && !isEditingBest && (
+                  {existingBestList.length > 0 && !isEditingBest && canSelectBestSuggestion && (
                     <Button size="sm" variant="outline" className="h-7 text-xs border-amber-500/50 hover:bg-amber-500/10 text-amber-700 dark:text-amber-300 font-semibold" onClick={() => startEditBest(existingBestList[0])}>
                       Edit Selection
                     </Button>
@@ -921,8 +933,8 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
                         <div className="space-y-2">
                           {existingBestList.map((item: any) => {
                             const cat = item.category || "month";
-                            const catLabel = cat === "year" ? "Best Suggestion of the Year" : cat === "foolproofing" ? "Best Foolproofing Suggestion" : "Best Suggestion of the Month";
-                            const icon = cat === "year" ? <Trophy className="w-3.5 h-3.5" /> : cat === "foolproofing" ? <Check className="w-3.5 h-3.5" /> : <Star className="w-3.5 h-3.5" />;
+                            const catLabel = cat === "md_unique" ? "👑 MD Unique Award" : cat === "year" ? "Best Suggestion of the Year" : cat === "foolproofing" ? "Best Foolproofing Suggestion" : "Best Suggestion of the Month";
+                            const icon = cat === "md_unique" ? <Crown className="w-3.5 h-3.5 text-amber-300" /> : cat === "year" ? <Trophy className="w-3.5 h-3.5" /> : cat === "foolproofing" ? <Check className="w-3.5 h-3.5" /> : <Star className="w-3.5 h-3.5" />;
                             
                             let beforeImg = item.before_image_url || "";
                             let afterImg = item.after_image_url || item.image_url || "";
@@ -975,7 +987,7 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
                           })}
                         </div>
                       </div>
-                    ) : (
+                    ) : canSelectBestSuggestion ? (
                       <div className="space-y-3 border-t border-amber-500/20 pt-3">
                         <div className="text-xs text-muted-foreground">
                           {existingBestList.length > 0 ? "Edit or update the recognition award for this suggestion:" : "Feature this suggestion under organizational recognition categories:"}
@@ -988,9 +1000,16 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
                               onChange={(e) => setBestCategory(e.target.value as any)}
                               className="w-full h-9 rounded border border-border bg-background px-2.5 text-xs font-semibold"
                             >
-                              <option value="month">🏆 Best Suggestion of the Month</option>
-                              <option value="year">🎖️ Best Suggestion of the Year</option>
-                              <option value="foolproofing">🛡️ Best Foolproofing Suggestion</option>
+                              {isMD ? (
+                                <option value="md_unique">👑 MD Unique Award</option>
+                              ) : (
+                                <>
+                                  <option value="month">🏆 Best Suggestion of the Month</option>
+                                  <option value="year">🎖️ Best Suggestion of the Year</option>
+                                  <option value="foolproofing">🛡️ Best Foolproofing Suggestion</option>
+                                  <option value="md_unique">👑 MD Unique Award</option>
+                                </>
+                              )}
                             </select>
                           </div>
 
@@ -1163,7 +1182,7 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
                           </div>
                         </div>
                       </div>
-                    )}
+                    ) : null}
                   </div>
             )}
           </div>

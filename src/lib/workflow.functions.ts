@@ -431,7 +431,7 @@ export const selectBestSuggestion = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({
       suggestion_id: z.string().uuid(),
-      category: z.enum(["month", "year", "foolproofing"]).optional().default("month"),
+      category: z.enum(["month", "year", "foolproofing", "md_unique"]).optional().default("month"),
       month: z.number().int().min(1).max(12),
       year: z.number().int(),
       reason: z.string().max(1000).optional(),
@@ -445,8 +445,8 @@ export const selectBestSuggestion = createServerFn({ method: "POST" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // 1. Enforce admin or super_admin role
-    await requireAnyRole(supabaseAdmin, userId, ["super_admin", "corporate_admin", "admin", "pe_user", "location_admin"]);
+    // 1. Enforce admin, super_admin, location_admin, plant_admin, or md role
+    await requireAnyRole(supabaseAdmin, userId, ["super_admin", "corporate_admin", "admin", "location_admin", "plant_admin", "md"]);
 
     // 2. Fetch target suggestion and ensure status is 'implemented'
     const { data: sug, error: sugErr } = await supabaseAdmin

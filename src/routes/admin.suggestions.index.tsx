@@ -82,8 +82,15 @@ export function SuggestionsList() {
     return { total, submitted, implemented, fake };
   }, [data]);
 
+  const isMD = sess?.isMD || sess?.roles?.some(r => r.role === "md");
+
   const filtered = useMemo(() => {
     return data.filter((s: any) => {
+      // MD role can only view implemented / closed suggestions
+      if (isMD && s.status !== "implemented" && s.status !== "closed") {
+        return false;
+      }
+
       if (q) {
         const lowq = q.toLowerCase();
         const matchesTitle = s.title?.toLowerCase().includes(lowq);

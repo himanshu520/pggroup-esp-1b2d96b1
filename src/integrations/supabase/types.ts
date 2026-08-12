@@ -668,6 +668,7 @@ export type Database = {
         | "dept_user"
         | "mgmt_viewer"
         | "employee"
+        | "md"
       priority_level: "low" | "medium" | "high" | "critical"
       suggestion_status:
         | "submitted"
@@ -824,6 +825,7 @@ export const Constants = {
         "dept_user",
         "mgmt_viewer",
         "employee",
+        "md",
       ],
       priority_level: ["low", "medium", "high", "critical"],
       suggestion_status: [

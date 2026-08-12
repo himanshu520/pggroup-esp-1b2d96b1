@@ -79,12 +79,13 @@ export const ROLE_LABEL: Record<AppRole, string> = {
   pe_user: "PE Department",
   dept_user: "Department User",
   mgmt_viewer: "Management (Viewer)",
+  md: "Managing Director (MD)",
   employee: "Employee",
 };
 
 export const ADMIN_ROLES: AppRole[] = [
   "super_admin","corporate_admin","hr","admin","location_admin","plant_admin",
-  "department_admin","pe_user","dept_user","mgmt_viewer",
+  "department_admin","pe_user","dept_user","mgmt_viewer","md",
 ];
 
 export function isAdminRole(r: AppRole) {
