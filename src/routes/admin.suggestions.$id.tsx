@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSession, isSuggestionAccessible } from "@/lib/session";
 import { STATUS_LABEL, getHistoryActionText, getEffectiveHistory } from "@/lib/statuses";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { peTransferSuggestion, peRejectSuggestion, deptDecide, deptStartImplementation, deptSubmitEvidence, peVerify, peRejectReturn, selectBestSuggestion, uploadBestFoolproofingImage } from "@/lib/workflow.functions";
 import { toast } from "sonner";
@@ -520,16 +520,31 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
     (!!sug.current_department_id && r.department_id === sug.current_department_id)
   ) || session?.primaryRole === "super_admin" || session?.primaryRole === "corporate_admin");
   
-  const isSuperAdmin = session?.primaryRole === "super_admin" || session?.primaryRole === "corporate_admin" || session?.roles?.some(r => r.role === "super_admin" || r.role === "corporate_admin");
-  const isAdminScoped = session?.roles?.some(r => {
-    if (r.role === "admin" || r.role === "location_admin" || r.role === "plant_admin") {
-      if (r.plant_id) return r.plant_id === sug.plant_id;
-      if (r.location_id) return r.location_id === sug.location_id;
-      return true;
+  const canSelectBestSuggestion = useMemo(() => {
+    if (!session || !sug) return false;
+    const primary = session.primaryRole;
+
+    // HR Manager, Department Admin, Dept User, PE User, Mgmt Viewer, Employee CANNOT select Best Suggestion
+    if (primary === "hr" || primary === "department_admin" || primary === "dept_user" || primary === "pe_user" || primary === "mgmt_viewer" || primary === "employee") {
+      return false;
     }
+
+    if (primary === "md" || session.isMD) return true;
+    if (primary === "super_admin" || primary === "corporate_admin") return true;
+
+    if (primary === "admin" || primary === "location_admin" || primary === "plant_admin") {
+      return session.roles.some((r) => {
+        if (r.role === "admin" || r.role === "location_admin" || r.role === "plant_admin") {
+          if (r.plant_id) return r.plant_id === sug.plant_id;
+          if (r.location_id) return r.location_id === sug.location_id;
+          return true;
+        }
+        return false;
+      });
+    }
+
     return false;
-  });
-  const canSelectBestSuggestion = (isSuperAdmin || isAdminScoped || isMD);
+  }, [session, sug]);
   const status = sug.status;
 
 
