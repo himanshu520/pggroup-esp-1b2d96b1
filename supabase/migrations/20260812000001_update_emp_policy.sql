@@ -1,7 +1,4 @@
--- Add 'hr' to the app_role enum
-ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'hr';
-
--- Update emp_read_self policy to support HR role
+-- Update emp_read_self policy to support HR role after enum value is committed
 DROP POLICY IF EXISTS emp_read_self ON public.employees;
 CREATE POLICY emp_read_self ON public.employees
 FOR SELECT
