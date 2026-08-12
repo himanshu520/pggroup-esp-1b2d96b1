@@ -137,6 +137,14 @@ export function isSuggestionAccessible(sug: { location_id: string | null; plant_
   if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin" || r.role === "pe_user")) return true;
   if (roles.some((r) => r.role === "md") && (sug.status === "implemented" || sug.status === "closed")) return true;
   return roles.some((r) => {
+    // HR, Admin, Location Admin, Plant Admin evaluate Location/Plant scope
+    if (r.role === "hr" || r.role === "admin" || r.role === "location_admin" || r.role === "plant_admin") {
+      if (!r.location_id && !r.plant_id) return true; // Global scope
+      if (r.plant_id && r.plant_id === sug.plant_id) return true;
+      if (r.location_id && r.location_id === sug.location_id) return true;
+      return false;
+    }
+
     if (!r.location_id && !r.plant_id && !r.department_id) return true;
     if (r.department_id) {
       return r.department_id === sug.department_id || r.department_id === sug.current_department_id;
