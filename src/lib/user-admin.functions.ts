@@ -353,24 +353,36 @@ function parseGender(val: unknown): "male" | "female" | "other" | "prefer_not_to
 const GENDER = z.enum(["male", "female", "other", "prefer_not_to_say"]);
 const GENDER_INPUT = z.preprocess(parseGender, GENDER.nullable().optional());
 
-const OPTIONAL_EMAIL = z
-  .union([
-    z.string().email("Invalid email address"),
-    z.literal(""),
-    z.null(),
-    z.undefined(),
-  ])
-  .transform((val) => {
-    if (!val || typeof val !== "string" || !val.trim()) return null;
-    return val.trim().toLowerCase();
-  });
+const OPTIONAL_EMAIL = z.preprocess((val) => {
+  if (val === null || val === undefined) return null;
+  if (typeof val !== "string") return null;
+  const s = val.trim();
+  if (!s || s.toLowerCase() === "n/a" || s.toLowerCase() === "na" || s === "-" || s.toLowerCase() === "nil" || s.toLowerCase() === "null") {
+    return null;
+  }
+  return s.toLowerCase();
+}, z.string().email("Invalid email address").nullable().optional());
+
+const BULK_OPTIONAL_EMAIL = z.preprocess((val) => {
+  if (val === null || val === undefined) return null;
+  if (typeof val !== "string") return null;
+  const s = val.trim();
+  if (!s || s.toLowerCase() === "n/a" || s.toLowerCase() === "na" || s === "-" || s.toLowerCase() === "nil" || s.toLowerCase() === "null") {
+    return null;
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(s)) {
+    return null;
+  }
+  return s.toLowerCase();
+}, z.string().nullable().optional());
 
 const EMPLOYEE_INPUT = z.object({
-  name: z.string().trim().min(1),
+  name: z.string().trim().min(1, "Name is required"),
   email: OPTIONAL_EMAIL,
-  employee_code: z.string().trim().min(1),
+  employee_code: z.string().trim().min(1, "Employee ID is required"),
   designation: z.string().trim().nullable().optional(),
-  mobile: z.string().trim().nullable().optional(),
+  mobile: z.preprocess((v) => (v ? String(v).trim() : null), z.string().nullable().optional()),
   gender: GENDER_INPUT,
   location_id: z.string().uuid().nullable().optional(),
   plant_id: z.string().uuid().nullable().optional(),
@@ -433,6 +445,9 @@ export const createEmployee = createServerFn({ method: "POST" })
       .single();
 
     if (error) {
+      if (error.message?.includes("not-null") && error.message?.includes("email")) {
+        throw new Error("Supabase Database constraint: Email column is still NOT NULL. Please execute 'ALTER TABLE public.employees ALTER COLUMN email DROP NOT NULL;' in Supabase SQL editor.");
+      }
       if (error.code === "23505" || error.message.includes("employees_employee_code_key")) {
         throw new Error(`Employee Code "${data.employee_code}" is already taken. Please enter a unique Employee Code.`);
       }
@@ -581,18 +596,18 @@ export const bulkCreateEmployees = createServerFn({ method: "POST" })
       .object({
         employees: z.array(
           z.object({
-            name: z.string().trim().min(1, "Name is required"),
-            email: OPTIONAL_EMAIL,
-            employee_code: z.string().trim().min(1, "Employee ID is required"),
-            designation: z.string().trim().nullable().optional(),
-            mobile: z.string().trim().nullable().optional(),
+            name: z.preprocess((v) => (v ? String(v).trim() : ""), z.string().min(1, "Name is required")),
+            email: BULK_OPTIONAL_EMAIL,
+            employee_code: z.preprocess((v) => (v ? String(v).trim() : ""), z.string().min(1, "Employee ID is required")),
+            designation: z.preprocess((v) => (v ? String(v).trim() : null), z.string().nullable().optional()),
+            mobile: z.preprocess((v) => (v ? String(v).trim() : null), z.string().nullable().optional()),
             gender: GENDER_INPUT,
-            location: z.string().trim().nullable().optional(),
-            plant: z.string().trim().nullable().optional(),
-            department: z.string().trim().nullable().optional(),
-            location_id: z.string().uuid().nullable().optional(),
-            plant_id: z.string().uuid().nullable().optional(),
-            department_id: z.string().uuid().nullable().optional(),
+            location: z.preprocess((v) => (v ? String(v).trim() : null), z.string().nullable().optional()),
+            plant: z.preprocess((v) => (v ? String(v).trim() : null), z.string().nullable().optional()),
+            department: z.preprocess((v) => (v ? String(v).trim() : null), z.string().nullable().optional()),
+            location_id: z.preprocess((v) => (v ? String(v).trim() : null), z.string().uuid().nullable().optional()),
+            plant_id: z.preprocess((v) => (v ? String(v).trim() : null), z.string().uuid().nullable().optional()),
+            department_id: z.preprocess((v) => (v ? String(v).trim() : null), z.string().uuid().nullable().optional()),
             active: z.boolean().default(true),
           })
         ),
@@ -717,6 +732,9 @@ export const bulkCreateEmployees = createServerFn({ method: "POST" })
     if (rowsToInsert.length > 0) {
       const { error: insertError } = await supabaseAdmin.from("employees").insert(rowsToInsert);
       if (insertError) {
+        if (insertError.message?.includes("not-null") && insertError.message?.includes("email")) {
+          throw new Error("Supabase Database constraint: Email column is still NOT NULL. Please execute 'ALTER TABLE public.employees ALTER COLUMN email DROP NOT NULL;' in Supabase SQL editor.");
+        }
         throw new Error(`Bulk insert failed: ${insertError.message}`);
       }
       insertedCount = rowsToInsert.length;
