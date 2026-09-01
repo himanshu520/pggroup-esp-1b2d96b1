@@ -5,7 +5,7 @@ import { z } from "zod";
 // Admin-only: create a new employee AND (optionally) grant roles
 export const createEmployeeWithRoles = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({
       employee_code: z.string().trim().min(1),
       name: z.string().trim().min(1),

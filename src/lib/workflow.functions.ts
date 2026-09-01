@@ -58,7 +58,7 @@ async function requireAnyRole(supabase: any, userId: string, allowedRoles: strin
 // PE transfers a submitted suggestion to a target department (concern department)
 export const peTransferSuggestion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({
       suggestion_id: z.string().uuid(),
       target_department_id: z.string().uuid(),
@@ -93,7 +93,7 @@ export const peTransferSuggestion = createServerFn({ method: "POST" })
 // PE rejects a submitted suggestion
 export const peRejectSuggestion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({
       suggestion_id: z.string().uuid(),
       remarks: z.string().max(2000).optional(),
@@ -123,7 +123,7 @@ export const peRejectSuggestion = createServerFn({ method: "POST" })
 // PE rejects a return claim and sends the suggestion back to the department that returned it
 export const peRejectReturn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({
       suggestion_id: z.string().uuid(),
       remarks: z.string().max(2000).optional(),
@@ -173,7 +173,7 @@ export const peRejectReturn = createServerFn({ method: "POST" })
 // Department approves (moves to evaluation/implementation) or rejects
 export const deptDecide = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({
       suggestion_id: z.string().uuid(),
       decision: z.enum(["approve","reject","transfer","not_related"]),
@@ -235,7 +235,7 @@ export const deptDecide = createServerFn({ method: "POST" })
 // Department starts implementation
 export const deptStartImplementation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ suggestion_id: z.string().uuid() }).parse(d ?? {}))
+  .validator((d: unknown) => z.object({ suggestion_id: z.string().uuid() }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
     await requireAnyRole(supabase, userId, ["department_admin", "dept_user", "super_admin", "corporate_admin"]);
@@ -250,7 +250,7 @@ export const deptStartImplementation = createServerFn({ method: "POST" })
 // Department submits evidence (versioned; links uploaded files to this evidence row)
 export const deptSubmitEvidence = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({
+  .validator((d: unknown) => z.object({
     suggestion_id: z.string().uuid(),
     remarks: z.string().max(2000).optional(),
     completion_date: z.string().optional(),
@@ -342,7 +342,7 @@ export const deptSubmitEvidence = createServerFn({ method: "POST" })
 // PE final verification: implemented OR fake closure
 export const peVerify = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({
+  .validator((d: unknown) => z.object({
     suggestion_id: z.string().uuid(),
     outcome: z.enum(["implemented","fake_closure"]),
     remarks: z.string().max(2000).optional(),
@@ -414,7 +414,7 @@ export const peVerify = createServerFn({ method: "POST" })
 // users (and super admins) see it in their notification bell.
 export const notifyNewSuggestion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ suggestion_id: z.string().uuid() }).parse(d ?? {}))
+  .validator((d: unknown) => z.object({ suggestion_id: z.string().uuid() }).parse(d ?? {}))
   .handler(async ({ data }) => {
     const { notifyForSuggestion } = await import("./notify.server");
     await notifyForSuggestion({
@@ -428,7 +428,7 @@ export const notifyNewSuggestion = createServerFn({ method: "POST" })
 
 export const selectBestSuggestion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({
       suggestion_id: z.string().uuid(),
       category: z.enum(["month", "year", "foolproofing", "md_unique"]).optional().default("month"),
@@ -564,7 +564,7 @@ export const selectBestSuggestion = createServerFn({ method: "POST" })
 
 export const uploadBestFoolproofingImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({
       suggestion_id: z.string().uuid(),
       kind: z.enum(["before", "after"]),
@@ -604,7 +604,7 @@ export const uploadBestFoolproofingImage = createServerFn({ method: "POST" })
 
 export const updateLeaderboardSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({
       key: z.string(),
       value: z.any(),
@@ -647,7 +647,7 @@ export const updateLeaderboardSettings = createServerFn({ method: "POST" })
 
 export const lockLeaderboardMonth = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({
       month: z.number().int().min(1).max(12),
       year: z.number().int(),

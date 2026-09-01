@@ -59,7 +59,7 @@ type Emp = {
   id: string;
   user_id: string | null;
   name: string;
-  email: string;
+  email: string | null;
   employee_code: string;
   designation: string | null;
   mobile: string | null;
@@ -153,7 +153,7 @@ export function EmployeesPage() {
     if (!q) return list;
     const s = q.toLowerCase();
     return list.filter((e) =>
-      `${e.name} ${e.email} ${e.employee_code} ${e.designation ?? ""}`.toLowerCase().includes(s),
+      `${e.name} ${e.email ?? ""} ${e.employee_code} ${e.designation ?? ""}`.toLowerCase().includes(s),
     );
   }, [rows, q]);
 
@@ -163,7 +163,7 @@ export function EmployeesPage() {
     mutationFn: async (v: Form) => {
       const payload = {
         name: v.name,
-        email: v.email,
+        email: v.email.trim() ? v.email.trim().toLowerCase() : null,
         employee_code: v.employee_code,
         designation: v.designation || null,
         mobile: v.mobile || null,
@@ -339,7 +339,7 @@ export function EmployeesPage() {
             return {
               employee_code: code,
               name: name,
-              email: email,
+              email: email || null,
               designation: designation || null,
               mobile: mobile || null,
               gender: gender,
@@ -349,7 +349,7 @@ export function EmployeesPage() {
               active: true,
             };
           })
-          .filter((r) => r.employee_code || r.name || r.email);
+          .filter((r) => r.employee_code || r.name);
 
         if (mapped.length === 0) {
           toast.error("Could not find valid employee rows in file. Please check column headers.");
@@ -373,7 +373,7 @@ export function EmployeesPage() {
     setForm({
       id: e.id,
       name: e.name,
-      email: e.email,
+      email: e.email ?? "",
       employee_code: e.employee_code,
       designation: e.designation ?? "",
       mobile: e.mobile ?? "",
@@ -764,8 +764,8 @@ export function EmployeesPage() {
             <Field label="Full name *">
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </Field>
-            <Field label="Email *">
-              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <Field label="Email (Optional)">
+              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="e.g. employee@pggroup.com" />
             </Field>
             <Field label="Mobile">
               <Input value={form.mobile} onChange={(e) => setForm({ ...form, mobile: e.target.value })} />
@@ -830,8 +830,8 @@ export function EmployeesPage() {
             </Button>
             <Button
               onClick={() => {
-                if (!form.name.trim() || !form.email.trim() || !form.employee_code.trim())
-                  return toast.error("Name, email and employee ID are required.");
+                if (!form.name.trim() || !form.employee_code.trim())
+                  return toast.error("Name and employee ID are required.");
                 save.mutate(form);
               }}
               disabled={save.isPending}

@@ -113,7 +113,7 @@ async function generateAndSendOtp(email: string, name?: string | null) {
  * Unknown emails receive a generic error — no user is auto-created.
  */
 export const sendCustomOtp = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({ email: z.string().trim().email(), name: z.string().optional() }).parse(d ?? {}),
   )
   .handler(async ({ data }) => {
@@ -130,7 +130,7 @@ export const sendCustomOtp = createServerFn({ method: "POST" })
  * Verifies the admin OTP server-side using the 6-to-8 digit mapping in user metadata.
  */
 export const verifyAdminOtp = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({
       email: z.string().trim().email(),
       token: z.string().trim().min(6).max(10),
@@ -210,7 +210,7 @@ export const verifyAdminOtp = createServerFn({ method: "POST" })
  * number and email server-side and sends the OTP via WhatsApp or Email.
  */
 export const startEmployeeOtp = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({
       employee_code: z.string().trim().min(1).max(64),
       send_via: z.enum(["email", "whatsapp"]).default("email"),
@@ -220,16 +220,28 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: emp } = await supabaseAdmin
       .from("employees")
-      .select("id, email, name, active, mobile")
+      .select("id, email, name, active, mobile, employee_code")
       .ilike("employee_code", data.employee_code)
       .maybeSingle();
-    if (!emp || !emp.active || !emp.email) {
+    if (!emp || !emp.active) {
       throw new Error("Employee ID not found or inactive");
     }
 
+    if (data.send_via === "email" && !emp.email) {
+      throw new Error("Email address is not registered for this Employee ID. Please select 'Send OTP on WhatsApp'.");
+    }
+
+    if (data.send_via === "whatsapp" && !emp.mobile) {
+      throw new Error("WhatsApp mobile number not registered for this Employee ID");
+    }
+
+    // Deterministic auth email for Supabase Auth user session
+    const safeCode = emp.employee_code.toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    const authEmail = emp.email || `${safeCode}@employee.internal`;
+
     // Ensure the auth user exists
     await supabaseAdmin.auth.admin
-      .createUser({ email: emp.email, email_confirm: true })
+      .createUser({ email: authEmail, email_confirm: true })
       .catch(() => {});
 
     // Generate a 6-digit custom OTP code
@@ -238,7 +250,7 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
     // Generate native OTP via Supabase
     const { data: link, error } = await supabaseAdmin.auth.admin.generateLink({
       type: "magiclink",
-      email: emp.email,
+      email: authEmail,
     });
     if (error) throw new Error(error.message);
     const supabaseOtp = link.properties?.email_otp;
@@ -248,6 +260,7 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
     const mapping = JSON.stringify({
       custom_otp: customOtp,
       supabase_otp: supabaseOtp,
+      auth_email: authEmail,
       expires_at: Date.now() + 10 * 60 * 1000 // 10 minutes
     });
 
@@ -257,21 +270,18 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
       .eq("id", emp.id);
 
     if (data.send_via === "whatsapp") {
-      if (!emp.mobile) {
-        throw new Error("WhatsApp mobile number not registered for this Employee ID");
-      }
       // Send the custom 6-digit OTP via WhatsApp
       const { sendOtpWhatsApp } = await import("./whatsapp.server");
-      const success = await sendOtpWhatsApp(emp.mobile, customOtp, emp.name);
+      const success = await sendOtpWhatsApp(emp.mobile!, customOtp, emp.name);
       if (!success) {
         throw new Error("Failed to send WhatsApp OTP. Please contact admin.");
       }
-      return { send_via: "whatsapp", maskedContact: maskPhone(emp.mobile) };
+      return { send_via: "whatsapp", maskedContact: maskPhone(emp.mobile!) };
     } else {
       // Default: Send the custom 6-digit OTP via Email
       const { sendOtpEmail } = await import("./otp.server");
-      await sendOtpEmail(emp.email, customOtp, emp.name ?? undefined);
-      return { send_via: "email", maskedContact: maskEmail(emp.email) };
+      await sendOtpEmail(emp.email!, customOtp, emp.name ?? undefined);
+      return { send_via: "email", maskedContact: maskEmail(emp.email!) };
     }
   });
 
@@ -281,7 +291,7 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
  * `supabase.auth.setSession`.
  */
 export const verifyEmployeeOtp = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         employee_code: z.string().trim().min(1).max(64),
@@ -293,25 +303,27 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: emp } = await supabaseAdmin
       .from("employees")
-      .select("id, email, active, user_id, reporting_manager")
+      .select("id, email, active, user_id, reporting_manager, employee_code")
       .ilike("employee_code", data.employee_code)
       .maybeSingle();
-    if (!emp || !emp.active || !emp.email || !emp.reporting_manager) {
+    if (!emp || !emp.active || !emp.reporting_manager) {
       throw new Error("Invalid or expired OTP");
     }
 
-    let mapping;
+    let mapping: { custom_otp?: string; supabase_otp?: string; auth_email?: string; expires_at?: number };
     try {
       mapping = JSON.parse(emp.reporting_manager);
     } catch {
       throw new Error("Invalid or expired OTP");
     }
 
-    if (mapping.custom_otp !== data.token || mapping.expires_at < Date.now()) {
+    if (mapping.custom_otp !== data.token || !mapping.expires_at || mapping.expires_at < Date.now()) {
       throw new Error("Invalid or expired OTP");
     }
 
     const supabaseOtp = mapping.supabase_otp;
+    const safeCode = emp.employee_code.toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    const authEmail = mapping.auth_email || emp.email || `${safeCode}@employee.internal`;
 
     // Clear mapping from employee table
     await supabaseAdmin
@@ -328,8 +340,8 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
       { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } },
     );
     const { data: verified, error } = await anon.auth.verifyOtp({
-      email: emp.email,
-      token: supabaseOtp,
+      email: authEmail,
+      token: supabaseOtp!,
       type: "email",
     });
     if (error || !verified.session) {
@@ -379,7 +391,7 @@ export const linkAuthUserToEmployee = createServerFn({ method: "POST" })
   });
 
 export const anonymousTrackSuggestion = createServerFn({ method: "GET" })
-  .inputValidator((code: string) => z.string().trim().min(1).max(64).parse(code))
+  .validator((code: string) => z.string().trim().min(1).max(64).parse(code))
   .handler(async ({ data: code }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: result } = await supabaseAdmin

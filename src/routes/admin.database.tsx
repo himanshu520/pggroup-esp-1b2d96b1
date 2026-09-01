@@ -38,7 +38,7 @@ const TABLES = [
 
 import { ConfirmDialog } from "@/components/confirm-dialog";
 
-export function AdminDatabase() {
+function AdminDatabase() {
   const { data: sess } = useSession();
   const isSuperAdmin = sess?.roles?.some((r) => r.role === "super_admin");
   const qc = useQueryClient();

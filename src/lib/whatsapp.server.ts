@@ -1,12 +1,14 @@
 /**
  * Server-side service to send WhatsApp messages using different providers:
+ * - interakt: Interakt WhatsApp Business API
  * - twilio: Twilio WhatsApp API
  * - meta: Meta WhatsApp Cloud API
+ * - wasender: WASender API
  * - custom: Custom HTTP GET/POST API Gateway
  */
 export async function sendOtpWhatsApp(mobile: string, otp: string, name?: string | null): Promise<boolean> {
-  const provider = (process.env.WHATSAPP_PROVIDER || "custom").toLowerCase();
-  const apiKey = process.env.WHATSAPP_API_KEY || process.env.WHATSAPP_AUTH_TOKEN || "";
+  const provider = (process.env.WHATSAPP_PROVIDER || (process.env.INTERAKT_API_KEY ? "interakt" : "custom")).toLowerCase();
+  const apiKey = process.env.INTERAKT_API_KEY || process.env.WHATSAPP_API_KEY || process.env.WHATSAPP_AUTH_TOKEN || "";
   const accountSid = process.env.WHATSAPP_ACCOUNT_SID || "";
   const senderNumber = process.env.WHATSAPP_SENDER_NUMBER || "";
   const customUrl = process.env.WHATSAPP_API_URL || "";
@@ -22,6 +24,68 @@ export async function sendOtpWhatsApp(mobile: string, otp: string, name?: string
   console.log(`[WhatsApp OTP] Preparing to send message to ${cleanMobile} via ${provider}...`);
 
   try {
+    if (provider === "interakt") {
+      if (!apiKey) {
+        throw new Error("Missing Interakt API Key in environment (INTERAKT_API_KEY or WHATSAPP_API_KEY)");
+      }
+
+      const interaktUrl = process.env.INTERAKT_API_URL || "https://api.interakt.ai/v1/public/message/";
+      const templateName = process.env.INTERAKT_TEMPLATE_NAME || "otp_verification";
+      const languageCode = process.env.INTERAKT_TEMPLATE_LANG || "en";
+
+      let countryCode = "+91";
+      let phoneNumber = cleanMobile;
+      if (cleanMobile.startsWith("91") && cleanMobile.length === 12) {
+        countryCode = "+91";
+        phoneNumber = cleanMobile.slice(2);
+      } else if (cleanMobile.length === 10) {
+        countryCode = "+91";
+        phoneNumber = cleanMobile;
+      }
+
+      let authHeader: string;
+      if (apiKey.startsWith("Basic ")) {
+        authHeader = apiKey;
+      } else {
+        const isBase64 = /^[A-Za-z0-9+/]+={0,2}$/.test(apiKey) && apiKey.length % 4 === 0;
+        if (isBase64) {
+          authHeader = `Basic ${apiKey}`;
+        } else {
+          authHeader = `Basic ${Buffer.from(apiKey.includes(":") ? apiKey : `${apiKey}:`).toString("base64")}`;
+        }
+      }
+
+      const payload = {
+        countryCode,
+        phoneNumber,
+        type: "Template",
+        template: {
+          name: templateName,
+          languageCode,
+          bodyValues: [otp],
+          buttonValues: {
+            "0": [otp]
+          }
+        }
+      };
+
+      const res = await fetch(interaktUrl, {
+        method: "POST",
+        headers: {
+          "Authorization": authHeader,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Interakt API responded with status ${res.status}: ${errorText}`);
+      }
+
+      console.log(`[WhatsApp OTP] Successfully sent message via Interakt.`);
+      return true;
+    }
     if (provider === "wasender") {
       if (!apiKey) {
         throw new Error("Missing WASender API token in environment (WHATSAPP_API_KEY)");

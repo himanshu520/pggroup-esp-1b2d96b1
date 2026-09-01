@@ -63,7 +63,7 @@ export const listUsersWithRoles = createServerFn({ method: "POST" })
 // the employees table — users and employees are managed separately.
 export const inviteUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         email: z.string().email().transform((s) => s.trim().toLowerCase()),
@@ -121,7 +121,7 @@ export const inviteUser = createServerFn({ method: "POST" })
 
 export const addRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         user_id: z.string().uuid(),
@@ -156,7 +156,7 @@ export const addRole = createServerFn({ method: "POST" })
 
 export const removeRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d ?? {}))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     const supabaseAdmin = await requireAdmin(context.userId);
     const { error } = await supabaseAdmin.from("user_roles").delete().eq("id", data.id);
@@ -166,7 +166,7 @@ export const removeRole = createServerFn({ method: "POST" })
 
 export const updateRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         id: z.string().uuid(),
@@ -200,7 +200,7 @@ export const updateRole = createServerFn({ method: "POST" })
 
 export const updateUserEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         user_id: z.string().uuid(),
@@ -230,7 +230,7 @@ export const updateUserEmail = createServerFn({ method: "POST" })
 
 export const resendInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ email: z.string().email() }).parse(d ?? {}))
+  .validator((d: unknown) => z.object({ email: z.string().email() }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     const supabaseAdmin = await requireAdmin(context.userId);
     const { error } = await supabaseAdmin.auth.admin.inviteUserByEmail(data.email);
@@ -251,7 +251,7 @@ async function writeAudit(
 
 export const setEmployeeActive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({ employee_id: z.string().uuid(), active: z.boolean() }).parse(d ?? {}),
   )
   .handler(async ({ context, data }) => {
@@ -286,7 +286,7 @@ export const setEmployeeActive = createServerFn({ method: "POST" })
 
 export const deleteUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ user_id: z.string().uuid() }).parse(d ?? {}))
+  .validator((d: unknown) => z.object({ user_id: z.string().uuid() }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     if (data.user_id === context.userId) throw new Error("You cannot delete your own account.");
     const supabaseAdmin = await requireAdmin(context.userId);
@@ -302,7 +302,7 @@ export const deleteUser = createServerFn({ method: "POST" })
 
 export const listEmployeesAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z.object({ showDeleted: z.boolean().optional() }).optional().parse(d ?? {}),
   )
   .handler(async ({ context, data }) => {
@@ -353,9 +353,21 @@ function parseGender(val: unknown): "male" | "female" | "other" | "prefer_not_to
 const GENDER = z.enum(["male", "female", "other", "prefer_not_to_say"]);
 const GENDER_INPUT = z.preprocess(parseGender, GENDER.nullable().optional());
 
+const OPTIONAL_EMAIL = z
+  .union([
+    z.string().email("Invalid email address"),
+    z.literal(""),
+    z.null(),
+    z.undefined(),
+  ])
+  .transform((val) => {
+    if (!val || typeof val !== "string" || !val.trim()) return null;
+    return val.trim().toLowerCase();
+  });
+
 const EMPLOYEE_INPUT = z.object({
   name: z.string().trim().min(1),
-  email: z.string().email().transform((s) => s.trim().toLowerCase()),
+  email: OPTIONAL_EMAIL,
   employee_code: z.string().trim().min(1),
   designation: z.string().trim().nullable().optional(),
   mobile: z.string().trim().nullable().optional(),
@@ -368,7 +380,7 @@ const EMPLOYEE_INPUT = z.object({
 
 export const createEmployee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => EMPLOYEE_INPUT.parse(d))
+  .validator((d: unknown) => EMPLOYEE_INPUT.parse(d))
   .handler(async ({ context, data }) => {
     const supabaseAdmin = await requireEmployeeAdmin(context.userId);
 
@@ -390,22 +402,24 @@ export const createEmployee = createServerFn({ method: "POST" })
       );
     }
 
-    // Pre-check for duplicate email
-    const { data: existingEmail } = await supabaseAdmin
-      .from("employees")
-      .select("id, name, email")
-      .ilike("email", data.email.trim())
-      .maybeSingle();
+    // Pre-check for duplicate email (only if email is provided)
+    if (data.email) {
+      const { data: existingEmail } = await supabaseAdmin
+        .from("employees")
+        .select("id, name, email")
+        .ilike("email", data.email.trim())
+        .maybeSingle();
 
-    if (existingEmail) {
-      throw new Error(`Email "${data.email}" is already assigned to employee "${existingEmail.name}".`);
+      if (existingEmail) {
+        throw new Error(`Email "${data.email}" is already assigned to employee "${existingEmail.name}".`);
+      }
     }
 
     const { data: row, error } = await supabaseAdmin
       .from("employees")
       .insert({
         name: data.name,
-        email: data.email,
+        email: data.email ?? null,
         employee_code: data.employee_code,
         designation: data.designation ?? null,
         mobile: data.mobile ?? null,
@@ -432,7 +446,7 @@ export const createEmployee = createServerFn({ method: "POST" })
 
 export const updateEmployee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     EMPLOYEE_INPUT.extend({ id: z.string().uuid() }).parse(d),
   )
   .handler(async ({ context, data }) => {
@@ -451,6 +465,20 @@ export const updateEmployee = createServerFn({ method: "POST" })
       throw new Error(`Employee Code "${rest.employee_code}" is already assigned to employee "${existingCode.name}". Please enter a unique code.`);
     }
 
+    // Pre-check for duplicate email on other employees (only if email is provided)
+    if (rest.email) {
+      const { data: existingEmail } = await supabaseAdmin
+        .from("employees")
+        .select("id, name")
+        .ilike("email", rest.email.trim())
+        .neq("id", id)
+        .maybeSingle();
+
+      if (existingEmail) {
+        throw new Error(`Email "${rest.email}" is already assigned to employee "${existingEmail.name}".`);
+      }
+    }
+
     // Fetch the current record to check for email updates and linked user_id
     const { data: before } = await supabaseAdmin
       .from("employees")
@@ -458,7 +486,7 @@ export const updateEmployee = createServerFn({ method: "POST" })
       .eq("id", id)
       .maybeSingle();
 
-    if (before && before.user_id && before.email.toLowerCase() !== rest.email.toLowerCase()) {
+    if (before && before.user_id && rest.email && (before.email ?? "").toLowerCase() !== rest.email.toLowerCase()) {
       const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(before.user_id, {
         email: rest.email,
         email_confirm: true,
@@ -472,6 +500,7 @@ export const updateEmployee = createServerFn({ method: "POST" })
       .from("employees")
       .update({
         ...rest,
+        email: rest.email ?? null,
         designation: rest.designation ?? null,
         mobile: rest.mobile ?? null,
         gender: rest.gender ?? null,
@@ -491,7 +520,7 @@ export const updateEmployee = createServerFn({ method: "POST" })
 
 export const deleteEmployee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d ?? {}))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     const supabaseAdmin = await requireAdmin(context.userId);
     const { data: before } = await supabaseAdmin
@@ -526,7 +555,7 @@ export const deleteEmployee = createServerFn({ method: "POST" })
 
 export const restoreEmployee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d ?? {}))
+  .validator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     const supabaseAdmin = await requireAdmin(context.userId);
     const { data: before } = await supabaseAdmin
@@ -547,13 +576,13 @@ export const restoreEmployee = createServerFn({ method: "POST" })
 
 export const bulkCreateEmployees = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
+  .validator((d: unknown) =>
     z
       .object({
         employees: z.array(
           z.object({
             name: z.string().trim().min(1, "Name is required"),
-            email: z.string().email("Invalid email").transform((s) => s.trim().toLowerCase()),
+            email: OPTIONAL_EMAIL,
             employee_code: z.string().trim().min(1, "Employee ID is required"),
             designation: z.string().trim().nullable().optional(),
             mobile: z.string().trim().nullable().optional(),
@@ -581,7 +610,7 @@ export const bulkCreateEmployees = createServerFn({ method: "POST" })
     ]);
 
     const existingCodeSet = new Set((existingEmps ?? []).map((e) => e.employee_code.toLowerCase()));
-    const existingEmailSet = new Set((existingEmps ?? []).map((e) => e.email.toLowerCase()));
+    const existingEmailSet = new Set((existingEmps ?? []).filter((e) => e.email).map((e) => e.email.toLowerCase()));
 
     const cleanStr = (s: string | null | undefined) => (s ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
@@ -593,13 +622,13 @@ export const bulkCreateEmployees = createServerFn({ method: "POST" })
 
     data.employees.forEach((emp, index) => {
       const codeKey = emp.employee_code.toLowerCase();
-      const emailKey = emp.email.toLowerCase();
+      const emailKey = emp.email ? emp.email.toLowerCase() : null;
 
       if (existingCodeSet.has(codeKey) || processedCodesInBatch.has(codeKey)) {
         errors.push({ index: index + 1, code: emp.employee_code, name: emp.name, error: `Employee Code "${emp.employee_code}" already exists.` });
         return;
       }
-      if (existingEmailSet.has(emailKey) || processedEmailsInBatch.has(emailKey)) {
+      if (emailKey && (existingEmailSet.has(emailKey) || processedEmailsInBatch.has(emailKey))) {
         errors.push({ index: index + 1, code: emp.employee_code, name: emp.name, error: `Email "${emp.email}" already exists.` });
         return;
       }
@@ -668,11 +697,11 @@ export const bulkCreateEmployees = createServerFn({ method: "POST" })
       }
 
       processedCodesInBatch.add(codeKey);
-      processedEmailsInBatch.add(emailKey);
+      if (emailKey) processedEmailsInBatch.add(emailKey);
 
       rowsToInsert.push({
         name: emp.name,
-        email: emp.email,
+        email: emp.email ?? null,
         employee_code: emp.employee_code,
         designation: emp.designation ?? null,
         mobile: emp.mobile ?? null,
