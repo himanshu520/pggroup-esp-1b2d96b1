@@ -55,7 +55,7 @@ export async function sendOtpWhatsApp(mobile: string, otp: string, name?: string
         }
       }
 
-      const payload = {
+      const payloadWithButtons = {
         countryCode,
         phoneNumber,
         type: "Template",
@@ -69,22 +69,52 @@ export async function sendOtpWhatsApp(mobile: string, otp: string, name?: string
         }
       };
 
-      const res = await fetch(interaktUrl, {
+      const payloadWithoutButtons = {
+        countryCode,
+        phoneNumber,
+        type: "Template",
+        template: {
+          name: templateName,
+          languageCode,
+          bodyValues: [otp]
+        }
+      };
+
+      let res = await fetch(interaktUrl, {
         method: "POST",
         headers: {
           "Authorization": authHeader,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payloadWithButtons)
       });
+
+      // If buttonValues caused an issue (e.g. template has no dynamic buttons), fallback to body-only
+      if (!res.ok && (res.status === 400 || res.status === 422)) {
+        const firstErr = await res.text();
+        console.warn(`[WhatsApp OTP] Retrying without buttonValues. First response:`, firstErr);
+        res = await fetch(interaktUrl, {
+          method: "POST",
+          headers: {
+            "Authorization": authHeader,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payloadWithoutButtons)
+        });
+      }
 
       if (!res.ok) {
         const errorText = await res.text();
-        throw new Error(`Interakt API responded with status ${res.status}: ${errorText}`);
+        let errMsg = `Interakt API error (${res.status}): ${errorText}`;
+        try {
+          const parsed = JSON.parse(errorText);
+          if (parsed.message) errMsg = `Interakt: ${parsed.message}`;
+        } catch (_) {}
+        throw new Error(errMsg);
       }
 
       console.log(`[WhatsApp OTP] Successfully sent message via Interakt.`);
-      return true;
+      return { success: true };
     }
     if (provider === "wasender") {
       if (!apiKey) {
@@ -235,6 +265,6 @@ export async function sendOtpWhatsApp(mobile: string, otp: string, name?: string
     throw new Error(`Unknown WhatsApp provider: ${provider}`);
   } catch (err: any) {
     console.error("[WhatsApp OTP] Failed to send WhatsApp message:", err.message || err);
-    return false;
+    throw err;
   }
 }

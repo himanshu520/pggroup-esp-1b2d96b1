@@ -272,9 +272,11 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
     if (data.send_via === "whatsapp") {
       // Send the custom 6-digit OTP via WhatsApp
       const { sendOtpWhatsApp } = await import("./whatsapp.server");
-      const success = await sendOtpWhatsApp(emp.mobile!, customOtp, emp.name);
-      if (!success) {
-        throw new Error("Failed to send WhatsApp OTP. Please contact admin.");
+      try {
+        await sendOtpWhatsApp(emp.mobile!, customOtp, emp.name);
+      } catch (waErr: any) {
+        console.error("[Employee OTP] WhatsApp dispatch error:", waErr);
+        throw new Error(waErr.message || "Failed to send WhatsApp OTP. Please contact admin.");
       }
       return { send_via: "whatsapp", maskedContact: maskPhone(emp.mobile!) };
     } else {
