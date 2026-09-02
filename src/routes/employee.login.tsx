@@ -232,6 +232,7 @@ function EmployeeFlow({
   const [empCode, setEmpCode] = useState("");
   const [sendViaWhatsApp, setSendViaWhatsApp] = useState(false);
   const [maskedPhone, setMaskedPhone] = useState("");
+  const [employeeName, setEmployeeName] = useState("");
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const start = useServerFn(startEmployeeOtp);
@@ -259,6 +260,7 @@ function EmployeeFlow({
         },
       });
       setMaskedPhone(res.maskedContact);
+      if (res.name) setEmployeeName(res.name);
       return res.maskedContact;
     },
     [start, sendViaWhatsApp],
@@ -381,6 +383,7 @@ function EmployeeFlow({
     <OtpStage
       t={t}
       phone={maskedPhone}
+      name={employeeName}
       otp={otp}
       setOtp={setOtp}
       onBack={() => {
@@ -397,6 +400,7 @@ function EmployeeFlow({
 function OtpStage({
   t,
   phone,
+  name,
   otp,
   setOtp,
   onBack,
@@ -406,6 +410,7 @@ function OtpStage({
 }: {
   t: (typeof T)[Lang];
   phone: string;
+  name?: string;
   otp: string;
   setOtp: (v: string) => void;
   onBack: () => void;
@@ -444,7 +449,12 @@ function OtpStage({
     <div className="space-y-5">
       <div>
         <h2 className="text-xl font-bold text-[color:oklch(0.18_0.05_260)]">{t.verify}</h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        {name && (
+          <p className="text-sm font-semibold text-primary mt-1">
+            Welcome, {name}
+          </p>
+        )}
+        <p className="text-sm text-muted-foreground mt-0.5">
           {t.verifyHint}{" "}
           <span className="font-medium text-foreground">{phone}</span>
         </p>
