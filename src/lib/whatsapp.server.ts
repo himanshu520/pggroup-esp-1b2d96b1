@@ -48,16 +48,6 @@ export async function sendOtpWhatsApp(mobile: string, otp: string, name?: string
       const templateName = process.env.INTERAKT_TEMPLATE_NAME || "otp_verification";
       const languageCode = process.env.INTERAKT_TEMPLATE_LANG || "en";
 
-      let countryCode = "+91";
-      let phoneNumber = cleanMobile;
-      if (cleanMobile.startsWith("91") && cleanMobile.length === 12) {
-        countryCode = "+91";
-        phoneNumber = cleanMobile.slice(2);
-      } else if (cleanMobile.length === 10) {
-        countryCode = "+91";
-        phoneNumber = cleanMobile;
-      }
-
       let authHeader: string;
       if (apiKey.startsWith("Basic ")) {
         authHeader = apiKey;
