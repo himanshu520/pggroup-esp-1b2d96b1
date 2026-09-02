@@ -13,15 +13,30 @@ export async function sendOtpWhatsApp(mobile: string, otp: string, name?: string
   const senderNumber = process.env.WHATSAPP_SENDER_NUMBER || "";
   const customUrl = process.env.WHATSAPP_API_URL || "";
 
-  // Normalize mobile number (ensure it has country code, default to +91 if length is 10 digits)
-  let cleanMobile = mobile.replace(/[\s\-\+\(\)]/g, "");
-  if (cleanMobile.length === 10) {
-    cleanMobile = "91" + cleanMobile;
+  // Normalize mobile number
+  let rawDigits = (mobile || "").replace(/[^0-9]/g, "");
+  if (rawDigits.startsWith("0") && rawDigits.length === 11) {
+    rawDigits = rawDigits.slice(1);
   }
-  
+
+  let countryCode = "+91";
+  let phoneNumber = rawDigits;
+
+  if (rawDigits.length === 10) {
+    countryCode = "+91";
+    phoneNumber = rawDigits;
+  } else if (rawDigits.startsWith("91") && rawDigits.length === 12) {
+    countryCode = "+91";
+    phoneNumber = rawDigits.slice(2);
+  } else if (rawDigits.length > 10) {
+    countryCode = `+${rawDigits.slice(0, rawDigits.length - 10)}`;
+    phoneNumber = rawDigits.slice(-10);
+  }
+
+  const cleanMobile = `${countryCode.replace("+", "")}${phoneNumber}`;
   const text = `Your Employee Suggestion Portal (ESP) login OTP code is: ${otp}. It is valid for 10 minutes.`;
 
-  console.log(`[WhatsApp OTP] Preparing to send message to ${cleanMobile} via ${provider}...`);
+  console.log(`[WhatsApp OTP] Dispatching to countryCode=${countryCode} phone=${phoneNumber} via provider=${provider}...`);
 
   try {
     if (provider === "interakt") {
@@ -217,13 +232,7 @@ export async function sendOtpWhatsApp(mobile: string, otp: string, name?: string
     // Default or fallback: custom HTTP API gateway
     if (provider === "custom") {
       if (!customUrl) {
-        console.warn("[WhatsApp OTP] WHATSAPP_API_URL not configured. Logging OTP to console only.");
-        console.log(`=========================================`);
-        console.log(`[MOCK WHATSAPP MESSAGE]`);
-        console.log(`To: +${cleanMobile}`);
-        console.log(`Message: ${text}`);
-        console.log(`=========================================`);
-        return true;
+        throw new Error("WhatsApp Gateway is not configured. Please set WHATSAPP_PROVIDER='interakt' and INTERAKT_API_KEY in your server environment variables.");
       }
 
       let finalUrl = customUrl
