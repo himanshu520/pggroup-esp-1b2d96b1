@@ -142,7 +142,7 @@ export function MySuggestions() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 border-b border-border">
               <tr className="text-left">
-                {["Code", "Title", "Category", "Status", "Created"].map((h) => (
+                {[t("lbl_code") || "Code", t("lbl_title") || "Title", t("category") || "Category", t("lbl_status") || "Status", t("lbl_created") || "Created"].map((h) => (
                   <th key={h} className="px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">{h}</th>
                 ))}
               </tr>
@@ -164,7 +164,7 @@ export function MySuggestions() {
                       <span className="truncate">{s.title}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-muted-foreground truncate max-w-[120px]">{s.categories?.name ?? "—"}</td>
+                  <td className="px-4 py-2.5 text-xs text-muted-foreground truncate max-w-[120px]">{s.categories?.name ? t(s.categories.name) : "—"}</td>
                   <td className="px-4 py-2.5 w-32"><StatusBadge status={s.status} /></td>
                   <td className="px-4 py-2.5 text-muted-foreground text-xs w-24 hidden md:table-cell">{new Date(s.created_at).toLocaleDateString()}</td>
                 </tr>
@@ -236,15 +236,15 @@ function SuggestionDetailsDialog({
               </span>
               <div className="flex-1" />
               <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" asChild>
-                <Link to="/employee" search={{ section: "track", code: s.code }}>Track Suggestion</Link>
+                <Link to="/employee" search={{ section: "track", code: s.code }}>{t("nav_track")}</Link>
               </Button>
             </div>
 
             <div className="grid sm:grid-cols-3 gap-3 text-sm border-t border-border pt-3">
               <Meta label={t("category")} value={s.categories?.name ? t(s.categories.name) : "—"} />
-              <Meta label="Department" value={s.departments?.name ?? "—"} />
-              <Meta label="Plant" value={s.plants?.name ?? "—"} />
-              <Meta label="Location" value={s.locations?.location ?? "—"} />
+              <Meta label={t("lbl_department")} value={s.departments?.name ?? "—"} />
+              <Meta label={t("lbl_unit_plant")} value={s.plants?.name ?? "—"} />
+              <Meta label={t("lbl_state_location")} value={s.locations?.location ?? "—"} />
             </div>
 
             <div className="border-t border-border pt-3 space-y-3">

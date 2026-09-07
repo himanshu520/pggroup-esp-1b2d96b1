@@ -139,16 +139,18 @@ export function SubmitForm() {
   }, [departments, allowedDepartmentIds, form.plant_id]);
 
   // Auto-populate hierarchy + gender + mobile from employee record once loaded
-  if (emp && !form.location_id && emp.location_id) {
-    setForm((f) => ({
-      ...f,
-      location_id: emp.location_id ?? "",
-      plant_id: emp.plant_id ?? "",
-      department_id: emp.department_id ?? "",
-      mobile: f.mobile || (emp.mobile ?? ""),
-      gender: f.gender || (emp.gender === "male" || emp.gender === "female" || emp.gender === "other" ? emp.gender : ""),
-    }));
-  }
+  useEffect(() => {
+    if (emp && !form.location_id && emp.location_id) {
+      setForm((f) => ({
+        ...f,
+        location_id: emp.location_id ?? "",
+        plant_id: emp.plant_id ?? "",
+        department_id: emp.department_id ?? "",
+        mobile: f.mobile || (emp.mobile ?? ""),
+        gender: f.gender || (emp.gender === "male" || emp.gender === "female" || emp.gender === "other" ? emp.gender : ""),
+      }));
+    }
+  }, [emp, form.location_id]);
 
   function handleFiles(fileList: FileList | null) {
     if (!fileList) return;

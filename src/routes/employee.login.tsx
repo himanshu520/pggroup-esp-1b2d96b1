@@ -7,8 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { KeyRound, ArrowRight, Languages, Search, ArrowLeft, Globe, Loader2 } from "lucide-react";
-import { BrandLogos } from "@/components/brand-logos";
+import { KeyRound, ArrowRight, Languages, Search, ArrowLeft, Globe, Loader2, Sparkles } from "lucide-react";
+import { BrandLogos, PgLogo, EspLogo } from "@/components/brand-logos";
 import { useLang, useT } from "@/lib/i18n";
 import { StatusBadge } from "@/components/status-badge";
 import { STATUS_LABEL, getHistoryActionText, getEffectiveHistory } from "@/lib/statuses";
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/employee/login")({
   component: EmployeeLogin,
 });
 
-type Lang = "en" | "hi";
+type Lang = "en" | "hi" | "mr";
 
 const T = {
   en: {
@@ -112,6 +112,48 @@ const T = {
     timeline: "समयरेखा",
     subDate: "प्रस्तुत करने की तिथि",
   },
+  mr: {
+    welcome: "स्वागत आहे",
+    subtitle: "कर्मचारी सूचना पोर्टल",
+    intro: "आपल्या कल्पना शेअर करा. आपले कार्यस्थळ अधिक चांगले बनवा.",
+    continueQ: "तुम्हाला पुढे सुरू ठेवायचे आहे का?",
+    yes: "होय, पुढे सुरू ठेवा",
+    switch: "View in English",
+    enterId: "आपला कर्मचारी आयडी प्रविष्ट करा",
+    idHint: "आम्ही आपली ओळख पडताळू आणि लॉगिन OTP पाठवू.",
+    empId: "कर्मचारी आयडी",
+    sendOtp: "OTP पाठवा",
+    verify: "OTP पडताळा",
+    verifyHint: "यावर पाठवलेला ६ अंकी पडताळणी कोड प्रविष्ट करा:",
+    resendIn: "पुन्हा पाठवा",
+    resend: "OTP पुन्हा पाठवा",
+    resending: "पाठवत आहे…",
+    back: "मागे",
+    verifyBtn: "पडताळा आणि साइन इन करा",
+    admin: "अ‍ॅडमिन?",
+    signInHere: "येथे साइन इन करा",
+    sendWhatsapp: "WhatsApp वर OTP पाठवा",
+
+    // Suggestion Tracking Translation keys
+    trackBtn: "सूचना ट्रॅक करा (लॉगिन शिवाय)",
+    trackTitle: "सूचना ट्रॅक करा",
+    trackDesc: "लॉगिन न करता प्रगती ट्रॅक करण्यासाठी सूचना आयडी प्रविष्ट करा.",
+    trackPlaceholder: "उदा. SUG-P01-2026-000001",
+    trackNow: "ट्रॅक करा",
+    backToLogin: "कर्मचारी लॉगिनवर परत जा",
+    searching: "शोधत आहे…",
+    noSugFound: "या आयडीसाठी कोणतीही सूचना सापडली नाही.",
+    metaEmp: "सादरकर्ता",
+    metaCategory: "श्रेणी",
+    metaDept: "विभाग",
+    metaPlant: "प्लांट",
+    metaLoc: "स्थान",
+    metaProblem: "समस्या",
+    metaSolution: "सुचवलेला तोडगा",
+    metaBenefits: "अपेक्षित फायदे",
+    timeline: "टाइमलाइन",
+    subDate: "सादर केल्याची तारीख",
+  },
 } as const;
 
 function EmployeeLogin() {
@@ -126,11 +168,9 @@ function EmployeeLogin() {
       return () => clearTimeout(t);
     }
   }, [stage]);
-  const t = T[lang];
+  const t = T[lang] ?? T.en;
 
-
-
-  function handleLanguageSelect(selectedLang: "en" | "hi") {
+  function handleLanguageSelect(selectedLang: "en" | "hi" | "mr") {
     setLang(selectedLang);
     markChosen();
     setStage("id");
@@ -146,43 +186,68 @@ function EmployeeLogin() {
         )}
       >
         {stage === "splash" ? (
-          <div className="flex flex-col items-center justify-center py-12 space-y-6 animate-pulse">
-            <BrandLogos className="justify-center scale-125 transition-transform duration-1000" imgClassName="h-16 sm:h-20" />
-            <h1 className="text-2xl sm:text-3xl font-bold text-[color:oklch(0.18_0.05_260)] tracking-wide">Employee Suggestion Portal</h1>
+          <div className="flex flex-col items-center justify-center py-10 space-y-5 animate-pulse text-center">
+            <PgLogo imgClassName="h-16 sm:h-20" />
+            <h2 className="text-xl sm:text-2xl font-bold text-[color:oklch(0.18_0.05_260)]">Welcome to</h2>
+            <EspLogo imgClassName="h-16 sm:h-20" />
+            <p className="text-sm text-muted-foreground font-medium">Employee Suggestion Portal</p>
           </div>
         ) : stage === "language" ? (
-          <div className="text-center space-y-8 py-6">
-            <BrandLogos className="justify-center" imgClassName="h-12 sm:h-14" />
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-[color:oklch(0.18_0.05_260)]">
-                Welcome
+          <div className="text-center space-y-6 py-2 sm:py-4">
+            {/* 1. PG Logo */}
+            <div className="flex justify-center">
+              <PgLogo imgClassName="h-16 sm:h-20 max-h-24 drop-shadow-sm" />
+            </div>
+
+            {/* 2. Welcome to */}
+            <div className="py-1">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-[color:oklch(0.18_0.05_260)] tracking-tight">
+                Welcome to
               </h1>
-              <p className="text-sm text-muted-foreground mt-2">
-                Employee Suggestion Portal
+            </div>
+
+            {/* 3. ESP Logo */}
+            <div className="flex justify-center">
+              <EspLogo imgClassName="h-16 sm:h-20 max-h-24 drop-shadow-sm" />
+            </div>
+
+            {/* 4. Share idea line */}
+            <div className="py-2">
+              <p className="text-sm sm:text-base font-medium text-foreground/80">
+                Share your ideas. Improve your workplace.
               </p>
             </div>
-            
-            <p className="text-sm text-foreground/80">
-              Share your ideas. Improve your workplace.
-            </p>
 
-            <div className="pt-6">
-              <p className="font-semibold text-lg mb-4 text-[color:oklch(0.18_0.05_260)]">
-                Do you want to continue?
+            {/* 5. Language sequence: Hindi -> Marathi -> English */}
+            <div className="pt-2">
+              <p className="font-semibold text-sm sm:text-base mb-3 text-[color:oklch(0.18_0.05_260)]">
+                Choose Language / भाषा चुनें / भाषा निवडा
               </p>
-              <div className="grid gap-3">
+              <div className="grid gap-2.5">
+                {/* 1. Hindi */}
                 <Button 
-                  className="h-12 text-base bg-primary hover:bg-primary/90" 
+                  variant="outline" 
+                  className="h-12 text-base font-semibold border-primary text-primary hover:bg-primary/5 hover:text-primary transition-all duration-200" 
+                  onClick={() => handleLanguageSelect("hi")}
+                >
+                  हिन्दी (Hindi) <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+
+                {/* 2. Marathi */}
+                <Button 
+                  variant="outline" 
+                  className="h-12 text-base font-semibold border-primary text-primary hover:bg-primary/5 hover:text-primary transition-all duration-200" 
+                  onClick={() => handleLanguageSelect("mr")}
+                >
+                  मराठी (Marathi) <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+
+                {/* 3. English */}
+                <Button 
+                  className="h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-all duration-200" 
                   onClick={() => handleLanguageSelect("en")}
                 >
                   English <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="h-12 text-base border-primary text-primary hover:bg-primary/5" 
-                  onClick={() => handleLanguageSelect("hi")}
-                >
-                  Hindi <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
             </div>

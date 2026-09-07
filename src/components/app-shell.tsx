@@ -3,7 +3,7 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useS
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/lib/session";
 import { ROLE_LABEL } from "@/lib/statuses";
-import { LogOut, Menu, X, User, Loader2, Globe } from "lucide-react";
+import { LogOut, Menu, X, User, Loader2, Globe, Check } from "lucide-react";
 import { NotificationBell } from "@/components/notification-bell";
 import pgLogo from "@/assets/pg-logo.png.asset.json";
 import espLogo from "@/assets/esp-logo.png.asset.json";
@@ -395,9 +395,24 @@ function AppShellInner({
                 <User className="w-4 h-4 mr-2" /> My Profile
               </DropdownMenuItem>
               {!loc.pathname.startsWith("/admin") && (
-                <DropdownMenuItem onClick={() => setLang(lang === "en" ? "hi" : "en")} className="cursor-pointer">
-                  <Globe className="w-4 h-4 mr-2" /> {lang === "en" ? "Change to हिन्दी" : "Change to English"}
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs text-muted-foreground font-normal flex items-center gap-1.5 py-1">
+                    <Globe className="w-3.5 h-3.5" /> Language / भाषा
+                  </DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => setLang("en")} className={cn("cursor-pointer justify-between text-xs py-1.5", lang === "en" && "font-bold text-primary bg-primary/5")}>
+                    <span>English</span>
+                    {lang === "en" && <Check className="w-3.5 h-3.5" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLang("hi")} className={cn("cursor-pointer justify-between text-xs py-1.5", lang === "hi" && "font-bold text-primary bg-primary/5")}>
+                    <span>हिन्दी (Hindi)</span>
+                    {lang === "hi" && <Check className="w-3.5 h-3.5" />}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLang("mr")} className={cn("cursor-pointer justify-between text-xs py-1.5", lang === "mr" && "font-bold text-primary bg-primary/5")}>
+                    <span>मराठी (Marathi)</span>
+                    {lang === "mr" && <Check className="w-3.5 h-3.5" />}
+                  </DropdownMenuItem>
+                </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>

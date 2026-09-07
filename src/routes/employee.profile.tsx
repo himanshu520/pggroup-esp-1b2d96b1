@@ -109,7 +109,7 @@ export function ProfilePage() {
         <div className="rounded-lg border border-border bg-card p-6">
           <div className="text-sm font-semibold">{t("profile_language")}</div>
           <div className="text-xs text-muted-foreground mt-0.5">{t("profile_language_desc")}</div>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             <Button
               size="sm"
               variant={lang === "en" ? "default" : "outline"}
@@ -123,6 +123,13 @@ export function ProfilePage() {
               onClick={() => setLang("hi")}
             >
               हिन्दी (Hindi)
+            </Button>
+            <Button
+              size="sm"
+              variant={lang === "mr" ? "default" : "outline"}
+              onClick={() => setLang("mr")}
+            >
+              मराठी (Marathi)
             </Button>
           </div>
         </div>

@@ -11,11 +11,12 @@ export function StatusBadge({ status, className }: { status: SuggestionStatus; c
 }
 
 export function BudgetBadge({ tier, className }: { tier: string; className?: string }) {
+  const t = useT();
   if (tier === "no_cost") {
     return (
       <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800/30", className)}>
         <CircleDollarSign className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-        No Cost
+        {t("budget_no_cost")}
       </span>
     );
   }
@@ -23,7 +24,7 @@ export function BudgetBadge({ tier, className }: { tier: string; className?: str
     return (
       <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-800/30", className)}>
         <Coins className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-        Low Cost
+        {t("budget_low_cost")}
       </span>
     );
   }
@@ -31,7 +32,7 @@ export function BudgetBadge({ tier, className }: { tier: string; className?: str
     return (
       <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800/30", className)}>
         <TrendingUp className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-        Investment
+        {t("budget_investment")}
       </span>
     );
   }

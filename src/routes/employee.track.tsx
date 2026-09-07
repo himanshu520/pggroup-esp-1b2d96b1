@@ -49,13 +49,13 @@ export function TrackPage({ initialCode }: { initialCode?: string }) {
 
   return (
     <EmployeeShell>
-      <PageHeader title="Track Suggestion" description="Enter a suggestion ID to see its full timeline." />
+      <PageHeader title={t("track_title")} description={t("track_desc")} />
       <div className="flex gap-2 mb-6 max-w-md">
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
-          <Input placeholder="SUG-P01-2026-000001" value={code} onChange={(e) => setCode(e.target.value)} className="pl-8 font-mono" onKeyDown={(e) => e.key === "Enter" && search()} />
+          <Input placeholder={t("track_placeholder")} value={code} onChange={(e) => setCode(e.target.value)} className="pl-8 font-mono" onKeyDown={(e) => e.key === "Enter" && search()} />
         </div>
-        <Button onClick={search} disabled={loading}>Track</Button>
+        <Button onClick={search} disabled={loading}>{t("track_btn")}</Button>
       </div>
 
       {result ? (
@@ -68,25 +68,25 @@ export function TrackPage({ initialCode }: { initialCode?: string }) {
                 <div className="flex items-center gap-2 mt-2">
                   <StatusBadge status={result.status} />
                   {result.budget_tier && <BudgetBadge tier={result.budget_tier} />}
-                  <span className="text-xs text-muted-foreground">Submitted {new Date(result.created_at).toLocaleDateString()}</span>
+                  <span className="text-xs text-muted-foreground">{t("submitted_on")} {new Date(result.created_at).toLocaleDateString()}</span>
                 </div>
               </div>
             </div>
             <div className="grid sm:grid-cols-3 gap-3 text-sm border-t border-border pt-3">
-              <Meta label="Employee" value={`${result.employees?.name} (${result.employees?.employee_code})`} />
-              <Meta label="Category" value={result.categories?.name ? t(result.categories.name) : "—"} />
-              <Meta label="Department" value={result.departments?.name ?? "—"} />
-              <Meta label="Plant" value={result.plants?.name ?? "—"} />
-              <Meta label="Location" value={result.locations?.location ?? "—"} />
+              <Meta label={t("lbl_employee")} value={`${result.employees?.name} (${result.employees?.employee_code})`} />
+              <Meta label={t("category")} value={result.categories?.name ? t(result.categories.name) : "—"} />
+              <Meta label={t("lbl_department")} value={result.departments?.name ?? "—"} />
+              <Meta label={t("lbl_unit_plant")} value={result.plants?.name ?? "—"} />
+              <Meta label={t("lbl_state_location")} value={result.locations?.location ?? "—"} />
             </div>
             <div className="border-t border-border pt-3 space-y-3">
-              <Section title="Problem" body={result.problem} />
-              <Section title="Suggested method" body={result.suggested_method} />
-              <Section title="Expected benefits" body={result.expected_benefits} />
+              <Section title={t("problem")} body={result.problem} />
+              <Section title={t("suggested_method")} body={result.suggested_method} />
+              <Section title={t("expected_benefits")} body={result.expected_benefits} />
             </div>
           </div>
           <div className="rounded-lg border border-border bg-card p-5">
-            <div className="text-sm font-medium mb-3">Timeline</div>
+            <div className="text-sm font-medium mb-3">{t("timeline")}</div>
             {(() => {
               const effectiveHistory = getEffectiveHistory(history, result);
               return (
@@ -100,14 +100,14 @@ export function TrackPage({ initialCode }: { initialCode?: string }) {
                       {h.remarks && <div className="text-xs text-muted-foreground mt-0.5">{h.remarks}</div>}
                     </li>
                   ))}
-                  {effectiveHistory.length === 0 && <li className="text-xs text-muted-foreground">No activity yet.</li>}
+                  {effectiveHistory.length === 0 && <li className="text-xs text-muted-foreground">{t("no_activity")}</li>}
                 </ol>
               );
             })()}
           </div>
         </div>
       ) : code && !loading ? (
-        <div className="text-sm text-muted-foreground">No suggestion found for that ID.</div>
+        <div className="text-sm text-muted-foreground">{t("no_suggestion_found")}</div>
       ) : null}
     </EmployeeShell>
   );
