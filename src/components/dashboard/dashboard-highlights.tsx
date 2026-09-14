@@ -77,6 +77,19 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
       if (!data || !(data as any).suggestions) return null;
       const s = (data as any).suggestions;
       const emp = s.employees;
+
+      let beforeImg = (data as any).before_image_url || s.before_image_url || "";
+      let afterImg = (data as any).after_image_url || (data as any).image_url || s.after_image_url || "";
+      const reason = (data as any).selection_reason || "";
+
+      if ((!beforeImg || !afterImg) && reason.startsWith("POKA_YOKE_IMAGES:")) {
+        try {
+          const parsed = JSON.parse(reason.substring("POKA_YOKE_IMAGES:".length));
+          if (!beforeImg && parsed.before_image_url) beforeImg = parsed.before_image_url;
+          if (!afterImg && parsed.after_image_url) afterImg = parsed.after_image_url;
+        } catch {}
+      }
+
       return {
         id: s.id,
         suggestionTitle: s.title,
@@ -87,11 +100,21 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
         plant: emp?.plants?.name || "Plant",
         savings: Number(s.expected_saving || s.actual_cost || 0),
         points: (s.status === "implemented" || s.status === "closed") ? 5 : ((s.status === "rejected" || s.status === "dropped" || s.status === "fake_closure") ? -2 : 0),
+        beforeImage: beforeImg,
+        afterImage: afterImg,
       };
     },
   });
 
-  const bestSug = nominatedBestSug;
+  const fallbackBestSug = useMemo(() => {
+    return (
+      suggestions.find((s) => s.status === "implemented" || s.status === "closed" || s.status === "approved") ||
+      suggestions[0] ||
+      null
+    );
+  }, [suggestions]);
+
+  const bestSug = nominatedBestSug || fallbackBestSug;
 
   // 4. Official Nominated Best Fool Proofing (Poka-Yoke)
   const { data: nominatedFoolProofing = null } = useQuery({
@@ -298,7 +321,42 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
               {bestSug ? bestSug.description : "No active suggestion description available."}
             </p>
           </div>
-          <div className="flex items-center justify-between text-xs pt-1">
+
+          {/* Before & After Process Images */}
+          <div className="grid grid-cols-2 gap-2 my-2">
+            <div>
+              <span className="text-[10px] font-bold text-rose-600 block mb-0.5">BEFORE: Process Image</span>
+              {bestSug?.beforeImage ? (
+                <img
+                  src={bestSug.beforeImage}
+                  alt="Before"
+                  className="w-full h-20 rounded-md object-cover border border-rose-200 cursor-pointer hover:scale-105 transition-transform"
+                  onClick={() => window.open(bestSug.beforeImage, "_blank")}
+                />
+              ) : (
+                <div className="w-full h-20 rounded-md bg-white/60 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700 flex items-center justify-center text-slate-400 text-xs">
+                  <ImageIcon className="w-4 h-4 mr-1 opacity-60" /> <span className="text-[11px]">No Image</span>
+                </div>
+              )}
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-emerald-600 block mb-0.5">AFTER: Solution Image</span>
+              {bestSug?.afterImage ? (
+                <img
+                  src={bestSug.afterImage}
+                  alt="After"
+                  className="w-full h-20 rounded-md object-cover border border-emerald-200 cursor-pointer hover:scale-105 transition-transform"
+                  onClick={() => window.open(bestSug.afterImage, "_blank")}
+                />
+              ) : (
+                <div className="w-full h-20 rounded-md bg-white/60 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700 flex items-center justify-center text-slate-400 text-xs">
+                  <ImageIcon className="w-4 h-4 mr-1 opacity-60" /> <span className="text-[11px]">No Image</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-xs pt-1 border-t border-emerald-100 dark:border-emerald-950/40">
             <span className="font-bold text-emerald-600 dark:text-emerald-400">
               {bestSug ? `₹${(bestSug.savings / 100000).toFixed(1)}L Savings` : "₹0.0L Savings"}
             </span>
