@@ -8,9 +8,9 @@
  */
 export async function sendOtpWhatsApp(mobile: string, otp: string, name?: string | null): Promise<boolean> {
   const provider = (process.env.WHATSAPP_PROVIDER || (process.env.INTERAKT_API_KEY ? "interakt" : "custom")).toLowerCase();
-  const apiKey = process.env.INTERAKT_API_KEY || process.env.WHATSAPP_API_KEY || process.env.WHATSAPP_AUTH_TOKEN || "";
+  const apiKey = process.env.INTERAKT_API_KEY || process.env.WHATSAPP_API_KEY || process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_AUTH_TOKEN || "";
   const accountSid = process.env.WHATSAPP_ACCOUNT_SID || "";
-  const senderNumber = process.env.WHATSAPP_SENDER_NUMBER || "";
+  const senderNumber = process.env.WHATSAPP_SENDER_NUMBER || process.env.WHATSAPP_PHONE_NUMBER_ID || "";
   const customUrl = process.env.WHATSAPP_API_URL || "";
 
   // Normalize mobile number
@@ -184,31 +184,81 @@ export async function sendOtpWhatsApp(mobile: string, otp: string, name?: string
     } 
     
     if (provider === "meta") {
-      if (!apiKey || !senderNumber) {
-        throw new Error("Missing Meta credentials in environment (WHATSAPP_API_KEY, WHATSAPP_SENDER_NUMBER - which is phone number ID)");
+      // Meta requires the Graph Phone Number ID (e.g. 1269178059617471), NOT the 10-digit display phone number
+      const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID || senderNumber;
+      if (!apiKey || !phoneId) {
+        throw new Error("Missing Meta credentials in environment (WHATSAPP_API_KEY/WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID)");
       }
 
-      const metaUrl = `https://graph.facebook.com/v17.0/${senderNumber}/messages`;
-      
-      const payload = {
+      const metaUrl = `https://graph.facebook.com/v21.0/${phoneId}/messages`;
+      const templateName = process.env.WHATSAPP_TEMPLATE_NAME || "otp_verification";
+      const templateLang = process.env.WHATSAPP_TEMPLATE_LANG || "en";
+
+      // Use template message for OTP (works outside 24h session window)
+      const templatePayload = {
         messaging_product: "whatsapp",
         recipient_type: "individual",
         to: cleanMobile,
-        type: "text",
-        text: {
-          preview_url: false,
-          body: text
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: templateLang },
+          components: [
+            {
+              type: "body",
+              parameters: [{ type: "text", text: otp }]
+            },
+            {
+              type: "button",
+              sub_type: "url",
+              index: "0",
+              parameters: [{ type: "text", text: otp }]
+            }
+          ]
         }
       };
 
-      const res = await fetch(metaUrl, {
+      // Try template first; fallback to plain text if template fails (e.g. no button in template)
+      let res = await fetch(metaUrl, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${apiKey}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(templatePayload)
       });
+
+      if (!res.ok) {
+        const firstErrText = await res.text();
+        console.warn(`[WhatsApp OTP] Template with button failed (${res.status}), retrying without button component:`, firstErrText);
+
+        // Retry without button component
+        const templatePayloadNoBtn = {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: cleanMobile,
+          type: "template",
+          template: {
+            name: templateName,
+            language: { code: templateLang },
+            components: [
+              {
+                type: "body",
+                parameters: [{ type: "text", text: otp }]
+              }
+            ]
+          }
+        };
+
+        res = await fetch(metaUrl, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(templatePayloadNoBtn)
+        });
+      }
 
       if (!res.ok) {
         const errorText = await res.text();
