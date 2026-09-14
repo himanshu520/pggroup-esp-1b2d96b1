@@ -295,7 +295,7 @@ function createLogicalDataset(): EmployeeSuggestion[] {
   return dataset;
 }
 
-export const DUMMY_SUGGESTIONS: EmployeeSuggestion[] = createLogicalDataset();
+export const DUMMY_SUGGESTIONS: EmployeeSuggestion[] = [];
 
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -326,7 +326,7 @@ export function getSuggestionPoints(s: any): number {
 
 /**
  * Maps live database records from Supabase into UI-ready EmployeeSuggestion format.
- * Falls back to rich logical dataset if database is empty so demo dashboard is 100% complete.
+ * Returns only genuine live database records from Supabase for live production.
  */
 export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] {
   const mappedLive = Array.isArray(dbSugs)
@@ -349,10 +349,10 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
         else if (s.status === "dropped") implStatus = "On Hold";
 
         const rawPlantName = String(s.plants?.name || s.plant || "").toUpperCase();
-        let mappedPlant = "PGTL-BHIWADI";
+        let mappedPlant = s.plants?.name || s.plant || "General Plant";
         if (rawPlantName.includes("NGM")) {
           mappedPlant = "NGM-KAROLI";
-        } else {
+        } else if (rawPlantName.includes("PGTL") || rawPlantName.includes("BHIWADI")) {
           mappedPlant = "PGTL-BHIWADI";
         }
 
@@ -392,12 +392,7 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
       })
     : [];
 
-  // Combine all live database records with demo dataset so every new user submission increments dashboard totals dynamically
-  if (mappedLive.length > 0) {
-    return [...mappedLive, ...DUMMY_SUGGESTIONS];
-  }
-
-  return DUMMY_SUGGESTIONS;
+  return mappedLive;
 }
 
 /**
