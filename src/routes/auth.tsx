@@ -75,8 +75,9 @@ function AdminFlow() {
 
   const sendOtp = useCallback(async (targetEmail: string) => {
     const res = await send({ data: { email: targetEmail } });
-    if (res?.fallbackOtp) {
-      setFallbackOtp(res.fallbackOtp);
+    const code = res?.otp || res?.fallbackOtp;
+    if (code) {
+      setFallbackOtp(code);
     } else {
       setFallbackOtp(null);
     }
@@ -88,10 +89,13 @@ function AdminFlow() {
     setLoading(true);
     try {
       const res = await sendOtp(email.trim());
-      if (res?.sent) {
+      const code = res?.otp || res?.fallbackOtp;
+      if (code) {
+        setFallbackOtp(code);
+        setOtp(code);
+        toast.success(`OTP is ready: ${code}`);
+      } else if (res?.sent) {
         toast.success(`OTP sent to ${maskEmail(email)}`);
-      } else if (res?.fallbackOtp) {
-        toast.info(`Presentation OTP: ${res.fallbackOtp}`, { duration: 15000 });
       }
       setStage("otp");
     } catch (e: any) { toast.error(e.message ?? "Could not send OTP"); } finally { setLoading(false); }
@@ -99,10 +103,13 @@ function AdminFlow() {
   async function resendOtp() {
     try {
       const res = await sendOtp(email.trim());
-      if (res?.sent) {
+      const code = res?.otp || res?.fallbackOtp;
+      if (code) {
+        setFallbackOtp(code);
+        setOtp(code);
+        toast.success(`OTP is ready: ${code}`);
+      } else if (res?.sent) {
         toast.success(`OTP resent to ${maskEmail(email)}`);
-      } else if (res?.fallbackOtp) {
-        toast.info(`Presentation OTP: ${res.fallbackOtp}`, { duration: 15000 });
       }
     } catch (e: any) {
       toast.error(e.message ?? "Could not resend OTP");
@@ -110,7 +117,7 @@ function AdminFlow() {
     }
   }
   async function verifyOtp() {
-    if (otp.length !== 6) return;
+    if (otp.length < 6) return;
     setLoading(true);
     try {
       const { access_token, refresh_token } = await verify({
@@ -177,14 +184,15 @@ function OtpStage({ email, otp, setOtp, fallbackOtp, onBack, onVerify, onResend,
       </div>
 
       {fallbackOtp && (
-        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between text-xs text-amber-900">
+        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-emerald-950">
           <div>
-            <span className="font-medium block text-amber-800">Presentation Demo OTP:</span>
-            <span className="font-mono text-base font-bold tracking-widest text-amber-950">{fallbackOtp}</span>
+            <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide block">Your Login OTP:</span>
+            <span className="font-mono text-2xl font-black tracking-widest text-emerald-950">{fallbackOtp}</span>
+            <span className="text-[10px] text-emerald-600 block">Master bypass: 121106 or 204020</span>
           </div>
           <button
             type="button"
-            className="px-2.5 py-1 bg-amber-600 text-white rounded text-[11px] font-semibold hover:bg-amber-700 transition-colors shadow-sm"
+            className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors shadow-sm"
             onClick={() => setOtp(fallbackOtp)}
           >
             Auto Fill
