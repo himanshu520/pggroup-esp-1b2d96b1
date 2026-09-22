@@ -28,32 +28,41 @@ async function resolveKnownEmail(rawEmail: string): Promise<{ email: string; nam
   const email = rawEmail.trim().toLowerCase();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  // 1. Check if email belongs to an employee
+  // 1. Strictly verify if email belongs to an active employee in `employees` table
   try {
-    const { data: emp } = await supabaseAdmin
+    const { data: emp, error } = await supabaseAdmin
       .from("employees")
       .select("email, name, active")
       .ilike("email", email)
       .maybeSingle();
-    if (emp && emp.active) {
+    if (!error && emp && emp.active) {
       return { email: emp.email || email, name: emp.name };
     }
-  } catch {}
-
-  // 2. Check auth users + roles
-  try {
-    const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    const authUser = list?.users?.find((u) => (u.email ?? "").toLowerCase() === email);
-    if (authUser) {
-      return { email, name: null };
-    }
-  } catch {}
-
-  // 3. Allow corporate domain
-  if (email.endsWith("@pgel.in")) {
-    return { email, name: null };
+  } catch (err) {
+    console.error("[Auth] Error verifying employee in DB:", err);
   }
 
+  // 2. Strictly verify if user exists in auth AND carries an assigned role in `user_roles` table
+  try {
+    const { data: list, error: listErr } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (!listErr && list?.users) {
+      const authUser = list.users.find((u) => (u.email ?? "").toLowerCase() === email);
+      if (authUser) {
+        const { data: roles, error: rolesErr } = await supabaseAdmin
+          .from("user_roles")
+          .select("id, role")
+          .eq("user_id", authUser.id)
+          .limit(1);
+        if (!rolesErr && roles && roles.length > 0) {
+          return { email: authUser.email || email, name: null };
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[Auth] Error verifying user roles in DB:", err);
+  }
+
+  // Strictly deny anyone not found in employees and not assigned any role in user_roles
   return null;
 }
 
@@ -151,6 +160,11 @@ export const verifyAdminOtp = createServerFn({ method: "POST" })
     }).parse(d ?? {}),
   )
   .handler(async ({ data }) => {
+    const known = await resolveKnownEmail(data.email);
+    if (!known) {
+      throw new Error("Invalid or expired OTP");
+    }
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: list, error: getError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
     if (getError) {
