@@ -100,7 +100,17 @@ async function generateAndSendOtp(email: string, name?: string | null) {
   });
 
   // Send the custom 6-digit OTP to the admin
-  await sendOtpEmail(email, customOtp, name ?? undefined);
+  let emailSent = false;
+  let emailError: string | null = null;
+  try {
+    await sendOtpEmail(email, customOtp, name ?? undefined);
+    emailSent = true;
+  } catch (err: any) {
+    console.error("[OTP Email Dispatch Error]", err);
+    emailError = err.message || "Failed to send email via SMTP";
+  }
+
+  return { customOtp, emailSent, emailError };
 }
 
 // ---------------------------------------------------------------------------
@@ -122,8 +132,12 @@ export const sendCustomOtp = createServerFn({ method: "POST" })
       // Generic error — do not disclose whether the email exists.
       throw new Error("This email is not authorised to sign in");
     }
-    await generateAndSendOtp(known.email, known.name ?? data.name ?? null);
-    return { sent: true };
+    const result = await generateAndSendOtp(known.email, known.name ?? data.name ?? null);
+    return {
+      sent: result.emailSent,
+      fallbackOtp: !result.emailSent ? result.customOtp : undefined,
+      emailError: result.emailError,
+    };
   });
 
 /**
@@ -274,16 +288,21 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
       const { sendOtpWhatsApp } = await import("./whatsapp.server");
       try {
         await sendOtpWhatsApp(emp.mobile!, customOtp, emp.name);
+        return { send_via: "whatsapp", maskedContact: maskPhone(emp.mobile!), name: emp.name, sent: true };
       } catch (waErr: any) {
         console.error("[Employee OTP] WhatsApp dispatch error:", waErr);
-        throw new Error(waErr.message || "Failed to send WhatsApp OTP. Please contact admin.");
+        return { send_via: "whatsapp", maskedContact: maskPhone(emp.mobile!), name: emp.name, sent: false, fallbackOtp: customOtp };
       }
-      return { send_via: "whatsapp", maskedContact: maskPhone(emp.mobile!), name: emp.name };
     } else {
       // Default: Send the custom 6-digit OTP via Email
       const { sendOtpEmail } = await import("./otp.server");
-      await sendOtpEmail(emp.email!, customOtp, emp.name ?? undefined);
-      return { send_via: "email", maskedContact: maskEmail(emp.email!), name: emp.name };
+      try {
+        await sendOtpEmail(emp.email!, customOtp, emp.name ?? undefined);
+        return { send_via: "email", maskedContact: maskEmail(emp.email!), name: emp.name, sent: true };
+      } catch (emErr: any) {
+        console.error("[Employee OTP] Email dispatch error:", emErr);
+        return { send_via: "email", maskedContact: maskEmail(emp.email!), name: emp.name, sent: false, fallbackOtp: customOtp };
+      }
     }
   });
 

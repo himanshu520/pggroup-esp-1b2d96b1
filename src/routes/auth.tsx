@@ -71,23 +71,39 @@ function AdminFlow() {
     }
   }, [otp, loading]);
 
+  const [fallbackOtp, setFallbackOtp] = useState<string | null>(null);
+
   const sendOtp = useCallback(async (targetEmail: string) => {
-    await send({ data: { email: targetEmail } });
+    const res = await send({ data: { email: targetEmail } });
+    if (res?.fallbackOtp) {
+      setFallbackOtp(res.fallbackOtp);
+    } else {
+      setFallbackOtp(null);
+    }
+    return res;
   }, [send]);
 
   async function requestOtp() {
     if (!email.trim()) return;
     setLoading(true);
     try {
-      await sendOtp(email.trim());
-      toast.success(`OTP sent to ${maskEmail(email)}`);
+      const res = await sendOtp(email.trim());
+      if (res?.sent) {
+        toast.success(`OTP sent to ${maskEmail(email)}`);
+      } else if (res?.fallbackOtp) {
+        toast.info(`Presentation OTP: ${res.fallbackOtp}`, { duration: 15000 });
+      }
       setStage("otp");
     } catch (e: any) { toast.error(e.message ?? "Could not send OTP"); } finally { setLoading(false); }
   }
   async function resendOtp() {
     try {
-      await sendOtp(email.trim());
-      toast.success(`OTP resent to ${maskEmail(email)}`);
+      const res = await sendOtp(email.trim());
+      if (res?.sent) {
+        toast.success(`OTP resent to ${maskEmail(email)}`);
+      } else if (res?.fallbackOtp) {
+        toast.info(`Presentation OTP: ${res.fallbackOtp}`, { duration: 15000 });
+      }
     } catch (e: any) {
       toast.error(e.message ?? "Could not resend OTP");
       throw e;
@@ -127,11 +143,11 @@ function AdminFlow() {
       </Button>
     </form>
   ) : (
-    <OtpStage email={email} otp={otp} setOtp={setOtp} onBack={() => { setStage("email"); setOtp(""); }} onVerify={verifyOtp} onResend={resendOtp} loading={loading} />
+    <OtpStage email={email} otp={otp} setOtp={setOtp} fallbackOtp={fallbackOtp} onBack={() => { setStage("email"); setOtp(""); setFallbackOtp(null); }} onVerify={verifyOtp} onResend={resendOtp} loading={loading} />
   );
 }
 
-function OtpStage({ email, otp, setOtp, onBack, onVerify, onResend, loading }: { email: string; otp: string; setOtp: (v: string) => void; onBack: () => void; onVerify: () => void; onResend: () => Promise<void>; loading: boolean }) {
+function OtpStage({ email, otp, setOtp, fallbackOtp, onBack, onVerify, onResend, loading }: { email: string; otp: string; setOtp: (v: string) => void; fallbackOtp: string | null; onBack: () => void; onVerify: () => void; onResend: () => Promise<void>; loading: boolean }) {
   const [remaining, setRemaining] = useState(RESEND_SECONDS);
   const [resending, setResending] = useState(false);
   const startedRef = useRef(false);
@@ -159,6 +175,23 @@ function OtpStage({ email, otp, setOtp, onBack, onVerify, onResend, loading }: {
         <h2 className="text-xl font-bold text-[color:oklch(0.18_0.05_260)]">Verify OTP</h2>
         <p className="text-sm text-muted-foreground mt-1">Enter the 6-digit code sent to <span className="font-medium text-foreground">{maskEmail(email)}</span></p>
       </div>
+
+      {fallbackOtp && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between text-xs text-amber-900">
+          <div>
+            <span className="font-medium block text-amber-800">Presentation Demo OTP:</span>
+            <span className="font-mono text-base font-bold tracking-widest text-amber-950">{fallbackOtp}</span>
+          </div>
+          <button
+            type="button"
+            className="px-2.5 py-1 bg-amber-600 text-white rounded text-[11px] font-semibold hover:bg-amber-700 transition-colors shadow-sm"
+            onClick={() => setOtp(fallbackOtp)}
+          >
+            Auto Fill
+          </button>
+        </div>
+      )}
+
       <div className="flex justify-center">
         <InputOTP maxLength={6} value={otp} onChange={setOtp}>
           <InputOTPGroup>
