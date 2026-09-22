@@ -108,6 +108,26 @@ async function generateAndSendOtp(email: string, name?: string | null) {
   } catch (err: any) {
     console.error("[OTP Email Dispatch Error]", err);
     emailError = err.message || "Failed to send email via SMTP";
+
+    // Secondary automatic delivery: Dispatch native Supabase OTP email
+    try {
+      const { createClient } = await import("@supabase/supabase-js");
+      const anon = createClient(
+        process.env.SUPABASE_URL || "https://hjnctinqgpxsoiocljax.supabase.co",
+        process.env.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_KQZS7rUmgUcEeBnXyFdpLQ_HcB3PogU",
+        { auth: { persistSession: false, autoRefreshToken: false } }
+      );
+      const { error: sbErr } = await anon.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: false }
+      });
+      if (!sbErr) {
+        emailSent = true;
+        console.log("[OTP Fallback] Native Supabase OTP email dispatched successfully");
+      }
+    } catch (fallbackErr) {
+      console.error("[OTP Fallback Exception]", fallbackErr);
+    }
   }
 
   return { customOtp, emailSent, emailError };
@@ -141,7 +161,8 @@ export const sendCustomOtp = createServerFn({ method: "POST" })
   });
 
 /**
- * Verifies the admin OTP server-side using the 6-to-8 digit mapping in user metadata.
+ * Verifies the admin OTP server-side using either the 6-digit custom OTP
+ * or direct native Supabase OTP.
  */
 export const verifyAdminOtp = createServerFn({ method: "POST" })
   .validator((d: unknown) =>
@@ -163,30 +184,29 @@ export const verifyAdminOtp = createServerFn({ method: "POST" })
     const user = { user: match };
 
     const mapping = user.user.user_metadata?.otp_mapping;
-    if (!mapping || mapping.custom_otp !== data.token || mapping.expires_at < Date.now()) {
-      throw new Error("Invalid or expired OTP");
+    const isCustomMatch = mapping && mapping.custom_otp === data.token && mapping.expires_at >= Date.now();
+    const tokenToVerify = isCustomMatch ? mapping.supabase_otp : data.token;
+
+    if (isCustomMatch) {
+      // Clear mapping from user metadata
+      const updatedMetadata = { ...user.user.user_metadata };
+      delete updatedMetadata.otp_mapping;
+      await supabaseAdmin.auth.admin.updateUserById(user.user.id, {
+        user_metadata: updatedMetadata
+      });
     }
-
-    const supabaseOtp = mapping.supabase_otp;
-
-    // Clear mapping from user metadata
-    const updatedMetadata = { ...user.user.user_metadata };
-    delete updatedMetadata.otp_mapping;
-    await supabaseAdmin.auth.admin.updateUserById(user.user.id, {
-      user_metadata: updatedMetadata
-    });
 
     // Use a fresh publishable client so verifyOtp does not persist the session
     // in the server runtime.
     const { createClient } = await import("@supabase/supabase-js");
     const anon = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_PUBLISHABLE_KEY!,
+      process.env.SUPABASE_URL || "https://hjnctinqgpxsoiocljax.supabase.co",
+      process.env.SUPABASE_PUBLISHABLE_KEY || "sb_publishable_KQZS7rUmgUcEeBnXyFdpLQ_HcB3PogU",
       { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } },
     );
     const { data: verified, error } = await anon.auth.verifyOtp({
       email: data.email,
-      token: supabaseOtp,
+      token: tokenToVerify,
       type: "email",
     });
     if (error || !verified.session) {
