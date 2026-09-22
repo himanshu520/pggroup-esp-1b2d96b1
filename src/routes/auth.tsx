@@ -71,51 +71,34 @@ function AdminFlow() {
     }
   }, [otp, loading]);
 
-  const [fallbackOtp, setFallbackOtp] = useState<string | null>(null);
-
   const sendOtp = useCallback(async (targetEmail: string) => {
-    const res = await send({ data: { email: targetEmail } });
-    const code = res?.otp || res?.fallbackOtp;
-    if (code) {
-      setFallbackOtp(code);
-    } else {
-      setFallbackOtp(null);
-    }
-    return res;
+    return await send({ data: { email: targetEmail } });
   }, [send]);
 
   async function requestOtp() {
     if (!email.trim()) return;
     setLoading(true);
     try {
-      const res = await sendOtp(email.trim());
-      const code = res?.otp || res?.fallbackOtp;
-      if (code) {
-        setFallbackOtp(code);
-        setOtp(code);
-        toast.success(`OTP is ready: ${code}`);
-      } else if (res?.sent) {
-        toast.success(`OTP sent to ${maskEmail(email)}`);
-      }
+      await sendOtp(email.trim());
+      toast.success(`OTP sent to ${maskEmail(email)}`);
       setStage("otp");
-    } catch (e: any) { toast.error(e.message ?? "Could not send OTP"); } finally { setLoading(false); }
+    } catch (e: any) {
+      toast.error(e.message ?? "Could not send OTP email");
+    } finally {
+      setLoading(false);
+    }
   }
+
   async function resendOtp() {
     try {
-      const res = await sendOtp(email.trim());
-      const code = res?.otp || res?.fallbackOtp;
-      if (code) {
-        setFallbackOtp(code);
-        setOtp(code);
-        toast.success(`OTP is ready: ${code}`);
-      } else if (res?.sent) {
-        toast.success(`OTP resent to ${maskEmail(email)}`);
-      }
+      await sendOtp(email.trim());
+      toast.success(`OTP resent to ${maskEmail(email)}`);
     } catch (e: any) {
       toast.error(e.message ?? "Could not resend OTP");
       throw e;
     }
   }
+
   async function verifyOtp() {
     if (otp.length < 6) return;
     setLoading(true);
@@ -126,9 +109,13 @@ function AdminFlow() {
       const { error } = await supabase.auth.setSession({ access_token, refresh_token });
       if (error) throw error;
       await link({ data: undefined as never }).catch(() => {});
-      toast.success("Signed in");
+      toast.success("Signed in successfully");
       navigate({ to: "/" });
-    } catch (e: any) { toast.error(e.message ?? "Invalid or expired OTP"); } finally { setLoading(false); }
+    } catch (e: any) {
+      toast.error(e.message ?? "Invalid or expired OTP");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return stage === "email" ? (
@@ -150,11 +137,11 @@ function AdminFlow() {
       </Button>
     </form>
   ) : (
-    <OtpStage email={email} otp={otp} setOtp={setOtp} fallbackOtp={fallbackOtp} onBack={() => { setStage("email"); setOtp(""); setFallbackOtp(null); }} onVerify={verifyOtp} onResend={resendOtp} loading={loading} />
+    <OtpStage email={email} otp={otp} setOtp={setOtp} onBack={() => { setStage("email"); setOtp(""); }} onVerify={verifyOtp} onResend={resendOtp} loading={loading} />
   );
 }
 
-function OtpStage({ email, otp, setOtp, fallbackOtp, onBack, onVerify, onResend, loading }: { email: string; otp: string; setOtp: (v: string) => void; fallbackOtp: string | null; onBack: () => void; onVerify: () => void; onResend: () => Promise<void>; loading: boolean }) {
+function OtpStage({ email, otp, setOtp, onBack, onVerify, onResend, loading }: { email: string; otp: string; setOtp: (v: string) => void; onBack: () => void; onVerify: () => void; onResend: () => Promise<void>; loading: boolean }) {
   const [remaining, setRemaining] = useState(RESEND_SECONDS);
   const [resending, setResending] = useState(false);
   const startedRef = useRef(false);
@@ -182,23 +169,6 @@ function OtpStage({ email, otp, setOtp, fallbackOtp, onBack, onVerify, onResend,
         <h2 className="text-xl font-bold text-[color:oklch(0.18_0.05_260)]">Verify OTP</h2>
         <p className="text-sm text-muted-foreground mt-1">Enter the 6-digit code sent to <span className="font-medium text-foreground">{maskEmail(email)}</span></p>
       </div>
-
-      {fallbackOtp && (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-emerald-950">
-          <div>
-            <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wide block">Your Login OTP:</span>
-            <span className="font-mono text-2xl font-black tracking-widest text-emerald-950">{fallbackOtp}</span>
-            <span className="text-[10px] text-emerald-600 block">Master bypass: 121106 or 204020</span>
-          </div>
-          <button
-            type="button"
-            className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors shadow-sm"
-            onClick={() => setOtp(fallbackOtp)}
-          >
-            Auto Fill
-          </button>
-        </div>
-      )}
 
       <div className="flex justify-center">
         <InputOTP maxLength={6} value={otp} onChange={setOtp}>
