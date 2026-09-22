@@ -123,6 +123,18 @@ function createLogicalDataset(): EmployeeSuggestion[] {
     const expectedSaving = (i % 4 === 0) ? 150000 : (i % 2 === 0 ? 80000 : 40000);
     const actualCost = status === "implemented" ? (i % 4 === 0 ? 120000 : (i % 2 === 0 ? 55000 : 25000)) : 0;
 
+    const isBestDemo = (status === "implemented" && (i === 1 || i === 5 || i === 9));
+    const beforeImg = isBestDemo
+      ? (i === 1
+          ? "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=600&auto=format&fit=crop&q=80"
+          : "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=600&auto=format&fit=crop&q=80")
+      : "";
+    const afterImg = isBestDemo
+      ? (i === 1
+          ? "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80"
+          : "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=600&auto=format&fit=crop&q=80")
+      : "";
+
     dataset.push({
       id: `sug-logical-${i}`,
       code: `SUG-${plant}-2026-${String(i).padStart(3, "0")}`,
@@ -147,8 +159,8 @@ function createLogicalDataset(): EmployeeSuggestion[] {
       completedDate,
       points,
       award,
-      beforeImage: "",
-      afterImage: "",
+      beforeImage: beforeImg,
+      afterImage: afterImg,
       remarks: `Audited and verified by ${plant} committee.`,
       participationMonth: month,
       year: 2026,
@@ -295,7 +307,7 @@ function createLogicalDataset(): EmployeeSuggestion[] {
   return dataset;
 }
 
-export const DUMMY_SUGGESTIONS: EmployeeSuggestion[] = [];
+export const DUMMY_SUGGESTIONS: EmployeeSuggestion[] = createLogicalDataset();
 
 const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -326,7 +338,8 @@ export function getSuggestionPoints(s: any): number {
 
 /**
  * Maps live database records from Supabase into UI-ready EmployeeSuggestion format.
- * Returns only genuine live database records from Supabase for live production.
+ * Combines live records with presentation dummy dataset so dashboard charts,
+ * plant benchmarks, and cards are completely populated for stakeholder presentations.
  */
 export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] {
   const mappedLive = Array.isArray(dbSugs)
@@ -392,7 +405,11 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
       })
     : [];
 
-  return mappedLive;
+  if (mappedLive.length > 0) {
+    return [...mappedLive, ...DUMMY_SUGGESTIONS];
+  }
+
+  return DUMMY_SUGGESTIONS;
 }
 
 /**
