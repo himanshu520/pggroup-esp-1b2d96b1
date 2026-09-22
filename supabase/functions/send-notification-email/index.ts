@@ -39,12 +39,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const host = Deno.env.get("SMTP_HOST") ?? "smtp.office365.com";
-    const port = Number(Deno.env.get("SMTP_PORT") ?? "587");
-    const user = Deno.env.get("SMTP_USER")!;
-    const pass = Deno.env.get("SMTP_PASS")!;
+    const host = (Deno.env.get("SMTP_HOST") ?? "smtp.office365.com").trim().replace(/^["']|["']$/g, "");
+    const port = Number((Deno.env.get("SMTP_PORT") ?? "587").toString().trim().replace(/^["']|["']$/g, ""));
+    const user = (Deno.env.get("SMTP_USER") ?? "").trim().replace(/^["']|["']$/g, "");
+    const pass = (Deno.env.get("SMTP_PASS") ?? "").trim().replace(/^["']|["']$/g, "");
     const fromName = "PG Suggestion Portal";
-    const appUrl = Deno.env.get("APP_URL") ?? "";
+    const appUrl = (Deno.env.get("APP_URL") ?? "").trim().replace(/^["']|["']$/g, "");
 
     const transporter = nodemailer.createTransport({
       host,
@@ -52,6 +52,10 @@ Deno.serve(async (req) => {
       secure: port === 465,
       requireTLS: port === 587,
       auth: { user, pass },
+      tls: {
+        ciphers: "SSLv3",
+        rejectUnauthorized: false,
+      },
     });
 
     const fullLink = link ? (link.startsWith("http") ? link : `${appUrl}${link}`) : "";

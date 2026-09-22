@@ -188,11 +188,11 @@ async function sendEmailsToUsers(
 
   const nodemailer = await import("nodemailer").then((m) => m.default ?? m);
 
-  const host = process.env.SMTP_HOST ?? "smtp.office365.com";
-  const port = Number(process.env.SMTP_PORT ?? "587");
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const appUrl = process.env.APP_URL ?? "";
+  const host = (process.env.SMTP_HOST ?? "smtp.office365.com").trim().replace(/^["']|["']$/g, "");
+  const port = Number((process.env.SMTP_PORT ?? "587").toString().trim().replace(/^["']|["']$/g, ""));
+  const user = process.env.SMTP_USER?.trim().replace(/^["']|["']$/g, "");
+  const pass = process.env.SMTP_PASS?.trim().replace(/^["']|["']$/g, "");
+  const appUrl = (process.env.APP_URL ?? "").trim().replace(/^["']|["']$/g, "");
 
   if (!user || !pass) {
     console.warn("SMTP credentials (SMTP_USER and SMTP_PASS) are not configured for notifications");
@@ -205,6 +205,10 @@ async function sendEmailsToUsers(
     secure: port === 465,
     requireTLS: port === 587,
     auth: { user, pass },
+    tls: {
+      ciphers: "SSLv3",
+      rejectUnauthorized: false,
+    },
   });
 
   const recipients = unique.filter((uid) => emailByUser.has(uid));
