@@ -37,8 +37,9 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Search, Plus, Pencil, Trash2, Power, PowerOff, Users, Undo2, FileSpreadsheet, Download, Upload, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, Power, PowerOff, Users, Undo2, FileSpreadsheet, Download, Upload, AlertCircle, CheckCircle2, Loader2, Filter, MapPin, Building2, Briefcase, X, RotateCcw } from "lucide-react";
 import { ExportMenu } from "@/components/export-menu";
+import { cn } from "@/lib/utils";
 import * as XLSX from "xlsx";
 
 export const Route = createFileRoute("/admin/employees")({
@@ -148,14 +149,68 @@ export function EmployeesPage() {
   const [form, setForm] = useState<Form>(EMPTY);
   const editing = !!form.id;
 
+  // Location, Plant & Department Filter States
+  const [filterLocation, setFilterLocation] = useState<string>("all");
+  const [filterPlant, setFilterPlant] = useState<string>("all");
+  const [filterDept, setFilterDept] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState<boolean>(true);
+
+  // Cascading lists for plants and departments
+  const availablePlants = useMemo(() => {
+    if (filterLocation === "all") return plants as any[];
+    return (plants as any[]).filter((p) => p.location_id === filterLocation);
+  }, [plants, filterLocation]);
+
+  const availableDepts = useMemo(() => {
+    if (filterPlant === "all") {
+      if (filterLocation === "all") return departments as any[];
+      const plantIds = new Set(availablePlants.map((p) => p.id));
+      return (departments as any[]).filter((d) => plantIds.has(d.plant_id));
+    }
+    return (departments as any[]).filter((d) => d.plant_id === filterPlant);
+  }, [departments, filterPlant, filterLocation, availablePlants]);
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filterLocation !== "all") count++;
+    if (filterPlant !== "all") count++;
+    if (filterDept !== "all") count++;
+    if (filterStatus !== "all") count++;
+    return count;
+  }, [filterLocation, filterPlant, filterDept, filterStatus]);
+
+  const resetFilters = () => {
+    setFilterLocation("all");
+    setFilterPlant("all");
+    setFilterDept("all");
+    setFilterStatus("all");
+  };
+
   const filtered = useMemo(() => {
-    const list = rows as Emp[];
-    if (!q) return list;
-    const s = q.toLowerCase();
-    return list.filter((e) =>
-      `${e.name} ${e.email ?? ""} ${e.employee_code} ${e.designation ?? ""}`.toLowerCase().includes(s),
-    );
-  }, [rows, q]);
+    let list = rows as Emp[];
+    if (filterLocation !== "all") {
+      list = list.filter((e) => e.location_id === filterLocation);
+    }
+    if (filterPlant !== "all") {
+      list = list.filter((e) => e.plant_id === filterPlant);
+    }
+    if (filterDept !== "all") {
+      list = list.filter((e) => e.department_id === filterDept);
+    }
+    if (filterStatus === "active") {
+      list = list.filter((e) => e.active);
+    } else if (filterStatus === "inactive") {
+      list = list.filter((e) => !e.active);
+    }
+    if (q) {
+      const s = q.toLowerCase();
+      list = list.filter((e) =>
+        `${e.name} ${e.email ?? ""} ${e.employee_code} ${e.designation ?? ""}`.toLowerCase().includes(s),
+      );
+    }
+    return list;
+  }, [rows, q, filterLocation, filterPlant, filterDept, filterStatus]);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["admin-employees"] });
 
@@ -443,8 +498,9 @@ export function EmployeesPage() {
         }
       />
 
-      <div className="flex items-center gap-2 mb-3">
-        <div className="relative flex-1 max-w-md">
+      {/* SEARCH, FILTER TOGGLE & ACTIONS BAR */}
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <div className="relative flex-1 min-w-[220px] max-w-md">
           <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
           <Input
             placeholder="Search by name, email, or employee ID"
@@ -453,16 +509,156 @@ export function EmployeesPage() {
             onChange={(e) => setQ(e.target.value)}
           />
         </div>
+
+        <Button
+          variant={showFilters || activeFiltersCount > 0 ? "secondary" : "outline"}
+          size="sm"
+          onClick={() => setShowFilters(!showFilters)}
+          className={cn(
+            "h-9 gap-1.5 font-medium transition-colors cursor-pointer",
+            activeFiltersCount > 0 && "border-primary/50 bg-primary/10 text-primary font-semibold"
+          )}
+          title="Filter employees by location, plant, or department"
+        >
+          <Filter className="w-4 h-4 text-primary" />
+          <span>Filter</span>
+          {activeFiltersCount > 0 && (
+            <Badge variant="default" className="ml-1 px-1.5 py-0 text-[10px] font-bold h-4">
+              {activeFiltersCount}
+            </Badge>
+          )}
+        </Button>
+
+        {activeFiltersCount > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={resetFilters}
+            className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+            title="Reset filters"
+          >
+            <RotateCcw className="w-3.5 h-3.5 mr-1" />
+            Reset
+          </Button>
+        )}
+
         {canManage && (
-          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer ml-auto sm:ml-0">
             <Switch checked={showDeleted} onCheckedChange={setShowDeleted} />
             Show Trash
           </label>
         )}
+
         <div className="text-xs text-muted-foreground ml-auto">
-          {filtered.length} employee{filtered.length === 1 ? "" : "s"}
+          Showing <span className="font-semibold text-foreground">{filtered.length}</span> of {rows.length} employee{rows.length === 1 ? "" : "s"}
         </div>
       </div>
+
+      {/* FILTER DRAWER / TOOLBAR */}
+      {showFilters && (
+        <div className="flex flex-wrap items-center gap-2.5 p-3 bg-muted/40 border border-border/80 rounded-lg mb-3 text-xs animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="flex items-center gap-1.5 font-semibold text-foreground shrink-0 mr-1">
+            <Filter className="w-3.5 h-3.5 text-primary" />
+            <span>Filter By:</span>
+          </div>
+
+          {/* Location Filter */}
+          <div className="flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <select
+              value={filterLocation}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFilterLocation(val);
+                if (val !== "all") {
+                  const currentPlant = (plants as any[]).find((p) => p.id === filterPlant);
+                  if (currentPlant && currentPlant.location_id !== val) {
+                    setFilterPlant("all");
+                    setFilterDept("all");
+                  }
+                }
+              }}
+              className="h-8 border border-input bg-background rounded-md px-2.5 text-xs font-medium focus:ring-1 focus:ring-primary cursor-pointer min-w-[140px]"
+            >
+              <option value="all">All Locations ({locations.length})</option>
+              {locations.map((loc: any) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.location}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Plant Filter */}
+          <div className="flex items-center gap-1.5">
+            <Building2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <select
+              value={filterPlant}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFilterPlant(val);
+                if (val !== "all") {
+                  const p = (plants as any[]).find((item) => item.id === val);
+                  if (p?.location_id && filterLocation === "all") {
+                    setFilterLocation(p.location_id);
+                  }
+                }
+                setFilterDept("all");
+              }}
+              className="h-8 border border-input bg-background rounded-md px-2.5 text-xs font-medium focus:ring-1 focus:ring-primary cursor-pointer min-w-[150px]"
+            >
+              <option value="all">All Plants ({availablePlants.length})</option>
+              {availablePlants.map((p: any) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Department Filter */}
+          <div className="flex items-center gap-1.5">
+            <Briefcase className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <select
+              value={filterDept}
+              onChange={(e) => setFilterDept(e.target.value)}
+              className="h-8 border border-input bg-background rounded-md px-2.5 text-xs font-medium focus:ring-1 focus:ring-primary cursor-pointer min-w-[160px] max-w-[220px]"
+            >
+              <option value="all">All Departments ({availableDepts.length})</option>
+              {availableDepts.map((d: any) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Status Filter */}
+          <div className="flex items-center gap-1.5">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="h-8 border border-input bg-background rounded-md px-2.5 text-xs font-medium focus:ring-1 focus:ring-primary cursor-pointer"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active Only</option>
+              <option value="inactive">Inactive Only</option>
+            </select>
+          </div>
+
+          {activeFiltersCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetFilters}
+              className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer ml-auto"
+            >
+              <X className="w-3.5 h-3.5 mr-1" />
+              Clear Filters
+            </Button>
+          )}
+        </div>
+      )}
 
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <table className="w-full text-sm">
