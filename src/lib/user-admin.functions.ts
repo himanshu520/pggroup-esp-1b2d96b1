@@ -634,9 +634,23 @@ export const bulkCreateEmployees = createServerFn({ method: "POST" })
       let locId: string | null = emp.location_id ?? null;
       if (!locId && emp.location) {
         const cleanLoc = cleanStr(emp.location);
-        const foundLoc = (locations ?? []).find(
+        let foundLoc = (locations ?? []).find(
           (l) => l.id === emp.location || cleanStr(l.location) === cleanLoc
         );
+        if (!foundLoc) {
+          if (cleanLoc.includes("noida") || cleanLoc.includes("gnoida")) {
+            foundLoc = (locations ?? []).find((l) => cleanStr(l.location).includes("noida"));
+          } else if (cleanLoc.includes("bhiwadi")) {
+            foundLoc = (locations ?? []).find((l) => cleanStr(l.location).includes("bhiwadi"));
+          } else if (cleanLoc.includes("supa")) {
+            foundLoc = (locations ?? []).find((l) => cleanStr(l.location).includes("supa"));
+          }
+        }
+        if (!foundLoc) {
+          foundLoc = (locations ?? []).find(
+            (l) => cleanStr(l.location).includes(cleanLoc) || cleanLoc.includes(cleanStr(l.location))
+          );
+        }
         if (foundLoc) locId = foundLoc.id;
       }
 
@@ -645,11 +659,20 @@ export const bulkCreateEmployees = createServerFn({ method: "POST" })
       if (!plantId && emp.plant) {
         const cleanPlt = cleanStr(emp.plant);
         let foundPlt = (plants ?? []).find(
-          (p) => (p.id === emp.plant || cleanStr(p.name) === cleanPlt) && (locId ? p.location_id === locId : true)
+          (p) => (p.id === emp.plant || cleanStr(p.name) === cleanPlt || cleanStr(p.code) === cleanPlt) && (locId ? p.location_id === locId : true)
         );
         if (!foundPlt) {
+          if (cleanPlt.includes("dmic") || cleanPlt === "2060") {
+            foundPlt = (plants ?? []).find((p) => cleanStr(p.name).includes("dmic") || p.code === "2060");
+          } else if (cleanPlt.includes("karoli") || cleanPlt === "4020") {
+            foundPlt = (plants ?? []).find((p) => cleanStr(p.name).includes("karoli") || p.code === "4020");
+          } else if (cleanPlt.includes("bhiwadi") || cleanPlt === "2040") {
+            foundPlt = (plants ?? []).find((p) => cleanStr(p.name).includes("bhiwadi") || p.code === "2040");
+          }
+        }
+        if (!foundPlt) {
           foundPlt = (plants ?? []).find(
-            (p) => p.id === emp.plant || cleanStr(p.name) === cleanPlt
+            (p) => p.id === emp.plant || cleanStr(p.name) === cleanPlt || cleanStr(p.code) === cleanPlt || cleanStr(p.name).includes(cleanPlt) || cleanPlt.includes(cleanStr(p.name))
           );
         }
         if (foundPlt) {
@@ -662,24 +685,41 @@ export const bulkCreateEmployees = createServerFn({ method: "POST" })
       let deptId: string | null = emp.department_id ?? null;
       if (!deptId && emp.department) {
         const cleanDept = cleanStr(emp.department);
+
+        // Normalize department aliases
+        let normDept = cleanDept;
+        if (["account", "accounts", "finance", "accountsfinance"].includes(cleanDept)) {
+          normDept = "accountsfinance";
+        } else if (["innovation", "pe", "innovationandpe"].includes(cleanDept)) {
+          normDept = "innovationandpe";
+        } else if (["operation", "operations"].includes(cleanDept)) {
+          normDept = "operations";
+        } else if (["rd", "rnd", "rd"].includes(cleanDept)) {
+          normDept = "rd";
+        } else if (["hr", "hradmin", "hrandadmin"].includes(cleanDept)) {
+          normDept = "hradmin";
+        } else if (["moulding", "molding"].includes(cleanDept)) {
+          normDept = "moulding";
+        }
+
         // Stage A: Match by plantId + name or code
         let foundDept = (depts ?? []).find(
           (d) =>
-            (d.id === emp.department || cleanStr(d.name) === cleanDept || cleanStr(d.code) === cleanDept) &&
+            (d.id === emp.department || cleanStr(d.name) === cleanDept || cleanStr(d.code) === cleanDept || cleanStr(d.name) === normDept) &&
             (plantId ? d.plant_id === plantId : true)
         );
-        // Stage B: Match by name or code across all departments
-        if (!foundDept) {
-          foundDept = (depts ?? []).find(
-            (d) => d.id === emp.department || cleanStr(d.name) === cleanDept || cleanStr(d.code) === cleanDept
-          );
-        }
-        // Stage C: Partial name match under plantId
+        // Stage B: Match by partial name under plantId
         if (!foundDept && plantId) {
           foundDept = (depts ?? []).find(
             (d) =>
               d.plant_id === plantId &&
-              (cleanStr(d.name).includes(cleanDept) || cleanDept.includes(cleanStr(d.name)))
+              (cleanStr(d.name).includes(cleanDept) || cleanDept.includes(cleanStr(d.name)) || cleanStr(d.name).includes(normDept))
+          );
+        }
+        // Stage C: Match across all departments if plantId not yet set
+        if (!foundDept) {
+          foundDept = (depts ?? []).find(
+            (d) => d.id === emp.department || cleanStr(d.name) === cleanDept || cleanStr(d.code) === cleanDept || cleanStr(d.name) === normDept
           );
         }
 
