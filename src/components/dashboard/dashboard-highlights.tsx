@@ -204,10 +204,10 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Card 1: Best Plant */}
-        <div className="glass-card relative overflow-hidden rounded-xl p-4 border border-amber-200/60 dark:border-amber-900/40 bg-gradient-to-br from-amber-50/50 to-orange-50/30 dark:from-amber-950/20 dark:to-slate-900">
+        <div className="relative overflow-hidden rounded-2xl p-5 border border-amber-200/90 dark:border-amber-800/60 bg-gradient-to-br from-amber-50/95 via-amber-50/80 to-orange-50/70 dark:from-amber-950/40 dark:to-slate-900 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-amber-500 text-white shadow-md">
+              <div className="p-2.5 rounded-xl bg-amber-500 text-white shadow-md">
                 <Building2 className="w-5 h-5" />
               </div>
               <div>
@@ -221,25 +221,25 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
           </div>
 
           <div className="grid grid-cols-2 gap-2 my-3 text-xs">
-            <div className="p-2 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-800">
+            <div className="p-2 rounded-lg bg-white/95 dark:bg-slate-900/90 border border-amber-200/70 dark:border-amber-900/40 shadow-2xs">
               <span className="text-muted-foreground block text-[10px]">Plant Score</span>
               <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
                 {bestPlant ? `${bestPlant.score} / 100` : "0 / 100"}
               </span>
             </div>
-            <div className="p-2 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-800">
+            <div className="p-2 rounded-lg bg-white/95 dark:bg-slate-900/90 border border-amber-200/70 dark:border-amber-900/40 shadow-2xs">
               <span className="text-muted-foreground block text-[10px]">Participation %</span>
               <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                 {bestPlant ? `${bestPlant.partPct}%` : "0%"}
               </span>
             </div>
-            <div className="p-2 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-800">
+            <div className="p-2 rounded-lg bg-white/95 dark:bg-slate-900/90 border border-amber-200/70 dark:border-amber-900/40 shadow-2xs">
               <span className="text-muted-foreground block text-[10px]">Implementation %</span>
               <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
                 {bestPlant ? `${bestPlant.implPct}%` : "0%"}
               </span>
             </div>
-            <div className="p-2 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-800">
+            <div className="p-2 rounded-lg bg-white/95 dark:bg-slate-900/90 border border-amber-200/70 dark:border-amber-900/40 shadow-2xs">
               <span className="text-muted-foreground block text-[10px]">Total Savings</span>
               <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                 {bestPlant ? `₹${bestPlant.savingsLacs} Lacs` : "₹0.0 Lacs"}
@@ -249,10 +249,10 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
         </div>
 
         {/* Card 2: Best Department */}
-        <div className="glass-card relative overflow-hidden rounded-xl p-4 border border-blue-200/60 dark:border-blue-900/40 bg-gradient-to-br from-blue-50/50 to-indigo-50/30 dark:from-blue-950/20 dark:to-slate-900">
+        <div className="relative overflow-hidden rounded-2xl p-5 border border-blue-200/90 dark:border-blue-800/60 bg-gradient-to-br from-blue-50/95 via-blue-50/80 to-indigo-50/70 dark:from-blue-950/40 dark:to-slate-900 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-blue-600 text-white shadow-md">
+              <div className="p-2.5 rounded-xl bg-blue-600 text-white shadow-md">
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
@@ -266,25 +266,25 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
           </div>
 
           <div className="grid grid-cols-2 gap-2 my-3 text-xs">
-            <div className="p-2 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-800">
+            <div className="p-2 rounded-lg bg-white/95 dark:bg-slate-900/90 border border-blue-200/70 dark:border-blue-900/40 shadow-2xs">
               <span className="text-muted-foreground block text-[10px]">Total Points</span>
               <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
                 {bestDept ? `${bestDept.points} Points` : "0 Points"}
               </span>
             </div>
-            <div className="p-2 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-800">
+            <div className="p-2 rounded-lg bg-white/95 dark:bg-slate-900/90 border border-blue-200/70 dark:border-blue-900/40 shadow-2xs">
               <span className="text-muted-foreground block text-[10px]">Current Ranking</span>
               <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                 {bestDept ? "#1 Org-Wide" : "N/A"}
               </span>
             </div>
-            <div className="p-2 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-800">
+            <div className="p-2 rounded-lg bg-white/95 dark:bg-slate-900/90 border border-blue-200/70 dark:border-blue-900/40 shadow-2xs">
               <span className="text-muted-foreground block text-[10px]">Implemented Ideas</span>
               <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                 {bestDept ? `${bestDept.implemented} / ${bestDept.total}` : "0"}
               </span>
             </div>
-            <div className="p-2 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-800">
+            <div className="p-2 rounded-lg bg-white/95 dark:bg-slate-900/90 border border-blue-200/70 dark:border-blue-900/40 shadow-2xs">
               <span className="text-muted-foreground block text-[10px]">Status</span>
               <span className="text-sm font-bold text-purple-600 dark:text-purple-400">Active</span>
             </div>
@@ -292,7 +292,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
         </div>
 
         {/* Card 3: Best Suggestion of the Month */}
-        <div className="glass-card relative overflow-hidden rounded-xl p-4 border border-emerald-200/60 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/50 to-teal-50/30 dark:from-emerald-950/20 dark:to-slate-900">
+        <div className="relative overflow-hidden rounded-2xl p-5 border border-emerald-200/90 dark:border-emerald-800/60 bg-gradient-to-br from-emerald-50/95 via-emerald-50/80 to-teal-50/70 dark:from-emerald-950/40 dark:to-slate-900 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2 min-w-0">
               {bestSug?.employeePhoto ? (
@@ -313,7 +313,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
               </div>
             </div>
           </div>
-          <div className="p-2 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-800 my-2">
+          <div className="p-2.5 rounded-xl bg-white/95 dark:bg-slate-900/90 border border-emerald-200/70 dark:border-emerald-900/40 shadow-2xs my-2">
             <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 line-clamp-1">
               {bestSug ? bestSug.suggestionTitle : "Awaiting Employee Ideas"}
             </h4>
@@ -367,10 +367,10 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
         </div>
 
         {/* Card 4: Best Fool Proofing (Poka-Yoke) */}
-        <div className="glass-card relative overflow-hidden rounded-xl p-4 border border-purple-200/60 dark:border-purple-900/40 bg-gradient-to-br from-purple-50/50 to-indigo-50/30 dark:from-purple-950/20 dark:to-slate-900 md:col-span-2 lg:col-span-1">
+        <div className="relative overflow-hidden rounded-2xl p-5 border border-purple-200/90 dark:border-purple-800/60 bg-gradient-to-br from-purple-50/95 via-purple-50/80 to-indigo-50/70 dark:from-purple-950/40 dark:to-slate-900 shadow-sm hover:shadow-md transition-all md:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="p-1.5 rounded-lg bg-purple-600 text-white shadow-md shrink-0">
+              <div className="p-2 rounded-xl bg-purple-600 text-white shadow-md shrink-0">
                 <ShieldCheck className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -391,7 +391,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
               {bestFoolProofing?.beforeImage ? (
                 <img src={bestFoolProofing.beforeImage} alt="Before" className="w-full h-20 rounded-md object-cover border border-rose-200 cursor-pointer hover:scale-105 transition-transform" onClick={() => window.open(bestFoolProofing.beforeImage, "_blank")} />
               ) : (
-                <div className="w-full h-20 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 text-xs">
+                <div className="w-full h-20 rounded-md bg-white/70 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 text-xs">
                   <ImageIcon className="w-5 h-5 mr-1" /> No Image
                 </div>
               )}
@@ -401,7 +401,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
               {bestFoolProofing?.afterImage ? (
                 <img src={bestFoolProofing.afterImage} alt="After" className="w-full h-20 rounded-md object-cover border border-emerald-200 cursor-pointer hover:scale-105 transition-transform" onClick={() => window.open(bestFoolProofing.afterImage, "_blank")} />
               ) : (
-                <div className="w-full h-20 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 text-xs">
+                <div className="w-full h-20 rounded-md bg-white/70 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 text-xs">
                   <ImageIcon className="w-5 h-5 mr-1" /> No Image
                 </div>
               )}
@@ -413,7 +413,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
         </div>
 
         {/* Card 5: King of Suggestion / Y-to-Y Champion */}
-        <div className="glass-card relative overflow-hidden rounded-xl p-4 border border-rose-200/60 dark:border-rose-900/40 bg-gradient-to-br from-rose-50/50 to-amber-50/30 dark:from-rose-950/20 dark:to-slate-900 md:col-span-2 lg:col-span-2">
+        <div className="relative overflow-hidden rounded-2xl p-5 border border-rose-200/90 dark:border-rose-800/60 bg-gradient-to-br from-rose-50/95 via-rose-50/80 to-amber-50/70 dark:from-rose-950/40 dark:to-slate-900 shadow-sm hover:shadow-md transition-all md:col-span-2 lg:col-span-2">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="relative shrink-0">
@@ -440,13 +440,13 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
             </div>
 
             <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
-              <div className="p-2.5 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/70 text-center flex-1 sm:flex-initial">
+              <div className="p-2.5 rounded-xl bg-white/95 dark:bg-slate-900/90 border border-rose-200/70 dark:border-rose-900/40 text-center flex-1 sm:flex-initial shadow-2xs">
                 <span className="text-[10px] font-bold text-muted-foreground block">TOTAL POINTS</span>
                 <span className="text-base font-black text-rose-600 dark:text-rose-400">
                   {kingOfSug ? `${kingOfSug.points} PTS` : "0 PTS"}
                 </span>
               </div>
-              <div className="p-2.5 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/70 text-center flex-1 sm:flex-initial">
+              <div className="p-2.5 rounded-xl bg-white/95 dark:bg-slate-900/90 border border-rose-200/70 dark:border-rose-900/40 text-center flex-1 sm:flex-initial shadow-2xs">
                 <span className="text-[10px] font-bold text-muted-foreground block">NATIONAL RANK</span>
                 <span className="text-base font-black text-amber-500">
                   {kingOfSug ? "RANK #1" : "N/A"}
@@ -455,7 +455,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
             </div>
           </div>
 
-          <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-between text-xs">
+          <div className="mt-3 pt-3 border-t border-rose-200/60 dark:border-rose-900/40 flex items-center justify-between text-xs">
             <span className="text-muted-foreground flex items-center gap-1 truncate">
               <CheckCircle className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> Real-time leader derived strictly from current database suggestions.
             </span>

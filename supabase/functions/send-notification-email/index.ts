@@ -41,16 +41,18 @@ Deno.serve(async (req) => {
 
     const host = (Deno.env.get("SMTP_HOST") ?? "smtp.office365.com").trim().replace(/^["']|["']$/g, "");
     const port = Number((Deno.env.get("SMTP_PORT") ?? "587").toString().trim().replace(/^["']|["']$/g, ""));
-    const user = (Deno.env.get("SMTP_USER") ?? "").trim().replace(/^["']|["']$/g, "");
-    const pass = (Deno.env.get("SMTP_PASS") ?? "").trim().replace(/^["']|["']$/g, "");
-    const fromName = "PG Suggestion Portal";
+    const user = (Deno.env.get("SMTP_USER") ?? "verify.software2040@pgel.in").trim().replace(/^["']|["']$/g, "");
+    let pass = (Deno.env.get("SMTP_PASS") ?? "fmdrdczrxkpjrbsv").trim().replace(/^["']|["']$/g, "");
+    if (pass === "nsxfmjjkskdrbbtt" || !pass) {
+      pass = "fmdrdczrxkpjrbsv";
+    }
+    const fromName = "PGEL MIS Verification";
     const appUrl = (Deno.env.get("APP_URL") ?? "").trim().replace(/^["']|["']$/g, "");
 
     const transporter = nodemailer.createTransport({
       host,
       port,
-      secure: port === 465,
-      requireTLS: port === 587,
+      secure: false, // port 587 uses STARTTLS
       auth: { user, pass },
       tls: {
         ciphers: "SSLv3",

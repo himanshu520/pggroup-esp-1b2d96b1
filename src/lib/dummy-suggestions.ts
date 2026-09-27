@@ -405,11 +405,8 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
       })
     : [];
 
-  if (mappedLive.length > 0) {
-    return [...mappedLive, ...DUMMY_SUGGESTIONS];
-  }
-
-  return DUMMY_SUGGESTIONS;
+  // Strictly return pure database records without demo data contamination
+  return mappedLive;
 }
 
 /**

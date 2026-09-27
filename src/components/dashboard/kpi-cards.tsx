@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { KpiDetailDialog, type KpiCardId } from "./kpi-detail-dialog";
 
 interface KPICardsProps {
   suggestions: EmployeeSuggestion[];
@@ -59,6 +60,8 @@ function KPICardsSectionComponent({
 }: KPICardsProps) {
   const [sugFilter, setSugFilter] = useState<SugTimeSubFilter>("all");
   const [internalFilterBarOpen, setInternalFilterBarOpen] = useState(false);
+  const [selectedKpiId, setSelectedKpiId] = useState<KpiCardId | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Dynamic Master Queries from Supabase
   const { data: dbPlants = [] } = useQuery({
@@ -470,12 +473,19 @@ function KPICardsSectionComponent({
           return (
             <div
               key={card.id}
-              className={`relative overflow-hidden rounded-xl p-2 flex flex-col justify-between cursor-pointer border shadow-2xs transition-all hover:shadow-xs hover:scale-[1.02] ${card.lightBg}`}
+              onClick={() => {
+                setSelectedKpiId(card.id as KpiCardId);
+                setIsDialogOpen(true);
+              }}
+              title="Click to view detailed popup breakdown"
+              className={`relative overflow-hidden rounded-xl p-2 flex flex-col justify-between cursor-pointer border shadow-2xs transition-all hover:shadow-md hover:scale-[1.03] active:scale-[0.99] group ${card.lightBg}`}
             >
               {/* Top Row: Title & Icon */}
               <div className="flex items-start justify-between gap-1">
-                <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 line-clamp-1 leading-tight">{card.title}</span>
-                <div className={`p-1 rounded-md ${card.iconBg} shadow-2xs shrink-0`}>
+                <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 line-clamp-1 leading-tight group-hover:text-primary transition-colors">
+                  {card.title}
+                </span>
+                <div className={`p-1 rounded-md ${card.iconBg} shadow-2xs shrink-0 group-hover:scale-110 transition-transform`}>
                   <Icon className="w-3 h-3" />
                 </div>
               </div>
@@ -516,7 +526,7 @@ function KPICardsSectionComponent({
                 </span>
               </div>
 
-              {/* Bottom Row: Growth Badge */}
+              {/* Bottom Row: Growth Badge & Detail Indicator */}
               <div className="flex items-center justify-between text-[9px] pt-1 border-t border-slate-200/60 dark:border-slate-800">
                 <span
                   className={`inline-flex items-center gap-0.5 font-bold px-1 py-0.2 rounded-full ${
@@ -534,11 +544,20 @@ function KPICardsSectionComponent({
                   ) : null}
                   {card.growth}
                 </span>
+                <span className="text-[8px] text-muted-foreground opacity-60 group-hover:opacity-100 font-bold">Details &rarr;</span>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* KPI Interactive Popup Modal Dialog */}
+      <KpiDetailDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        kpiId={selectedKpiId}
+        suggestions={suggestions}
+      />
     </div>
   );
 }

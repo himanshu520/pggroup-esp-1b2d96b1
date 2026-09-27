@@ -190,20 +190,17 @@ async function sendEmailsToUsers(
 
   const host = (process.env.SMTP_HOST ?? "smtp.office365.com").trim().replace(/^["']|["']$/g, "");
   const port = Number((process.env.SMTP_PORT ?? "587").toString().trim().replace(/^["']|["']$/g, ""));
-  const user = process.env.SMTP_USER?.trim().replace(/^["']|["']$/g, "");
-  const pass = process.env.SMTP_PASS?.trim().replace(/^["']|["']$/g, "");
-  const appUrl = (process.env.APP_URL ?? "").trim().replace(/^["']|["']$/g, "");
-
-  if (!user || !pass) {
-    console.warn("SMTP credentials (SMTP_USER and SMTP_PASS) are not configured for notifications");
-    return;
+  const user = (process.env.SMTP_USER ?? "verify.software2040@pgel.in").trim().replace(/^["']|["']$/g, "");
+  let pass = (process.env.SMTP_PASS ?? "fmdrdczrxkpjrbsv").trim().replace(/^["']|["']$/g, "");
+  if (pass === "nsxfmjjkskdrbbtt" || !pass) {
+    pass = "fmdrdczrxkpjrbsv";
   }
+  const appUrl = (process.env.APP_URL ?? "").trim().replace(/^["']|["']$/g, "");
 
   const transporter = nodemailer.createTransport({
     host,
     port,
-    secure: port === 465,
-    requireTLS: port === 587,
+    secure: false, // port 587 uses STARTTLS
     auth: { user, pass },
     tls: {
       ciphers: "SSLv3",
@@ -232,7 +229,7 @@ async function sendEmailsToUsers(
         </div>`;
 
       return transporter.sendMail({
-        from: `"PG Suggestion Portal" <${user}>`,
+        from: `"PGEL MIS Verification" <${user}>`,
         to: email,
         subject: opts.subject,
         text: `${opts.title}${opts.body ? `\n\n${opts.body}` : ""}${fullLink ? `\n\n${fullLink}` : ""}`,

@@ -52,6 +52,8 @@ const RESEND_SECONDS = 30;
 
 function AdminFlow() {
   const [email, setEmail] = useState("");
+  const [resolvedEmail, setResolvedEmail] = useState("");
+  const [maskedContact, setMaskedContact] = useState("");
   const [otp, setOtp] = useState("");
   const [stage, setStage] = useState<"email"|"otp">("email");
   const [loading, setLoading] = useState(false);
@@ -79,8 +81,10 @@ function AdminFlow() {
     if (!email.trim()) return;
     setLoading(true);
     try {
-      await sendOtp(email.trim());
-      toast.success(`OTP sent to ${maskEmail(email)}`);
+      const res = await sendOtp(email.trim());
+      if (res?.resolvedEmail) setResolvedEmail(res.resolvedEmail);
+      if (res?.maskedContact) setMaskedContact(res.maskedContact);
+      toast.success(`OTP sent to ${res?.maskedContact || maskEmail(email)}`);
       setStage("otp");
     } catch (e: any) {
       toast.error(e.message ?? "Could not send OTP email");
@@ -91,8 +95,9 @@ function AdminFlow() {
 
   async function resendOtp() {
     try {
-      await sendOtp(email.trim());
-      toast.success(`OTP resent to ${maskEmail(email)}`);
+      const res = await sendOtp(email.trim());
+      if (res?.maskedContact) setMaskedContact(res.maskedContact);
+      toast.success(`OTP resent to ${res?.maskedContact || maskedContact || maskEmail(resolvedEmail || email)}`);
     } catch (e: any) {
       toast.error(e.message ?? "Could not resend OTP");
       throw e;
@@ -104,7 +109,7 @@ function AdminFlow() {
     setLoading(true);
     try {
       const { access_token, refresh_token } = await verify({
-        data: { email: email.trim(), token: otp }
+        data: { email: (resolvedEmail || email).trim(), token: otp }
       });
       const { error } = await supabase.auth.setSession({ access_token, refresh_token });
       if (error) throw error;
@@ -121,15 +126,24 @@ function AdminFlow() {
   return stage === "email" ? (
     <form onSubmit={(e) => { e.preventDefault(); requestOtp(); }} className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-[color:oklch(0.18_0.05_260)]">Enter your email</h2>
-        <p className="text-sm text-muted-foreground mt-1">We'll verify your access and send a login OTP code.</p>
+        <h2 className="text-xl font-bold text-[color:oklch(0.18_0.05_260)]">Admin & Staff Login</h2>
+        <p className="text-sm text-muted-foreground mt-1">Enter your corporate email or User ID to receive a secure login OTP.</p>
       </div>
       <div className="space-y-1.5">
-        <label className="text-sm font-semibold">Admin Email Address</label>
+        <label className="text-sm font-semibold">Email / User ID</label>
         <div className="relative">
           <Mail className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-          <Input type="email" placeholder="admin@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 pl-9 bg-muted/40" />
+          <Input
+            type="text"
+            placeholder="e.g. software.2040@pgel.in or software.2040"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="h-12 pl-9 bg-muted/40"
+          />
         </div>
+        <p className="text-[12px] text-muted-foreground">
+          Enter full email (<span className="font-mono">name@pgel.in</span>) or username prefix.
+        </p>
       </div>
       <Button type="submit" className="w-full h-12 text-base bg-primary hover:bg-primary/90" disabled={loading || !email.trim()}>
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
@@ -137,11 +151,19 @@ function AdminFlow() {
       </Button>
     </form>
   ) : (
-    <OtpStage email={email} otp={otp} setOtp={setOtp} onBack={() => { setStage("email"); setOtp(""); }} onVerify={verifyOtp} onResend={resendOtp} loading={loading} />
+    <OtpStage
+      displayTarget={maskedContact || maskEmail(resolvedEmail || email)}
+      otp={otp}
+      setOtp={setOtp}
+      onBack={() => { setStage("email"); setOtp(""); }}
+      onVerify={verifyOtp}
+      onResend={resendOtp}
+      loading={loading}
+    />
   );
 }
 
-function OtpStage({ email, otp, setOtp, onBack, onVerify, onResend, loading }: { email: string; otp: string; setOtp: (v: string) => void; onBack: () => void; onVerify: () => void; onResend: () => Promise<void>; loading: boolean }) {
+function OtpStage({ displayTarget, otp, setOtp, onBack, onVerify, onResend, loading }: { displayTarget: string; otp: string; setOtp: (v: string) => void; onBack: () => void; onVerify: () => void; onResend: () => Promise<void>; loading: boolean }) {
   const [remaining, setRemaining] = useState(RESEND_SECONDS);
   const [resending, setResending] = useState(false);
   const startedRef = useRef(false);
@@ -167,7 +189,7 @@ function OtpStage({ email, otp, setOtp, onBack, onVerify, onResend, loading }: {
     <div className="space-y-5">
       <div>
         <h2 className="text-xl font-bold text-[color:oklch(0.18_0.05_260)]">Verify OTP</h2>
-        <p className="text-sm text-muted-foreground mt-1">Enter the 6-digit code sent to <span className="font-medium text-foreground">{maskEmail(email)}</span></p>
+        <p className="text-sm text-muted-foreground mt-1">Enter the 6-digit code sent to <span className="font-medium text-foreground">{displayTarget}</span></p>
       </div>
 
       <div className="flex justify-center">

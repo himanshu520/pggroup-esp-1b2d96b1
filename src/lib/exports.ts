@@ -247,13 +247,50 @@ export function exportComprehensiveExecutiveDashboard(
     "Total Points": stat.points,
   }));
 
-  // 4. Department-wise aggregation
-  const deptMap: Record<string, { total: number; impl: number; points: number; employees: Set<string> }> = {};
-  suggestions.forEach((s) => {
+  // 4. Department-wise aggregation with Pending, Implemented & Savings
+  const deptMap: Record<
+    string,
+    {
+      total: number;
+      impl: number;
+      pending: number;
+      underReview: number;
+      rejected: number;
+      savings: number;
+      points: number;
+      employees: Set<string>;
+    }
+  > = {};
+
+  suggestions.forEach((s: any) => {
     const dept = s.department || "General";
-    if (!deptMap[dept]) deptMap[dept] = { total: 0, impl: 0, points: 0, employees: new Set() };
+    if (!deptMap[dept]) {
+      deptMap[dept] = {
+        total: 0,
+        impl: 0,
+        pending: 0,
+        underReview: 0,
+        rejected: 0,
+        savings: 0,
+        points: 0,
+        employees: new Set(),
+      };
+    }
     deptMap[dept].total += 1;
-    if (s.status === "implemented" || s.status === "closed") deptMap[dept].impl += 1;
+    const cat = s.status ? String(s.status).toLowerCase().trim() : "";
+    if (cat === "implemented" || cat === "closed" || cat === "completed") {
+      deptMap[dept].impl += 1;
+    } else if (cat === "pending") {
+      deptMap[dept].pending += 1;
+    } else if (cat === "under_review" || cat === "approved" || cat === "pe_review" || cat === "dept_review" || cat === "pe_verification" || cat === "evidence_pending" || cat === "evidence_submitted") {
+      deptMap[dept].underReview += 1;
+    } else if (cat === "rejected" || cat === "dropped" || cat === "fake_closure") {
+      deptMap[dept].rejected += 1;
+    } else {
+      deptMap[dept].pending += 1;
+    }
+
+    deptMap[dept].savings += Number(s.savings) || Number(s.expectedSaving) || Number(s.expected_saving) || 0;
     deptMap[dept].points += typeof s.points === "number" ? s.points : 0;
     if (s.employeeName) deptMap[dept].employees.add(s.employeeName);
   });
@@ -261,19 +298,91 @@ export function exportComprehensiveExecutiveDashboard(
   const deptRows = Object.entries(deptMap).map(([dept, stat]) => ({
     Department: dept,
     "Active Contributors": stat.employees.size,
-    "Total Ideas": stat.total,
-    Implemented: stat.impl,
-    "Impl Rate (%)": stat.total > 0 ? ((stat.impl / stat.total) * 100).toFixed(1) + "%" : "0%",
+    "Total Ideas Submitted": stat.total,
+    "Implemented Ideas": stat.impl,
+    "Pending Review Ideas": stat.pending,
+    "Under Evaluation Ideas": stat.underReview,
+    "Rejected / Dropped": stat.rejected,
+    "Implementation Rate (%)": stat.total > 0 ? ((stat.impl / stat.total) * 100).toFixed(1) + "%" : "0.0%",
+    "Cost Savings (INR)": `₹${stat.savings.toLocaleString("en-IN")}`,
     "Total Points": stat.points,
   }));
 
-  // 5. Suggestions Master Detail
-  const suggestionRows = suggestions.map((s) => ({
+  // 5. Dedicated Implemented Suggestions Details (Top Management POV)
+  const implementedSuggestions = suggestions.filter((s: any) => {
+    const st = String(s.status || "").toLowerCase().trim();
+    return st === "implemented" || st === "closed" || st === "completed";
+  });
+
+  const implementedRows = implementedSuggestions.map((s: any) => {
+    const created = s.createdDate ? new Date(s.createdDate) : null;
+    const completed = s.completedDate ? new Date(s.completedDate) : null;
+    const turnaroundDays =
+      created && completed && !isNaN(created.getTime()) && !isNaN(completed.getTime())
+        ? Math.max(0, Math.floor((completed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)))
+        : "—";
+
+    return {
+      "Suggestion Code": s.code || s.id,
+      "Idea Title": s.title || s.suggestionTitle || "—",
+      "Problem / Description": s.description || s.problem || "—",
+      "Employee Name": s.employeeName || "Unknown",
+      "Employee Code": s.employeeId || "—",
+      "Submitting Department": s.department || "—",
+      "Implementing Department": s.current_departments?.name || s.current_department || s.department || "—",
+      "Plant Unit": s.plant || "—",
+      Location: s.location || "—",
+      Category: s.category || s.suggestionType || "—",
+      "Cost Type": s.costType || "No Cost",
+      "Submitted Date": s.createdDate || "—",
+      "Implemented Date": s.completedDate || s.createdDate || "—",
+      "Turnaround (Days)": turnaroundDays,
+      "Verified Savings (INR)": s.savings ? `₹${Number(s.savings).toLocaleString("en-IN")}` : "₹0",
+      "Points Awarded": typeof s.points === "number" ? s.points : 5,
+      Award: s.award || "Recognition",
+    };
+  });
+
+  // 6. Dedicated Pending Suggestions Aging Analysis (Top Management POV)
+  const now = new Date();
+  const pendingSuggestions = suggestions.filter((s: any) => {
+    const st = String(s.status || "").toLowerCase().trim();
+    return st !== "implemented" && st !== "closed" && st !== "completed" && st !== "rejected" && st !== "dropped" && st !== "fake_closure";
+  });
+
+  const pendingRows = pendingSuggestions.map((s: any) => {
+    const created = s.createdDate ? new Date(s.createdDate) : new Date();
+    const agingDays = !isNaN(created.getTime())
+      ? Math.max(0, Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)))
+      : 0;
+
+    return {
+      "Suggestion Code": s.code || s.id,
+      "Idea Title": s.title || s.suggestionTitle || "—",
+      "Problem / Description": s.description || s.problem || "—",
+      "Employee Name": s.employeeName || "Unknown",
+      "Employee Code": s.employeeId || "—",
+      "Submitting Department": s.department || "—",
+      "Pending At Department / Level": s.current_departments?.name || s.current_department || s.department || "—",
+      "Plant Unit": s.plant || "—",
+      Location: s.location || "—",
+      Category: s.category || s.suggestionType || "—",
+      Priority: s.priority || "Medium",
+      "Submitted Date": s.createdDate || "—",
+      "Pending Aging (Days)": agingDays,
+      "Current Status": s.status || "pending",
+      "Expected Savings (INR)": s.expectedSaving || s.savings ? `₹${Number(s.expectedSaving || s.savings).toLocaleString("en-IN")}` : "₹0",
+    };
+  });
+
+  // 7. Suggestions Complete Master Detail
+  const suggestionRows = suggestions.map((s: any) => ({
     "Idea Code": s.code || s.id,
-    "Idea Title": s.title,
+    "Idea Title": s.title || s.suggestionTitle || "—",
     Employee: s.employeeName || "Unknown",
     "Employee Code": s.employeeId || "—",
-    Department: s.department || "—",
+    "Submitting Department": s.department || "—",
+    "Current / Implementing Dept": s.current_departments?.name || s.current_department || s.department || "—",
     Plant: s.plant || "—",
     Location: s.location || "—",
     Category: s.category || "—",
@@ -281,63 +390,93 @@ export function exportComprehensiveExecutiveDashboard(
     Priority: s.priority || "Medium",
     "Savings (INR)": s.savings ? `₹${Number(s.savings).toLocaleString("en-IN")}` : "₹0",
     Points: typeof s.points === "number" ? s.points : 0,
-    "Created Date": s.createdDate || "—",
+    "Submitted Date": s.createdDate || "—",
+    "Completed Date": s.completedDate || "—",
   }));
 
   if (format === "xlsx") {
     const wb = XLSX.utils.book_new();
 
-    // Summary Sheet
+    // 1. Executive Summary Sheet
     const wsSum = XLSX.utils.json_to_sheet(summaryRows, { origin: "A3" });
-    XLSX.utils.sheet_add_aoa(wsSum, [["ESP EXECUTIVE OVERVIEW KPI SUMMARY"], [`Generated On: ${new Date().toLocaleString()}`]], { origin: "A1" });
-    (wsSum as any)["!cols"] = [{ wch: 35 }, { wch: 25 }];
-    XLSX.utils.book_append_sheet(wb, wsSum, "KPI Summary");
+    XLSX.utils.sheet_add_aoa(wsSum, [["PG ELECTROPLAST LIMITED - EXECUTIVE OVERVIEW KPI SUMMARY"], [`Generated On: ${new Date().toLocaleString()}`]], { origin: "A1" });
+    (wsSum as any)["!cols"] = [{ wch: 38 }, { wch: 25 }];
+    XLSX.utils.book_append_sheet(wb, wsSum, "Executive Overview");
 
-    // Location Sheet
+    // 2. Department Breakdown Sheet (with Pending count, Implemented count, Savings)
+    const wsDept = XLSX.utils.json_to_sheet(deptRows.length > 0 ? deptRows : [{ Status: "No Departments In Active Data" }], { origin: "A3" });
+    XLSX.utils.sheet_add_aoa(wsDept, [["DEPARTMENT PERFORMANCE & PENDING BREAKDOWN"], [`Generated On: ${new Date().toLocaleString()}`]], { origin: "A1" });
+    (wsDept as any)["!cols"] = [{ wch: 25 }, { wch: 20 }, { wch: 22 }, { wch: 20 }, { wch: 20 }, { wch: 22 }, { wch: 18 }, { wch: 24 }, { wch: 22 }, { wch: 15 }];
+    XLSX.utils.book_append_sheet(wb, wsDept, "Department Breakdown");
+
+    // 3. Implemented Suggestions Detailed Sheet
+    const wsImpl = XLSX.utils.json_to_sheet(
+      implementedRows.length > 0 ? implementedRows : [{ "Status": "No Implemented Suggestions In Active Filter" }],
+      { origin: "A3" }
+    );
+    XLSX.utils.sheet_add_aoa(wsImpl, [["IMPLEMENTED SUGGESTIONS DETAILED AUDIT REGISTRY"], [`Generated On: ${new Date().toLocaleString()}`]], { origin: "A1" });
+    (wsImpl as any)["!cols"] = [
+      { wch: 25 }, { wch: 35 }, { wch: 40 }, { wch: 22 }, { wch: 16 }, { wch: 22 }, { wch: 24 }, { wch: 20 }, { wch: 16 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 16 }, { wch: 18 }, { wch: 22 }, { wch: 15 }, { wch: 20 }
+    ];
+    XLSX.utils.book_append_sheet(wb, wsImpl, "Implemented Ideas");
+
+    // 4. Pending Suggestions Detailed Sheet (with Aging Days)
+    const wsPending = XLSX.utils.json_to_sheet(
+      pendingRows.length > 0 ? pendingRows : [{ "Status": "No Pending Suggestions In Active Filter" }],
+      { origin: "A3" }
+    );
+    XLSX.utils.sheet_add_aoa(wsPending, [["PENDING & IN-REVIEW SUGGESTIONS AGING REPORT"], [`Generated On: ${new Date().toLocaleString()}`]], { origin: "A1" });
+    (wsPending as any)["!cols"] = [
+      { wch: 25 }, { wch: 35 }, { wch: 40 }, { wch: 22 }, { wch: 16 }, { wch: 22 }, { wch: 28 }, { wch: 20 }, { wch: 16 }, { wch: 18 }, { wch: 12 }, { wch: 15 }, { wch: 20 }, { wch: 18 }, { wch: 22 }
+    ];
+    XLSX.utils.book_append_sheet(wb, wsPending, "Pending Suggestions");
+
+    // 5. Plant Performance Sheet
+    const wsPlant = XLSX.utils.json_to_sheet(plantRows, { origin: "A3" });
+    XLSX.utils.sheet_add_aoa(wsPlant, [["PLANT UNIT PERFORMANCE ANALYSIS"], [`Generated On: ${new Date().toLocaleString()}`]], { origin: "A1" });
+    (wsPlant as any)["!cols"] = [{ wch: 25 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }];
+    XLSX.utils.book_append_sheet(wb, wsPlant, "Plant Performance");
+
+    // 6. Location Performance Sheet
     const wsLoc = XLSX.utils.json_to_sheet(locationRows, { origin: "A3" });
     XLSX.utils.sheet_add_aoa(wsLoc, [["LOCATION PERFORMANCE ANALYSIS"], [`Generated On: ${new Date().toLocaleString()}`]], { origin: "A1" });
     (wsLoc as any)["!cols"] = [{ wch: 25 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }];
     XLSX.utils.book_append_sheet(wb, wsLoc, "Location Performance");
 
-    // Plant Sheet
-    const wsPlant = XLSX.utils.json_to_sheet(plantRows, { origin: "A3" });
-    XLSX.utils.sheet_add_aoa(wsPlant, [["PLANT PERFORMANCE ANALYSIS"], [`Generated On: ${new Date().toLocaleString()}`]], { origin: "A1" });
-    (wsPlant as any)["!cols"] = [{ wch: 25 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 15 }, { wch: 15 }, { wch: 20 }, { wch: 15 }];
-    XLSX.utils.book_append_sheet(wb, wsPlant, "Plant Performance");
-
-    // Department Sheet
-    const wsDept = XLSX.utils.json_to_sheet(deptRows, { origin: "A3" });
-    XLSX.utils.sheet_add_aoa(wsDept, [["DEPARTMENT PERFORMANCE BREAKDOWN"], [`Generated On: ${new Date().toLocaleString()}`]], { origin: "A1" });
-    (wsDept as any)["!cols"] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
-    XLSX.utils.book_append_sheet(wb, wsDept, "Department Breakdown");
-
-    // Master Detail Sheet
+    // 7. All Suggestions Master Registry
     const wsSug = XLSX.utils.json_to_sheet(suggestionRows, { origin: "A3" });
-    XLSX.utils.sheet_add_aoa(wsSug, [["SUGGESTIONS MASTER DATA"], [`Generated On: ${new Date().toLocaleString()}`]], { origin: "A1" });
-    XLSX.utils.book_append_sheet(wb, wsSug, "All Suggestions");
+    XLSX.utils.sheet_add_aoa(wsSug, [["ALL SUGGESTIONS COMPLETE AUDIT REGISTRY"], [`Generated On: ${new Date().toLocaleString()}`]], { origin: "A1" });
+    (wsSug as any)["!cols"] = [
+      { wch: 25 }, { wch: 35 }, { wch: 22 }, { wch: 16 }, { wch: 22 }, { wch: 24 }, { wch: 20 }, { wch: 16 }, { wch: 18 }, { wch: 15 }, { wch: 12 }, { wch: 18 }, { wch: 10 }, { wch: 15 }, { wch: 15 }
+    ];
+    XLSX.utils.book_append_sheet(wb, wsSug, "All Suggestions Master");
 
     XLSX.writeFile(wb, `${filename}_${timestamp()}.xlsx`);
   } else if (format === "csv") {
-    let csvContent = `"ESP EXECUTIVE ANALYTICS PRESENTATION REPORT"\n"Generated On: ${new Date().toLocaleString()}"\n\n`;
-    
+    let csvContent = `"PG ELECTROPLAST LIMITED - ESP EXECUTIVE AUDIT REPORT"\n"Generated On: ${new Date().toLocaleString()}"\n\n`;
+
     // 1. KPI Summary
     csvContent += `"=== 1. EXECUTIVE OVERVIEW KPI SUMMARY ==="\n`;
     csvContent += XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(summaryRows)) + "\n\n";
 
-    // 2. Location Performance
-    csvContent += `"=== 2. LOCATION PERFORMANCE ANALYSIS ==="\n`;
-    csvContent += XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(locationRows)) + "\n\n";
-
-    // 3. Plant Performance
-    csvContent += `"=== 3. PLANT PERFORMANCE ANALYSIS ==="\n`;
-    csvContent += XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(plantRows)) + "\n\n";
-
-    // 4. Department Breakdown
-    csvContent += `"=== 4. DEPARTMENT PERFORMANCE BREAKDOWN ==="\n`;
+    // 2. Department Breakdown
+    csvContent += `"=== 2. DEPARTMENT PERFORMANCE & PENDING BREAKDOWN ==="\n`;
     csvContent += XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(deptRows)) + "\n\n";
 
-    // 5. Suggestions Registry
-    csvContent += `"=== 5. MASTER SUGGESTIONS REGISTRY ==="\n`;
+    // 3. Implemented Suggestions Registry
+    csvContent += `"=== 3. IMPLEMENTED SUGGESTIONS DETAILED REGISTRY ==="\n`;
+    csvContent += XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(implementedRows.length > 0 ? implementedRows : [{ Status: "No Implemented Ideas" }])) + "\n\n";
+
+    // 4. Pending Suggestions Aging Report
+    csvContent += `"=== 4. PENDING SUGGESTIONS AGING REPORT ==="\n`;
+    csvContent += XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(pendingRows.length > 0 ? pendingRows : [{ Status: "No Pending Ideas" }])) + "\n\n";
+
+    // 5. Plant Performance
+    csvContent += `"=== 5. PLANT PERFORMANCE ANALYSIS ==="\n`;
+    csvContent += XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(plantRows)) + "\n\n";
+
+    // 6. Master Registry
+    csvContent += `"=== 6. MASTER SUGGESTIONS REGISTRY ==="\n`;
     csvContent += XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(suggestionRows)) + "\n";
 
     download(new Blob([csvContent], { type: "text/csv;charset=utf-8" }), `${filename}_${timestamp()}.csv`);
@@ -366,65 +505,77 @@ export function exportComprehensiveExecutiveDashboard(
       margin: { left: 40, right: 400 },
     });
 
-    // Section 2: Location Performance Matrix Table
+    // Section 2: Department Performance & Pending Breakdown
     const finalY1 = (doc as any).lastAutoTable.finalY + 20;
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(37, 63, 122);
-    doc.text("2. Location Performance Matrix", 40, finalY1);
+    doc.text("2. Department Performance & Pending Breakdown", 40, finalY1);
 
     autoTable(doc, {
       startY: finalY1 + 10,
-      head: [["Location", "Total Ideas", "Implemented", "Pending", "Fake", "Impl Rate", "Savings (INR)", "Points"]],
-      body: locationRows.map((r) => [r.Location, String(r["Total Suggestions"]), String(r.Implemented), String(r["Pending Review"]), String(r["Fake Closures"]), r["Impl Rate (%)"], r["Cost Savings (INR)"], String(r["Total Points"])]),
+      head: [["Department", "Contributors", "Total Ideas", "Implemented", "Pending", "Impl Rate", "Savings (INR)", "Points"]],
+      body: deptRows.map((r) => [
+        r.Department,
+        String(r["Active Contributors"]),
+        String(r["Total Ideas Submitted"]),
+        String(r["Implemented Ideas"]),
+        String(r["Pending Review Ideas"]),
+        r["Implementation Rate (%)"],
+        r["Cost Savings (INR)"],
+        String(r["Total Points"]),
+      ]),
       styles: { fontSize: 8, cellPadding: 3 },
       headStyles: { fillColor: [37, 63, 122], textColor: 255 },
       margin: { left: 40, right: 40 },
     });
 
-    // Section 3: Plant Performance Matrix Table
+    // Section 3: Implemented Suggestions Table
     doc.addPage();
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(37, 63, 122);
-    doc.text("3. Plant Performance Matrix", 40, 40);
+    doc.text("3. Implemented Suggestions Registry", 40, 40);
 
     autoTable(doc, {
       startY: 50,
-      head: [["Plant", "Total Ideas", "Implemented", "Pending", "Fake", "Impl Rate", "Savings (INR)", "Points"]],
-      body: plantRows.map((r) => [r.Plant, String(r["Total Suggestions"]), String(r.Implemented), String(r["Pending Review"]), String(r["Fake Closures"]), r["Impl Rate (%)"], r["Cost Savings (INR)"], String(r["Total Points"])]),
-      styles: { fontSize: 8, cellPadding: 3 },
+      head: [["Code", "Title", "Employee", "Submitting Dept", "Implementing Dept", "Plant", "Turnaround", "Savings"]],
+      body: implementedRows.slice(0, 50).map((r) => [
+        r["Suggestion Code"],
+        r["Idea Title"].slice(0, 22),
+        r["Employee Name"],
+        r["Submitting Department"],
+        r["Implementing Department"],
+        r["Plant Unit"],
+        String(r["Turnaround (Days)"]),
+        r["Verified Savings (INR)"],
+      ]),
+      styles: { fontSize: 7, cellPadding: 3 },
       headStyles: { fillColor: [37, 63, 122], textColor: 255 },
       margin: { left: 40, right: 40 },
     });
 
-    // Section 4: Department Performance Breakdown Table
-    const finalY3 = (doc as any).lastAutoTable.finalY + 20;
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(37, 63, 122);
-    doc.text("4. Department Performance Breakdown", 40, finalY3);
-
-    autoTable(doc, {
-      startY: finalY3 + 10,
-      head: [["Department", "Active Contributors", "Total Ideas", "Implemented", "Impl Rate", "Points"]],
-      body: deptRows.map((r) => [r.Department, String(r["Active Contributors"]), String(r["Total Ideas"]), String(r.Implemented), r["Impl Rate (%)"], String(r["Total Points"])]),
-      styles: { fontSize: 8, cellPadding: 3 },
-      headStyles: { fillColor: [37, 63, 122], textColor: 255 },
-      margin: { left: 40, right: 40 },
-    });
-
-    // Section 5: All Suggestions Registry Table
+    // Section 4: Pending Suggestions Table
     doc.addPage();
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(37, 63, 122);
-    doc.text("5. Master Suggestions Registry", 40, 40);
+    doc.text("4. Pending Suggestions Aging Report", 40, 40);
 
     autoTable(doc, {
       startY: 50,
-      head: [["Code", "Title", "Employee", "Department", "Plant", "Location", "Category", "Status", "Savings"]],
-      body: suggestionRows.map((r) => [r["Idea Code"], r["Idea Title"].slice(0, 25), r.Employee, r.Department, r.Plant, r.Location, r.Category, r.Status, r["Savings (INR)"]]),
+      head: [["Code", "Title", "Employee", "Submitting Dept", "Pending At Dept", "Plant", "Priority", "Aging Days", "Status"]],
+      body: pendingRows.slice(0, 50).map((r) => [
+        r["Suggestion Code"],
+        r["Idea Title"].slice(0, 22),
+        r["Employee Name"],
+        r["Submitting Department"],
+        r["Pending At Department / Level"],
+        r["Plant Unit"],
+        r.Priority,
+        String(r["Pending Aging (Days)"]),
+        r["Current Status"],
+      ]),
       styles: { fontSize: 7, cellPadding: 3 },
       headStyles: { fillColor: [37, 63, 122], textColor: 255 },
       margin: { left: 40, right: 40 },
@@ -433,3 +584,4 @@ export function exportComprehensiveExecutiveDashboard(
     doc.save(`${filename}_${timestamp()}.pdf`);
   }
 }
+

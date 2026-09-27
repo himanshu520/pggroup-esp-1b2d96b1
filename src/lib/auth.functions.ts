@@ -24,19 +24,35 @@ function maskPhone(phone: string): string {
  * server runtime — never returned to the client. Generic "not found" errors
  * prevent enumeration.
  */
-async function resolveKnownEmail(rawEmail: string): Promise<{ email: string; name?: string | null } | null> {
-  const email = rawEmail.trim().toLowerCase();
+async function resolveKnownEmail(rawInput: string): Promise<{ email: string; name?: string | null } | null> {
+  const input = rawInput.trim().toLowerCase();
+  if (!input) return null;
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  // 1. Strictly verify if email belongs to an active employee in `employees` table
+  const candidates: string[] = [];
+  if (input.includes("@")) {
+    candidates.push(input);
+  } else {
+    candidates.push(`${input}@pgel.in`);
+    candidates.push(input);
+  }
+
+  // 1. Strictly verify if identifier belongs to an active employee in `employees` table
   try {
-    const { data: emp, error } = await supabaseAdmin
+    const filter = !input.includes("@")
+      ? `employee_code.ilike.${input},email.ilike.${input},email.ilike.${input}@pgel.in`
+      : `employee_code.ilike.${input},email.ilike.${input}`;
+    const { data: emps, error } = await supabaseAdmin
       .from("employees")
-      .select("email, name, active")
-      .ilike("email", email)
-      .maybeSingle();
-    if (!error && emp && emp.active) {
-      return { email: emp.email || email, name: emp.name };
+      .select("email, name, active, employee_code")
+      .or(filter)
+      .limit(5);
+
+    if (!error && emps && emps.length > 0) {
+      const activeEmp = emps.find((e) => e.active && e.email);
+      if (activeEmp && activeEmp.email) {
+        return { email: activeEmp.email.toLowerCase(), name: activeEmp.name };
+      }
     }
   } catch (err) {
     console.error("[Auth] Error verifying employee in DB:", err);
@@ -46,15 +62,21 @@ async function resolveKnownEmail(rawEmail: string): Promise<{ email: string; nam
   try {
     const { data: list, error: listErr } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
     if (!listErr && list?.users) {
-      const authUser = list.users.find((u) => (u.email ?? "").toLowerCase() === email);
-      if (authUser) {
-        const { data: roles, error: rolesErr } = await supabaseAdmin
-          .from("user_roles")
-          .select("id, role")
-          .eq("user_id", authUser.id)
-          .limit(1);
-        if (!rolesErr && roles && roles.length > 0) {
-          return { email: authUser.email || email, name: null };
+      for (const target of candidates) {
+        const authUser = list.users.find((u) => {
+          const uEmail = (u.email ?? "").toLowerCase();
+          return uEmail === target || uEmail.startsWith(`${target}@`);
+        });
+
+        if (authUser && authUser.email) {
+          const { data: roles, error: rolesErr } = await supabaseAdmin
+            .from("user_roles")
+            .select("id, role")
+            .eq("user_id", authUser.id)
+            .limit(1);
+          if (!rolesErr && roles && roles.length > 0) {
+            return { email: authUser.email.toLowerCase(), name: null };
+          }
         }
       }
     }
@@ -124,27 +146,29 @@ async function generateAndSendOtp(email: string, name?: string | null) {
 }
 
 // ---------------------------------------------------------------------------
-// Admin flow (email entered directly on /auth)
+// Admin flow (email or identifier entered directly on /auth)
 // ---------------------------------------------------------------------------
 
 /**
- * Admin OTP: caller supplies an email. We only send the OTP if the address
+ * Admin OTP: caller supplies an email, email prefix, or employee code. We only send the OTP if the address
  * already belongs to an active employee or an existing role-bearing user.
  * Unknown emails receive a generic error — no user is auto-created.
  */
 export const sendCustomOtp = createServerFn({ method: "POST" })
   .validator((d: unknown) =>
-    z.object({ email: z.string().trim().email(), name: z.string().optional() }).parse(d ?? {}),
+    z.object({ email: z.string().trim().min(1), name: z.string().optional() }).parse(d ?? {}),
   )
   .handler(async ({ data }) => {
     const known = await resolveKnownEmail(data.email);
     if (!known) {
       // Generic error — do not disclose whether the email exists.
-      throw new Error("This email is not authorised to sign in");
+      throw new Error("This email or User ID is not authorised to sign in");
     }
     const result = await generateAndSendOtp(known.email, known.name ?? data.name ?? null);
     return {
       sent: result.emailSent,
+      resolvedEmail: known.email,
+      maskedContact: maskEmail(known.email),
     };
   });
 
@@ -155,7 +179,7 @@ export const sendCustomOtp = createServerFn({ method: "POST" })
 export const verifyAdminOtp = createServerFn({ method: "POST" })
   .validator((d: unknown) =>
     z.object({
-      email: z.string().trim().email(),
+      email: z.string().trim().min(1),
       token: z.string().trim().min(6).max(10),
     }).parse(d ?? {}),
   )
@@ -164,16 +188,17 @@ export const verifyAdminOtp = createServerFn({ method: "POST" })
     if (!known) {
       throw new Error("Invalid or expired OTP");
     }
+    const realEmail = known.email;
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: list, error: getError } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
     if (getError) {
       throw new Error("Invalid or expired OTP");
     }
-    let match = list?.users?.find((u) => (u.email ?? "").toLowerCase() === data.email.toLowerCase());
+    let match = list?.users?.find((u) => (u.email ?? "").toLowerCase() === realEmail.toLowerCase());
     if (!match) {
       const { data: created } = await supabaseAdmin.auth.admin.createUser({
-        email: data.email,
+        email: realEmail,
         email_confirm: true,
       });
       match = created?.user;
@@ -191,7 +216,7 @@ export const verifyAdminOtp = createServerFn({ method: "POST" })
     if (isCustomMatch || isMasterCode) {
       const { data: link } = await supabaseAdmin.auth.admin.generateLink({
         type: "magiclink",
-        email: data.email,
+        email: realEmail,
       });
       if (link?.properties?.email_otp) {
         tokenToVerify = link.properties.email_otp;
@@ -218,7 +243,7 @@ export const verifyAdminOtp = createServerFn({ method: "POST" })
       { auth: { persistSession: false, autoRefreshToken: false, storage: undefined } },
     );
     const { data: verified, error } = await anon.auth.verifyOtp({
-      email: data.email,
+      email: realEmail,
       token: tokenToVerify,
       type: "email",
     });
@@ -265,13 +290,20 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: emp } = await supabaseAdmin
+    const code = data.employee_code.trim();
+    const filter = !code.includes("@")
+      ? `employee_code.ilike.${code},email.ilike.${code},email.ilike.${code}@pgel.in`
+      : `employee_code.ilike.${code},email.ilike.${code}`;
+
+    const { data: emps } = await supabaseAdmin
       .from("employees")
       .select("id, email, name, active, mobile, employee_code")
-      .ilike("employee_code", data.employee_code)
-      .maybeSingle();
-    if (!emp || !emp.active) {
-      throw new Error("Employee ID not found or inactive");
+      .or(filter)
+      .limit(5);
+
+    const emp = emps?.find((e) => e.active);
+    if (!emp) {
+      throw new Error("Employee ID or email not found or inactive");
     }
 
     if (data.send_via === "email" && !emp.email) {
@@ -355,12 +387,19 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: emp } = await supabaseAdmin
+    const code = data.employee_code.trim();
+    const filter = !code.includes("@")
+      ? `employee_code.ilike.${code},email.ilike.${code},email.ilike.${code}@pgel.in`
+      : `employee_code.ilike.${code},email.ilike.${code}`;
+
+    const { data: emps } = await supabaseAdmin
       .from("employees")
       .select("id, email, active, user_id, reporting_manager, employee_code")
-      .ilike("employee_code", data.employee_code)
-      .maybeSingle();
-    if (!emp || !emp.active) {
+      .or(filter)
+      .limit(5);
+
+    const emp = emps?.find((e) => e.active);
+    if (!emp) {
       throw new Error("Invalid or expired OTP");
     }
 
