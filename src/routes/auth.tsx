@@ -135,7 +135,7 @@ function AdminFlow() {
           <Mail className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
           <Input
             type="text"
-            placeholder="e.g. software.2040@pgel.in or software.2040"
+            placeholder="Enter your official company mail"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="h-12 pl-9 bg-muted/40"
