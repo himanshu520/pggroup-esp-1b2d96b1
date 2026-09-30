@@ -399,7 +399,7 @@ export function exportComprehensiveExecutiveDashboard(
 
     // 1. Executive Summary Sheet
     const wsSum = XLSX.utils.json_to_sheet(summaryRows, { origin: "A3" });
-    XLSX.utils.sheet_add_aoa(wsSum, [["PG ELECTROPLAST LIMITED - EXECUTIVE OVERVIEW KPI SUMMARY"], [`Generated On: ${new Date().toLocaleString()}`]], { origin: "A1" });
+    XLSX.utils.sheet_add_aoa(wsSum, [["PG GROUP - EXECUTIVE OVERVIEW KPI SUMMARY"], [`Generated On: ${new Date().toLocaleString()}`]], { origin: "A1" });
     (wsSum as any)["!cols"] = [{ wch: 38 }, { wch: 25 }];
     XLSX.utils.book_append_sheet(wb, wsSum, "Executive Overview");
 
@@ -453,7 +453,7 @@ export function exportComprehensiveExecutiveDashboard(
 
     XLSX.writeFile(wb, `${filename}_${timestamp()}.xlsx`);
   } else if (format === "csv") {
-    let csvContent = `"PG ELECTROPLAST LIMITED - ESP EXECUTIVE AUDIT REPORT"\n"Generated On: ${new Date().toLocaleString()}"\n\n`;
+    let csvContent = `"PG GROUP - ESP EXECUTIVE AUDIT REPORT"\n"Generated On: ${new Date().toLocaleString()}"\n\n`;
 
     // 1. KPI Summary
     csvContent += `"=== 1. EXECUTIVE OVERVIEW KPI SUMMARY ==="\n`;

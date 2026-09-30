@@ -219,8 +219,8 @@ async function sendEmailsToUsers(
 
       const html = `
         <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#ffffff;color:#0f172a">
-          <h2 style="color:#1e293b;margin:0 0 8px">PG Suggestion Portal</h2>
-          <p style="color:#475569;margin:0 0 20px">Suggestion Management System</p>
+          <h2 style="color:#1e293b;margin:0 0 8px">PG Group ESP</h2>
+          <p style="color:#475569;margin:0 0 20px">Employee Suggestion Portal (ESP)</p>
           <h3 style="margin:0 0 12px;color:#0f172a">${opts.title}</h3>
           ${opts.body ? `<p style="color:#334155;line-height:1.5">${opts.body}</p>` : ""}
           ${opts.code ? `<p style="color:#64748b;font-size:13px">Reference: <strong>${opts.code}</strong></p>` : ""}
@@ -229,7 +229,7 @@ async function sendEmailsToUsers(
         </div>`;
 
       return transporter.sendMail({
-        from: `"PGEL MIS Verification" <${user}>`,
+        from: `"PG Group ESP" <${user}>`,
         to: email,
         subject: opts.subject,
         text: `${opts.title}${opts.body ? `\n\n${opts.body}` : ""}${fullLink ? `\n\n${fullLink}` : ""}`,

@@ -16,7 +16,7 @@ export async function sendOtpEmail(to: string, code: string, name?: string) {
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;background:#ffffff;color:#0f172a;border:1px solid #e2e8f0;border-radius:8px">
       <div style="border-bottom:2px solid #2563eb;padding-bottom:12px;margin-bottom:16px">
-        <h2 style="color:#1e293b;margin:0 0 4px;font-size:20px">PG Electroplast Limited</h2>
+        <h2 style="color:#1e293b;margin:0 0 4px;font-size:20px">PG Group</h2>
         <p style="color:#64748b;margin:0;font-size:13px">Employee Suggestion Portal (ESP) &bull; Verification Service</p>
       </div>
       <p style="color:#334155;font-size:15px;margin:0 0 12px">${greeting}</p>
@@ -24,14 +24,14 @@ export async function sendOtpEmail(to: string, code: string, name?: string) {
       <div style="font-size:32px;font-weight:700;letter-spacing:8px;padding:16px 24px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;text-align:center;margin:20px 0;color:#1e293b">${code}</div>
       <p style="color:#64748b;font-size:13px;margin:0 0 6px">If you did not request this code, you can safely ignore this email.</p>
       <div style="margin-top:24px;padding-top:12px;border-top:1px solid #f1f5f9;color:#94a3b8;font-size:11px">
-        PGEL MIS Verification &bull; Automated Message &bull; Please do not reply
+        PG Group ESP &bull; Automated Message &bull; Please do not reply
       </div>
     </div>`;
 
   const mailOptions = {
-    from: `"PGEL MIS Verification" <${user}>`,
+    from: `"PG Group ESP" <${user}>`,
     to,
-    subject: `PGEL MIS - Login Verification OTP: ${code}`,
+    subject: `PG Group ESP - Login Verification OTP: ${code}`,
     text: `Your one-time password is ${code}. It expires in 10 minutes.`,
     html,
   };
