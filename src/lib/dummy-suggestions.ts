@@ -405,8 +405,12 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
       })
     : [];
 
-  // Strictly return pure database records without demo data contamination
-  return mappedLive;
+  // Combine all live database records with demo dataset so dashboard is rich with demo data and every live submission increments totals
+  if (mappedLive.length > 0) {
+    return [...mappedLive, ...DUMMY_SUGGESTIONS];
+  }
+
+  return DUMMY_SUGGESTIONS;
 }
 
 /**
