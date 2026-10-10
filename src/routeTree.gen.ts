@@ -9,43 +9,38 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as EmployeeRouteImport } from './routes/employee'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as EmployeeIndexRouteImport } from './routes/employee.index'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as EmployeeRouteImport } from './routes/employee'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
-import { Route as EmployeeTrackRouteImport } from './routes/employee.track'
-import { Route as EmployeeSubmitRouteImport } from './routes/employee.submit'
-import { Route as EmployeeProfileRouteImport } from './routes/employee.profile'
-import { Route as EmployeeNotificationsRouteImport } from './routes/employee.notifications'
-import { Route as EmployeeMyRouteImport } from './routes/employee.my'
-import { Route as EmployeeLoginRouteImport } from './routes/employee.login'
-import { Route as AdminWorkflowRouteImport } from './routes/admin.workflow'
-import { Route as AdminUsersRouteImport } from './routes/admin.users'
-import { Route as AdminSuggestionsRouteImport } from './routes/admin.suggestions'
-import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
-import { Route as AdminSecurityRouteImport } from './routes/admin.security'
-import { Route as AdminPlantsRouteImport } from './routes/admin.plants'
-import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
-import { Route as AdminMastersRouteImport } from './routes/admin.masters'
-import { Route as AdminLocationsRouteImport } from './routes/admin.locations'
-import { Route as AdminEmployeesRouteImport } from './routes/admin.employees'
-import { Route as AdminDepartmentsRouteImport } from './routes/admin.departments'
-import { Route as AdminDatabaseRouteImport } from './routes/admin.database'
-import { Route as AdminAuditRouteImport } from './routes/admin.audit'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
+import { Route as AdminAuditRouteImport } from './routes/admin.audit'
+import { Route as AdminDatabaseRouteImport } from './routes/admin.database'
+import { Route as AdminDepartmentsRouteImport } from './routes/admin.departments'
+import { Route as AdminEmployeesRouteImport } from './routes/admin.employees'
+import { Route as AdminLocationsRouteImport } from './routes/admin.locations'
+import { Route as AdminMastersRouteImport } from './routes/admin.masters'
+import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
+import { Route as AdminPlantsRouteImport } from './routes/admin.plants'
+import { Route as AdminSecurityRouteImport } from './routes/admin.security'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminSuggestionsRouteImport } from './routes/admin.suggestions'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminWorkflowRouteImport } from './routes/admin.workflow'
+import { Route as EmployeeIndexRouteImport } from './routes/employee.index'
+import { Route as EmployeeLoginRouteImport } from './routes/employee.login'
+import { Route as EmployeeMyRouteImport } from './routes/employee.my'
+import { Route as EmployeeNotificationsRouteImport } from './routes/employee.notifications'
+import { Route as EmployeeProfileRouteImport } from './routes/employee.profile'
+import { Route as EmployeeSubmitRouteImport } from './routes/employee.submit'
+import { Route as EmployeeTrackRouteImport } from './routes/employee.track'
 import { Route as AdminSuggestionsIndexRouteImport } from './routes/admin.suggestions.index'
 import { Route as AdminSuggestionsIdRouteImport } from './routes/admin.suggestions.$id'
 
-const EmployeeRoute = EmployeeRouteImport.update({
-  id: '/employee',
-  path: '/employee',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -53,109 +48,24 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EmployeeIndexRoute = EmployeeIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => EmployeeRoute,
+const EmployeeRoute = EmployeeRouteImport.update({
+  id: '/employee',
+  path: '/employee',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
-const EmployeeTrackRoute = EmployeeTrackRouteImport.update({
-  id: '/track',
-  path: '/track',
-  getParentRoute: () => EmployeeRoute,
-} as any)
-const EmployeeSubmitRoute = EmployeeSubmitRouteImport.update({
-  id: '/submit',
-  path: '/submit',
-  getParentRoute: () => EmployeeRoute,
-} as any)
-const EmployeeProfileRoute = EmployeeProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => EmployeeRoute,
-} as any)
-const EmployeeNotificationsRoute = EmployeeNotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => EmployeeRoute,
-} as any)
-const EmployeeMyRoute = EmployeeMyRouteImport.update({
-  id: '/my',
-  path: '/my',
-  getParentRoute: () => EmployeeRoute,
-} as any)
-const EmployeeLoginRoute = EmployeeLoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => EmployeeRoute,
-} as any)
-const AdminWorkflowRoute = AdminWorkflowRouteImport.update({
-  id: '/workflow',
-  path: '/workflow',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminUsersRoute = AdminUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminSuggestionsRoute = AdminSuggestionsRouteImport.update({
-  id: '/suggestions',
-  path: '/suggestions',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminSettingsRoute = AdminSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminSecurityRoute = AdminSecurityRouteImport.update({
-  id: '/security',
-  path: '/security',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminPlantsRoute = AdminPlantsRouteImport.update({
-  id: '/plants',
-  path: '/plants',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminMastersRoute = AdminMastersRouteImport.update({
-  id: '/masters',
-  path: '/masters',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminLocationsRoute = AdminLocationsRouteImport.update({
-  id: '/locations',
-  path: '/locations',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminEmployeesRoute = AdminEmployeesRouteImport.update({
-  id: '/employees',
-  path: '/employees',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminDepartmentsRoute = AdminDepartmentsRouteImport.update({
-  id: '/departments',
-  path: '/departments',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminDatabaseRoute = AdminDatabaseRouteImport.update({
-  id: '/database',
-  path: '/database',
+const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminAuditRoute = AdminAuditRouteImport.update({
@@ -163,10 +73,100 @@ const AdminAuditRoute = AdminAuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
+const AdminDatabaseRoute = AdminDatabaseRouteImport.update({
+  id: '/database',
+  path: '/database',
   getParentRoute: () => AdminRoute,
+} as any)
+const AdminDepartmentsRoute = AdminDepartmentsRouteImport.update({
+  id: '/departments',
+  path: '/departments',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminEmployeesRoute = AdminEmployeesRouteImport.update({
+  id: '/employees',
+  path: '/employees',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLocationsRoute = AdminLocationsRouteImport.update({
+  id: '/locations',
+  path: '/locations',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMastersRoute = AdminMastersRouteImport.update({
+  id: '/masters',
+  path: '/masters',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPlantsRoute = AdminPlantsRouteImport.update({
+  id: '/plants',
+  path: '/plants',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSecurityRoute = AdminSecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSuggestionsRoute = AdminSuggestionsRouteImport.update({
+  id: '/suggestions',
+  path: '/suggestions',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminWorkflowRoute = AdminWorkflowRouteImport.update({
+  id: '/workflow',
+  path: '/workflow',
+  getParentRoute: () => AdminRoute,
+} as any)
+const EmployeeIndexRoute = EmployeeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => EmployeeRoute,
+} as any)
+const EmployeeLoginRoute = EmployeeLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => EmployeeRoute,
+} as any)
+const EmployeeMyRoute = EmployeeMyRouteImport.update({
+  id: '/my',
+  path: '/my',
+  getParentRoute: () => EmployeeRoute,
+} as any)
+const EmployeeNotificationsRoute = EmployeeNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => EmployeeRoute,
+} as any)
+const EmployeeProfileRoute = EmployeeProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => EmployeeRoute,
+} as any)
+const EmployeeSubmitRoute = EmployeeSubmitRouteImport.update({
+  id: '/submit',
+  path: '/submit',
+  getParentRoute: () => EmployeeRoute,
+} as any)
+const EmployeeTrackRoute = EmployeeTrackRouteImport.update({
+  id: '/track',
+  path: '/track',
+  getParentRoute: () => EmployeeRoute,
 } as any)
 const AdminSuggestionsIndexRoute = AdminSuggestionsIndexRouteImport.update({
   id: '/',
@@ -366,18 +366,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/employee': {
-      id: '/employee'
-      path: '/employee'
-      fullPath: '/employee'
-      preLoaderRoute: typeof EmployeeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -387,19 +380,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/employee/': {
-      id: '/employee/'
-      path: '/'
-      fullPath: '/employee/'
-      preLoaderRoute: typeof EmployeeIndexRouteImport
-      parentRoute: typeof EmployeeRoute
+    '/employee': {
+      id: '/employee'
+      path: '/employee'
+      fullPath: '/employee'
+      preLoaderRoute: typeof EmployeeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/': {
       id: '/admin/'
@@ -408,130 +401,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/employee/track': {
-      id: '/employee/track'
-      path: '/track'
-      fullPath: '/employee/track'
-      preLoaderRoute: typeof EmployeeTrackRouteImport
-      parentRoute: typeof EmployeeRoute
-    }
-    '/employee/submit': {
-      id: '/employee/submit'
-      path: '/submit'
-      fullPath: '/employee/submit'
-      preLoaderRoute: typeof EmployeeSubmitRouteImport
-      parentRoute: typeof EmployeeRoute
-    }
-    '/employee/profile': {
-      id: '/employee/profile'
-      path: '/profile'
-      fullPath: '/employee/profile'
-      preLoaderRoute: typeof EmployeeProfileRouteImport
-      parentRoute: typeof EmployeeRoute
-    }
-    '/employee/notifications': {
-      id: '/employee/notifications'
-      path: '/notifications'
-      fullPath: '/employee/notifications'
-      preLoaderRoute: typeof EmployeeNotificationsRouteImport
-      parentRoute: typeof EmployeeRoute
-    }
-    '/employee/my': {
-      id: '/employee/my'
-      path: '/my'
-      fullPath: '/employee/my'
-      preLoaderRoute: typeof EmployeeMyRouteImport
-      parentRoute: typeof EmployeeRoute
-    }
-    '/employee/login': {
-      id: '/employee/login'
-      path: '/login'
-      fullPath: '/employee/login'
-      preLoaderRoute: typeof EmployeeLoginRouteImport
-      parentRoute: typeof EmployeeRoute
-    }
-    '/admin/workflow': {
-      id: '/admin/workflow'
-      path: '/workflow'
-      fullPath: '/admin/workflow'
-      preLoaderRoute: typeof AdminWorkflowRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/users': {
-      id: '/admin/users'
-      path: '/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AdminUsersRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/suggestions': {
-      id: '/admin/suggestions'
-      path: '/suggestions'
-      fullPath: '/admin/suggestions'
-      preLoaderRoute: typeof AdminSuggestionsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/settings': {
-      id: '/admin/settings'
-      path: '/settings'
-      fullPath: '/admin/settings'
-      preLoaderRoute: typeof AdminSettingsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/security': {
-      id: '/admin/security'
-      path: '/security'
-      fullPath: '/admin/security'
-      preLoaderRoute: typeof AdminSecurityRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/plants': {
-      id: '/admin/plants'
-      path: '/plants'
-      fullPath: '/admin/plants'
-      preLoaderRoute: typeof AdminPlantsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/notifications': {
-      id: '/admin/notifications'
-      path: '/notifications'
-      fullPath: '/admin/notifications'
-      preLoaderRoute: typeof AdminNotificationsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/masters': {
-      id: '/admin/masters'
-      path: '/masters'
-      fullPath: '/admin/masters'
-      preLoaderRoute: typeof AdminMastersRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/locations': {
-      id: '/admin/locations'
-      path: '/locations'
-      fullPath: '/admin/locations'
-      preLoaderRoute: typeof AdminLocationsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/employees': {
-      id: '/admin/employees'
-      path: '/employees'
-      fullPath: '/admin/employees'
-      preLoaderRoute: typeof AdminEmployeesRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/departments': {
-      id: '/admin/departments'
-      path: '/departments'
-      fullPath: '/admin/departments'
-      preLoaderRoute: typeof AdminDepartmentsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/database': {
-      id: '/admin/database'
-      path: '/database'
-      fullPath: '/admin/database'
-      preLoaderRoute: typeof AdminDatabaseRouteImport
+    '/admin/analytics': {
+      id: '/admin/analytics'
+      path: '/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AdminAnalyticsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/audit': {
@@ -541,12 +415,138 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAuditRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/analytics': {
-      id: '/admin/analytics'
-      path: '/analytics'
-      fullPath: '/admin/analytics'
-      preLoaderRoute: typeof AdminAnalyticsRouteImport
+    '/admin/database': {
+      id: '/admin/database'
+      path: '/database'
+      fullPath: '/admin/database'
+      preLoaderRoute: typeof AdminDatabaseRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/admin/departments': {
+      id: '/admin/departments'
+      path: '/departments'
+      fullPath: '/admin/departments'
+      preLoaderRoute: typeof AdminDepartmentsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/employees': {
+      id: '/admin/employees'
+      path: '/employees'
+      fullPath: '/admin/employees'
+      preLoaderRoute: typeof AdminEmployeesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/locations': {
+      id: '/admin/locations'
+      path: '/locations'
+      fullPath: '/admin/locations'
+      preLoaderRoute: typeof AdminLocationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/masters': {
+      id: '/admin/masters'
+      path: '/masters'
+      fullPath: '/admin/masters'
+      preLoaderRoute: typeof AdminMastersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/notifications': {
+      id: '/admin/notifications'
+      path: '/notifications'
+      fullPath: '/admin/notifications'
+      preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/plants': {
+      id: '/admin/plants'
+      path: '/plants'
+      fullPath: '/admin/plants'
+      preLoaderRoute: typeof AdminPlantsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/security': {
+      id: '/admin/security'
+      path: '/security'
+      fullPath: '/admin/security'
+      preLoaderRoute: typeof AdminSecurityRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/suggestions': {
+      id: '/admin/suggestions'
+      path: '/suggestions'
+      fullPath: '/admin/suggestions'
+      preLoaderRoute: typeof AdminSuggestionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/workflow': {
+      id: '/admin/workflow'
+      path: '/workflow'
+      fullPath: '/admin/workflow'
+      preLoaderRoute: typeof AdminWorkflowRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/employee/': {
+      id: '/employee/'
+      path: '/'
+      fullPath: '/employee/'
+      preLoaderRoute: typeof EmployeeIndexRouteImport
+      parentRoute: typeof EmployeeRoute
+    }
+    '/employee/login': {
+      id: '/employee/login'
+      path: '/login'
+      fullPath: '/employee/login'
+      preLoaderRoute: typeof EmployeeLoginRouteImport
+      parentRoute: typeof EmployeeRoute
+    }
+    '/employee/my': {
+      id: '/employee/my'
+      path: '/my'
+      fullPath: '/employee/my'
+      preLoaderRoute: typeof EmployeeMyRouteImport
+      parentRoute: typeof EmployeeRoute
+    }
+    '/employee/notifications': {
+      id: '/employee/notifications'
+      path: '/notifications'
+      fullPath: '/employee/notifications'
+      preLoaderRoute: typeof EmployeeNotificationsRouteImport
+      parentRoute: typeof EmployeeRoute
+    }
+    '/employee/profile': {
+      id: '/employee/profile'
+      path: '/profile'
+      fullPath: '/employee/profile'
+      preLoaderRoute: typeof EmployeeProfileRouteImport
+      parentRoute: typeof EmployeeRoute
+    }
+    '/employee/submit': {
+      id: '/employee/submit'
+      path: '/submit'
+      fullPath: '/employee/submit'
+      preLoaderRoute: typeof EmployeeSubmitRouteImport
+      parentRoute: typeof EmployeeRoute
+    }
+    '/employee/track': {
+      id: '/employee/track'
+      path: '/track'
+      fullPath: '/employee/track'
+      preLoaderRoute: typeof EmployeeTrackRouteImport
+      parentRoute: typeof EmployeeRoute
     }
     '/admin/suggestions/': {
       id: '/admin/suggestions/'
