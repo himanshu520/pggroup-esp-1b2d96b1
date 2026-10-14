@@ -307,7 +307,7 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
     }
 
     if (data.send_via === "email" && !emp.email) {
-      throw new Error("Email address is not registered for this Employee ID. Please select 'Send OTP on WhatsApp'.");
+      throw new Error("Email address is not registered for this Employee ID. Please contact HR to update your email.");
     }
 
     if (data.send_via === "whatsapp" && !emp.mobile) {

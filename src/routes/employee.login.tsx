@@ -48,7 +48,6 @@ const T = {
     verifyBtn: "Verify & sign in",
     admin: "Admin?",
     signInHere: "Sign in here",
-    sendWhatsapp: "Send OTP on WhatsApp",
     
     // Suggestion Tracking Translation keys
     trackBtn: "Track Suggestion (No Login)",
@@ -90,7 +89,6 @@ const T = {
     verifyBtn: "सत्यापित करें और साइन इन करें",
     admin: "एडमिन?",
     signInHere: "यहाँ साइन इन करें",
-    sendWhatsapp: "WhatsApp पर ओटीपी भेजें",
 
     // Suggestion Tracking Translation keys
     trackBtn: "सुझाव ट्रैक करें (बिना लॉगिन)",
@@ -132,7 +130,6 @@ const T = {
     verifyBtn: "पडताळा आणि साइन इन करा",
     admin: "अ‍ॅडमिन?",
     signInHere: "येथे साइन इन करा",
-    sendWhatsapp: "WhatsApp वर OTP पाठवा",
 
     // Suggestion Tracking Translation keys
     trackBtn: "सूचना ट्रॅक करा (लॉगिन शिवाय)",
@@ -295,7 +292,6 @@ function EmployeeFlow({
   lang: Lang;
 }) {
   const [empCode, setEmpCode] = useState("");
-  const [sendViaWhatsApp, setSendViaWhatsApp] = useState(false);
   const [maskedPhone, setMaskedPhone] = useState("");
   const [employeeName, setEmployeeName] = useState("");
   const [otp, setOtp] = useState("");
@@ -321,14 +317,14 @@ function EmployeeFlow({
       const res = await start({
         data: {
           employee_code: code,
-          send_via: sendViaWhatsApp ? "whatsapp" : "email",
+          send_via: "email",
         },
       });
       setMaskedPhone(res.maskedContact);
       if (res.name) setEmployeeName(res.name);
       return res.maskedContact;
     },
-    [start, sendViaWhatsApp],
+    [start],
   );
 
   async function requestOtp() {
@@ -397,19 +393,6 @@ function EmployeeFlow({
           className="h-12 text-base sm:text-sm bg-muted/40"
           autoFocus
         />
-      </div>
-
-      <div className="flex items-center space-x-2 py-1">
-        <input
-          type="checkbox"
-          id="sendWhatsapp"
-          checked={sendViaWhatsApp}
-          onChange={(e) => setSendViaWhatsApp(e.target.checked)}
-          className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary accent-primary cursor-pointer"
-        />
-        <label htmlFor="sendWhatsapp" className="text-xs sm:text-sm text-foreground/80 font-medium cursor-pointer select-none">
-          {t.sendWhatsapp}
-        </label>
       </div>
 
       <Button
