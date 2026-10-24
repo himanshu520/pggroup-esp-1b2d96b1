@@ -114,6 +114,18 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
       }));
     },
   });
+  const { data: suggestionAttachments = [] } = useQuery({
+    enabled: validId,
+    queryKey: ["suggestion-initial-attachments", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("attachments")
+        .select("*")
+        .eq("suggestion_id", id!)
+        .is("evidence_id", null);
+      return data ?? [];
+    },
+  });
   const { data: departments = [] } = useQuery({
     queryKey: ["depts"],
     queryFn: async () => (await supabase.from("departments").select("*").eq("active", true)).data ?? [],
@@ -593,6 +605,45 @@ function SuggestionDetailPage({ targetId }: { targetId?: string }) {
           <Card title="Current method">{sug.current_method}</Card>
           <Card title="Suggested method">{sug.suggested_method}</Card>
           <Card title="Expected benefits">{sug.expected_benefits}</Card>
+
+          {suggestionAttachments.length > 0 && (
+            <Card title={`Supporting Images & Attachments (${suggestionAttachments.length})`}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {suggestionAttachments.map((att: any) => {
+                  const publicUrl = supabase.storage.from("suggestion-files").getPublicUrl(att.file_path).data.publicUrl;
+                  const isImg = att.content_type?.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif)$/i.test(att.file_name);
+                  return (
+                    <a
+                      key={att.id}
+                      href={publicUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative block rounded-xl border border-border bg-card overflow-hidden hover:border-primary/60 shadow-sm transition"
+                    >
+                      {isImg ? (
+                        <div className="h-32 w-full bg-muted overflow-hidden">
+                          <img
+                            src={publicUrl}
+                            alt={att.file_name}
+                            className="h-full w-full object-cover group-hover:scale-105 transition duration-300"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-32 flex flex-col items-center justify-center p-3 text-center bg-accent/20">
+                          <FileText className="w-9 h-9 text-primary/70 mb-1.5" />
+                          <span className="text-[11px] font-medium truncate w-full text-foreground">{att.file_name}</span>
+                        </div>
+                      )}
+                      <div className="p-2 text-xs truncate bg-background/90 backdrop-blur border-t border-border flex items-center justify-between">
+                        <span className="truncate text-[11px] font-medium">{att.file_name}</span>
+                        <ExternalLink className="w-3.5 h-3.5 text-muted-foreground shrink-0 ml-1 group-hover:text-primary transition" />
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
 
           {/* Actions */}
           <div className="rounded-lg border border-border bg-card p-5 space-y-3">

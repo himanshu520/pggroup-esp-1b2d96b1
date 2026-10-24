@@ -197,7 +197,7 @@ function SuggestionDetailsDialog({
     queryKey: ["my-suggestion-detail", suggestionId],
     enabled: !!suggestionId,
     queryFn: async () => {
-      const [{ data: s }, { data: h }] = await Promise.all([
+      const [{ data: s }, { data: h }, { data: atts }] = await Promise.all([
         supabase
           .from("suggestions")
           .select("*, categories(name), departments!suggestions_department_id_fkey(name), plants(name), locations(location)")
@@ -208,13 +208,19 @@ function SuggestionDetailsDialog({
           .select("*, from_dept:departments!suggestion_history_from_department_id_fkey(name), to_dept:departments!suggestion_history_to_department_id_fkey(name)")
           .eq("suggestion_id", suggestionId!)
           .order("created_at"),
+        supabase
+          .from("attachments")
+          .select("*")
+          .eq("suggestion_id", suggestionId!)
+          .is("evidence_id", null),
       ]);
-      return { s, h: h ?? [] };
+      return { s, h: h ?? [], atts: atts ?? [] };
     },
   });
 
   const s = data?.s as any;
   const history = getEffectiveHistory(data?.h, s);
+  const attachments = data?.atts ?? [];
 
   return (
     <Dialog open={!!suggestionId} onOpenChange={(o) => !o && onClose()}>
@@ -252,6 +258,40 @@ function SuggestionDetailsDialog({
               <Section title={t("suggested_method")} body={s.suggested_method} />
               <Section title={t("expected_benefits")} body={s.expected_benefits} />
             </div>
+
+            {attachments.length > 0 && (
+              <div className="border-t border-border pt-3 space-y-2">
+                <div className="text-sm font-semibold">Supporting Images & Photos ({attachments.length})</div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {attachments.map((att: any) => {
+                    const publicUrl = supabase.storage.from("suggestion-files").getPublicUrl(att.file_path).data.publicUrl;
+                    const isImg = att.content_type?.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif)$/i.test(att.file_name);
+                    return (
+                      <a
+                        key={att.id}
+                        href={publicUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group relative block rounded-xl border border-border bg-card overflow-hidden hover:border-primary/60 shadow-sm transition"
+                      >
+                        {isImg ? (
+                          <div className="h-28 w-full bg-muted overflow-hidden">
+                            <img src={publicUrl} alt={att.file_name} className="h-full w-full object-cover group-hover:scale-105 transition duration-300" />
+                          </div>
+                        ) : (
+                          <div className="h-28 flex flex-col items-center justify-center p-3 text-center bg-accent/20">
+                            <span className="text-xs truncate w-full">{att.file_name}</span>
+                          </div>
+                        )}
+                        <div className="p-2 text-[11px] truncate bg-background/90 border-t border-border font-medium">
+                          {att.file_name}
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="border-t border-border pt-3">
               <div className="text-sm font-medium mb-3">{t("timeline")}</div>

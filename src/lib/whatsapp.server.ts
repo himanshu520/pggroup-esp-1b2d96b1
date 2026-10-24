@@ -121,6 +121,47 @@ export async function sendOtpWhatsApp(mobile: string, otp: string, name?: string
       console.log(`[WhatsApp OTP] Successfully sent message via Interakt.`);
       return { success: true };
     }
+    if (provider === "gupshup") {
+      if (!apiKey) {
+        throw new Error("Missing Gupshup API Key in environment (WHATSAPP_API_KEY or GUPSHUP_API_KEY)");
+      }
+
+      const gupshupUrl = process.env.GUPSHUP_API_URL || "https://api.gupshup.io/wa/api/v1/msg";
+      const source = process.env.GUPSHUP_SOURCE || senderNumber || "15554596478";
+      const srcName = process.env.GUPSHUP_APP_NAME || process.env.WHATSAPP_APP_NAME || "PGGROUPESP";
+      const destination = cleanMobile; // e.g. 919034812153
+
+      const messagePayload = JSON.stringify({
+        type: "text",
+        text: text
+      });
+
+      const params = new URLSearchParams();
+      params.append("channel", "whatsapp");
+      params.append("source", source);
+      params.append("destination", destination);
+      params.append("message", messagePayload);
+      params.append("src.name", srcName);
+
+      const res = await fetch(gupshupUrl, {
+        method: "POST",
+        headers: {
+          "Cache-Control": "no-cache",
+          "Content-Type": "application/x-www-form-urlencoded",
+          "apikey": apiKey
+        },
+        body: params.toString()
+      });
+
+      if (!res.ok && res.status !== 202) {
+        const errorText = await res.text();
+        throw new Error(`Gupshup API responded with status ${res.status}: ${errorText}`);
+      }
+
+      console.log(`[WhatsApp OTP] Successfully submitted message via Gupshup.`);
+      return true;
+    }
+
     if (provider === "wasender") {
       if (!apiKey) {
         throw new Error("Missing WASender API token in environment (WHATSAPP_API_KEY)");

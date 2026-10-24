@@ -132,28 +132,56 @@ export function isDeptAccessible(deptId: string | null, plantId: string | null, 
   });
 }
 
-export function isSuggestionAccessible(sug: { location_id: string | null; plant_id: string | null; department_id: string | null; current_department_id?: string | null; status?: string } | null, roles: SessionProfile["roles"] | undefined): boolean {
-  if (!sug || !roles) return false;
-  if (roles.some((r) => r.role === "super_admin" || r.role === "corporate_admin" || r.role === "pe_user")) return true;
-  if (roles.some((r) => r.role === "md") && (sug.status === "implemented" || sug.status === "closed")) return true;
+export function isSuggestionAccessible(
+  sug: {
+    location_id: string | null;
+    plant_id: string | null;
+    department_id: string | null;
+    current_department_id?: string | null;
+    status?: string;
+  } | null,
+  roles: SessionProfile["roles"] | undefined
+): boolean {
+  if (!sug || !roles || roles.length === 0) return false;
+
+  // Super Admin & Corporate Admin with no location/plant restrictions have full global visibility
+  const hasGlobalAdmin = roles.some(
+    (r) =>
+      (r.role === "super_admin" || r.role === "corporate_admin") &&
+      !r.location_id &&
+      !r.plant_id &&
+      !r.department_id
+  );
+  if (hasGlobalAdmin) return true;
+
   return roles.some((r) => {
-    // HR, Admin, Location Admin, Plant Admin evaluate Location/Plant scope
-    if (r.role === "hr" || r.role === "admin" || r.role === "location_admin" || r.role === "plant_admin") {
-      if (!r.location_id && !r.plant_id) return true; // Global scope
-      if (r.plant_id && r.plant_id === sug.plant_id) return true;
-      if (r.location_id && r.location_id === sug.location_id) return true;
-      return false;
+    // MD can only view implemented or closed suggestions
+    if (r.role === "md") {
+      if (sug.status !== "implemented" && sug.status !== "closed") return false;
+      if (r.location_id && r.location_id !== sug.location_id) return false;
+      if (r.plant_id && r.plant_id !== sug.plant_id) return false;
+      return true;
     }
 
-    if (!r.location_id && !r.plant_id && !r.department_id) return true;
+    // Department match (e.g., dept_user, department_admin)
     if (r.department_id) {
-      return r.department_id === sug.department_id || r.department_id === sug.current_department_id;
+      const match =
+        sug.department_id === r.department_id ||
+        sug.current_department_id === r.department_id;
+      if (!match) return false;
     }
+
+    // Plant match (e.g., plant_admin, plant-level pe_user, plant-level admin)
     if (r.plant_id) {
-      return (r.location_id ? r.location_id === sug.location_id : true) && r.plant_id === sug.plant_id;
+      if (sug.plant_id !== r.plant_id) return false;
     }
-    if (r.location_id) return r.location_id === sug.location_id;
-    return false;
+
+    // Location/State match (e.g., location_admin, state-level hr)
+    if (r.location_id) {
+      if (sug.location_id !== r.location_id) return false;
+    }
+
+    return true;
   });
 }
 

@@ -128,10 +128,12 @@ function OverviewPage() {
     refetchOnWindowFocus: false,
   });
 
-  // Map live database records from Supabase
+  // Map live database records from Supabase filtered by user's role and location scope
   const mappedSuggestions = useMemo(() => {
-    return mapDatabaseSuggestionsToUI(sugs);
-  }, [sugs]);
+    if (!sess?.roles) return [];
+    const accessibleSugs = sugs.filter((s: any) => isSuggestionAccessible(s, sess.roles));
+    return mapDatabaseSuggestionsToUI(accessibleSugs);
+  }, [sugs, sess?.roles]);
 
   // Filter live database suggestions according to Filter Drawer selection
   const filteredSuggestions = useMemo(() => {

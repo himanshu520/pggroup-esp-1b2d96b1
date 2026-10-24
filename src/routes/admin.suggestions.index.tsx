@@ -74,18 +74,23 @@ export function SuggestionsList() {
     },
   });
 
+  const accessibleData = useMemo(() => {
+    if (!sess?.roles) return [];
+    return data.filter((s: any) => isSuggestionAccessible(s, sess.roles));
+  }, [data, sess?.roles]);
+
   const counts = useMemo(() => {
-    const total = data.length;
-    const submitted = data.filter((s: any) => !["implemented", "closed", "rejected", "fake_closure"].includes(s.status)).length;
-    const implemented = data.filter((s: any) => s.status === "implemented" || s.status === "closed").length;
-    const fake = data.filter((s: any) => s.status === "fake_closure" || s.status === "rejected" || s.status === "dropped").length;
+    const total = accessibleData.length;
+    const submitted = accessibleData.filter((s: any) => !["implemented", "closed", "rejected", "fake_closure"].includes(s.status)).length;
+    const implemented = accessibleData.filter((s: any) => s.status === "implemented" || s.status === "closed").length;
+    const fake = accessibleData.filter((s: any) => s.status === "fake_closure" || s.status === "rejected" || s.status === "dropped").length;
     return { total, submitted, implemented, fake };
-  }, [data]);
+  }, [accessibleData]);
 
   const isMD = sess?.isMD || sess?.roles?.some(r => r.role === "md");
 
   const filtered = useMemo(() => {
-    return data.filter((s: any) => {
+    return accessibleData.filter((s: any) => {
       // MD role can only view implemented / closed suggestions
       if (isMD && s.status !== "implemented" && s.status !== "closed") {
         return false;
@@ -124,7 +129,7 @@ export function SuggestionsList() {
 
       return true;
     });
-  }, [data, q, statusFilter, dateType, startDate, endDate]);
+  }, [accessibleData, isMD, q, statusFilter, dateType, startDate, endDate]);
 
   const exportSubtitle = useMemo(() => {
     const parts: string[] = [];

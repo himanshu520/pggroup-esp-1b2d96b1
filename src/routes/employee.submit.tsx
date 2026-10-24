@@ -155,7 +155,19 @@ export function SubmitForm() {
   function handleFiles(fileList: FileList | null) {
     if (!fileList) return;
     const arr = Array.from(fileList);
-    setFiles((prev) => [...prev, ...arr].slice(0, 10));
+    const valid: File[] = [];
+    for (const f of arr) {
+      if (f.size > 15 * 1024 * 1024) {
+        toast.error(`${f.name} is too large (max 15MB)`);
+        continue;
+      }
+      valid.push(f);
+    }
+    setFiles((prev) => [...prev, ...valid].slice(0, 5));
+  }
+
+  function removeFile(index: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function submit() {
@@ -335,12 +347,104 @@ export function SubmitForm() {
           </div>
         </section>
 
+        {/* Section: Supporting Photos / Images */}
+        <section className="rounded-xl border border-border bg-card">
+          <SectionHeader
+            tone="primary"
+            icon={<Paperclip className="w-4.5 h-4.5" />}
+            index="3"
+            title={t("sec_attach_title") || "Supporting Images / Photos (फ़ोटो / तस्वीरें)"}
+            subtitle={t("sec_attach_sub") || "Upload photos of the current machine, problem area, or your proposed solution"}
+          />
+          <div className="p-4 sm:p-5 space-y-4">
+            <label
+              className={cn(
+                "flex flex-col items-center justify-center gap-2.5 p-6 sm:p-8 rounded-xl border-2 border-dashed border-border hover:border-primary/60 bg-accent/20 hover:bg-accent/40 cursor-pointer transition text-center",
+                files.length >= 5 && "opacity-50 pointer-events-none"
+              )}
+            >
+              <input
+                type="file"
+                multiple
+                accept="image/*,.pdf"
+                className="hidden"
+                disabled={files.length >= 5}
+                onChange={(e) => {
+                  handleFiles(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+              <div className="w-12 h-12 rounded-full bg-primary/10 grid place-items-center text-primary shadow-sm">
+                <Upload className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm font-semibold text-foreground">
+                  Click to take photo / upload images or drag & drop
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Camera photo, JPG, PNG, WebP or PDF (Max 5 files, up to 15MB each)
+                </div>
+              </div>
+            </label>
+
+            {files.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-muted-foreground">
+                  Attached Files ({files.length}/5):
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                  {files.map((file, idx) => {
+                    const isImg = file.type.startsWith("image/");
+                    const previewUrl = isImg ? URL.createObjectURL(file) : null;
+                    return (
+                      <div
+                        key={idx}
+                        className="group relative rounded-xl border border-border bg-card p-2 text-xs flex flex-col items-center justify-between overflow-hidden shadow-sm hover:border-primary/40 transition"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => removeFile(idx)}
+                          className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-destructive text-destructive-foreground grid place-items-center shadow-md hover:scale-110 transition"
+                          title="Remove file"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+
+                        {isImg && previewUrl ? (
+                          <div className="w-full h-24 rounded-lg overflow-hidden bg-muted mb-2">
+                            <img
+                              src={previewUrl}
+                              alt={file.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-full h-24 rounded-lg bg-accent/40 grid place-items-center mb-2">
+                            <FileText className="w-9 h-9 text-primary/70" />
+                          </div>
+                        )}
+
+                        <span className="w-full truncate text-[11px] font-medium text-center" title={file.name}>
+                          {file.name}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground mt-0.5">
+                          {(file.size / (1024 * 1024)).toFixed(1)} MB
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
         {/* Section: Employee & Location */}
         <section className="rounded-xl border border-border bg-card">
           <SectionHeader
             tone="primary"
             icon={<User className="w-4.5 h-4.5" />}
-            index="3"
+            index="4"
             title={t("sec_1_title")}
             subtitle={t("sec_1_sub")}
           />
