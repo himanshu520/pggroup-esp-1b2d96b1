@@ -1,0 +1,934 @@
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { AppShell, PageHeader } from "@/components/app-shell";
+import { ADMIN_NAV } from "@/lib/admin-nav";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
+import {
+  listUsersWithRoles,
+  inviteUser,
+  addRole,
+  removeRole,
+  updateRole,
+  updateUserEmail,
+  deleteUser,
+} from "@/lib/user-admin.functions";
+import { ROLE_LABEL, type AppRole } from "@/lib/statuses";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { toast } from "sonner";
+import { Search, UserPlus, Shield, Trash2, Plus, UserX, Pencil } from "lucide-react";
+import { ExportMenu } from "@/components/export-menu";
+
+export const Route = createFileRoute("/admin/users")({
+  beforeLoad: () => { throw redirect({ to: "/admin", search: { section: "users" } as any }); },
+  component: () => null,
+});
+
+const ROLES: AppRole[] = [
+  "super_admin",
+  "corporate_admin",
+  "hr",
+  "admin",
+  "location_admin",
+  "plant_admin",
+  "department_admin",
+  "pe_user",
+  "dept_user",
+  "mgmt_viewer",
+  "md",
+  "employee",
+];
+
+type RoleRow = {
+  id: string;
+  user_id: string;
+  role: AppRole;
+  location_id: string | null;
+  plant_id: string | null;
+  department_id: string | null;
+  locations?: { location: string } | null;
+  plants?: { name: string } | null;
+  departments?: { name: string } | null;
+};
+
+export function UsersPage() {
+  const qc = useQueryClient();
+  const listFn = useServerFn(listUsersWithRoles);
+  const removeRoleFn = useServerFn(removeRole);
+  const deleteUserFn = useServerFn(deleteUser);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["users-and-roles"],
+    queryFn: () => listFn(),
+  });
+
+  const { data: locations = [] } = useQuery({
+    queryKey: ["loc-all"],
+    queryFn: async () => (await supabase.from("locations").select("id,location").order("location")).data ?? [],
+  });
+  const { data: plants = [] } = useQuery({
+    queryKey: ["plants-all"],
+    queryFn: async () => (await supabase.from("plants").select("id,name,location_id").order("name")).data ?? [],
+  });
+  const { data: departments = [] } = useQuery({
+    queryKey: ["depts-all-u"],
+    queryFn: async () => (await supabase.from("departments").select("id,name,plant_id").is("deleted_at", null).order("name")).data ?? [],
+  });
+
+  const [q, setQ] = useState("");
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [addRoleFor, setAddRoleFor] = useState<{ user_id: string; email: string } | null>(null);
+  const [editRoleFor, setEditRoleFor] = useState<RoleRow | null>(null);
+  const [editUserFor, setEditUserFor] = useState<{ user_id: string; email: string } | null>(null);
+  const [revokeRole, setRevokeRole] = useState<{ id: string; label: string } | null>(null);
+  const [deleteUserFor, setDeleteUserFor] = useState<{ user_id: string; email: string } | null>(null);
+
+  const users = data?.users ?? [];
+  const roles = (data?.roles ?? []) as RoleRow[];
+
+  const rowsByUser = useMemo(() => {
+    const rolesByUser = new Map<string, RoleRow[]>();
+    for (const r of roles) {
+      const arr = rolesByUser.get(r.user_id) ?? [];
+      arr.push(r);
+      rolesByUser.set(r.user_id, arr);
+    }
+    return users
+      .map((u) => ({
+        ...u,
+        roles: rolesByUser.get(u.user_id) ?? [],
+      }))
+      .filter((u) => u.roles.length > 0);
+  }, [users, roles]);
+
+  const filtered = q
+    ? rowsByUser.filter((r) => r.email.toLowerCase().includes(q.toLowerCase()))
+    : rowsByUser;
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["users-and-roles"] });
+
+  const removeRoleM = useMutation({
+    mutationFn: (id: string) => removeRoleFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Role revoked", {
+        description: revokeRole
+          ? `${revokeRole.label} was removed successfully.`
+          : "The role was removed successfully.",
+      });
+      setRevokeRole(null);
+      invalidate();
+    },
+    onError: (e: Error) => {
+      toast.error("Could not revoke role", {
+        description: e?.message || "An unexpected error occurred. Please try again.",
+      });
+    },
+  });
+
+  const deleteU = useMutation({
+    mutationFn: (user_id: string) => deleteUserFn({ data: { user_id } }),
+    onSuccess: () => {
+      toast.success("User deleted.");
+      setDeleteUserFor(null);
+      invalidate();
+    },
+    onError: (e: unknown) => {
+      console.error("[deleteUser] failed", e);
+      const msg =
+        e instanceof Error && e.message
+          ? e.message
+          : typeof e === "string"
+            ? e
+            : (e as { message?: string })?.message ?? "Failed to delete user.";
+      toast.error(msg);
+    },
+  });
+
+  // Export columns
+  const exportRows = filtered.flatMap((u) =>
+    u.roles.length
+      ? u.roles.map((r) => ({
+          email: u.email,
+          name: (u as any).employee?.name ?? "",
+          code: (u as any).employee?.employee_code ?? "",
+          role: ROLE_LABEL[r.role],
+          location: r.locations?.location ?? "",
+          plant: r.plants?.name ?? "",
+          department: r.departments?.name ?? "",
+          last_sign_in: u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString() : "Never",
+        }))
+      : [
+          {
+            email: u.email,
+            name: (u as any).employee?.name ?? "",
+            code: (u as any).employee?.employee_code ?? "",
+            role: "— none —",
+            location: "",
+            plant: "",
+            department: "",
+            last_sign_in: u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString() : "Never",
+          },
+        ],
+  );
+
+  return (
+    <AppShell navGroups={ADMIN_NAV} title="Admin Console">
+      <PageHeader
+        title="Users & Roles"
+        description="Add dashboard users and assign roles scoped to location, plant, or department. Users and employees are managed separately — adding a user here does not create an employee record."
+        actions={
+          <div className="flex items-center gap-2">
+            <ExportMenu
+              data={exportRows}
+              columns={[
+                { key: "email", header: "Email" },
+                { key: "name", header: "Name" },
+                { key: "code", header: "Employee ID" },
+                { key: "role", header: "Role" },
+                { key: "location", header: "Location" },
+                { key: "plant", header: "Plant" },
+                { key: "department", header: "Department" },
+                { key: "last_sign_in", header: "Last sign-in" },
+              ]}
+              filename="users_and_roles"
+              title="Users & Roles"
+              subtitle="Enterprise user access matrix"
+            />
+            <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <UserPlus className="w-4 h-4 mr-1.5" />
+                  Add user
+                </Button>
+              </DialogTrigger>
+              <InviteDialog
+                onClose={() => setInviteOpen(false)}
+                locations={locations}
+                plants={plants}
+                departments={departments}
+                onInvited={() => {
+                  invalidate();
+                  setInviteOpen(false);
+                }}
+              />
+            </Dialog>
+          </div>
+        }
+      />
+
+      <div className="flex items-center gap-2 mb-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
+          <Input
+            placeholder="Search by email, name or employee ID"
+            className="pl-8"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
+        <div className="text-xs text-muted-foreground ml-auto">
+          {filtered.length} user{filtered.length === 1 ? "" : "s"}
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50 border-b border-border">
+            <tr>
+              {["User", "Roles & scope", "Last sign-in", "Actions"].map((h) => (
+                <th
+                  key={h}
+                  className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {isLoading ? (
+              <tr>
+                <td colSpan={4} className="text-center py-12 text-sm text-muted-foreground">
+                  Loading users…
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="text-center py-12 text-sm text-muted-foreground">
+                  No users found.
+                </td>
+              </tr>
+            ) : (
+              filtered.map((u) => (
+                <tr key={u.user_id} className="hover:bg-muted/30 align-top">
+                  <td className="px-4 py-3">
+                    <div className="text-sm font-medium">{u.email}</div>
+                    <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
+                      {u.user_id.slice(0, 8)}…
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-3">
+                    {u.roles.length === 0 ? (
+                      <span className="text-xs text-muted-foreground italic">No roles assigned</span>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        {u.roles.map((r) => (
+                          <div key={r.id} className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs">
+                              <Shield className="w-3 h-3 mr-1" />
+                              {ROLE_LABEL[r.role]}
+                            </Badge>
+                            <span className="text-[11px] text-muted-foreground">
+                              {[r.locations?.location, r.plants?.name, r.departments?.name]
+                                .filter(Boolean)
+                                .join(" › ") || "Global"}
+                            </span>
+                            <button
+                              type="button"
+                              className="text-muted-foreground hover:text-primary transition-colors"
+                              onClick={() => setEditRoleFor(r)}
+                              title="Edit role & scope"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              className="text-muted-foreground hover:text-destructive transition-colors"
+                              onClick={() => setRevokeRole({ id: r.id, label: ROLE_LABEL[r.role] })}
+                              title="Revoke role"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                    {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString() : "Never"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditUserFor({ user_id: u.user_id, email: u.email })}
+                        title="Edit user email"
+                      >
+                        <Pencil className="w-3.5 h-3.5 mr-1" />
+                        Edit
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setAddRoleFor({ user_id: u.user_id, email: u.email })}
+                      >
+                        <Plus className="w-3.5 h-3.5 mr-1" />
+                        Role
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setDeleteUserFor({ user_id: u.user_id, email: u.email })}
+                        title="Delete user permanently"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <UserX className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {addRoleFor && (
+        <AddRoleDialog
+          open={!!addRoleFor}
+          onClose={() => setAddRoleFor(null)}
+          user={addRoleFor}
+          locations={locations}
+          plants={plants}
+          departments={departments}
+          onAdded={() => {
+            invalidate();
+            setAddRoleFor(null);
+          }}
+        />
+      )}
+
+      {editRoleFor && (
+        <EditRoleDialog
+          open={!!editRoleFor}
+          onClose={() => setEditRoleFor(null)}
+          roleRow={editRoleFor}
+          locations={locations}
+          plants={plants}
+          departments={departments}
+          onUpdated={() => {
+            invalidate();
+            setEditRoleFor(null);
+          }}
+        />
+      )}
+
+      {editUserFor && (
+        <EditUserDialog
+          open={!!editUserFor}
+          onClose={() => setEditUserFor(null)}
+          user={editUserFor}
+          onUpdated={() => {
+            invalidate();
+            setEditUserFor(null);
+          }}
+        />
+      )}
+
+      <ConfirmDialog
+        open={!!revokeRole}
+        onOpenChange={(o) => !o && setRevokeRole(null)}
+        title="Revoke role?"
+        description={
+          revokeRole
+            ? `This will remove the "${revokeRole.label}" role. The user will immediately lose access granted by this role.`
+            : ""
+        }
+        confirmLabel="Revoke"
+        destructive
+        loading={removeRoleM.isPending}
+        onConfirm={() => {
+          if (revokeRole) removeRoleM.mutate(revokeRole.id);
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!deleteUserFor}
+        onOpenChange={(o) => !o && setDeleteUserFor(null)}
+        title="Delete user permanently?"
+        description={
+          deleteUserFor
+            ? `This will permanently delete "${deleteUserFor.email}" — including their auth account, employee record, and all assigned roles. This action cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete user"
+        destructive
+        loading={deleteU.isPending}
+        onConfirm={() => {
+          if (deleteUserFor) {
+            deleteU.mutate(deleteUserFor.user_id);
+          }
+        }}
+      />
+    </AppShell>
+  );
+}
+
+type Loc = { id: string; location: string };
+type Plt = { id: string; name: string; location_id?: string };
+type Dept = { id: string; name: string; plant_id?: string };
+
+function ScopePicker({
+  role,
+  locations,
+  plants,
+  departments,
+  value,
+  onChange,
+}: {
+  role: AppRole;
+  locations: Loc[];
+  plants: Plt[];
+  departments: Dept[];
+  value: { location_id: string | null; plant_id: string | null; plant_ids?: string[] | null; department_id: string | null };
+  onChange: (v: { location_id: string | null; plant_id: string | null; plant_ids?: string[] | null; department_id: string | null }) => void;
+}) {
+  const needsLoc = role === "location_admin" || role === "admin" || role === "plant_admin" || role === "department_admin" || role === "dept_user" || role === "pe_user" || role === "mgmt_viewer" || role === "employee" || role === "hr";
+  const needsPlant = role === "plant_admin" || role === "admin" || role === "department_admin" || role === "dept_user" || role === "pe_user" || role === "mgmt_viewer" || role === "employee" || role === "hr";
+  const needsDept = role === "department_admin" || role === "dept_user" || role === "hr";
+
+  const filteredPlants = value.location_id ? plants.filter((p) => p.location_id === value.location_id) : plants;
+  const filteredDepts = value.plant_id ? departments.filter((d) => d.plant_id === value.plant_id) : departments;
+
+  if (!needsLoc && !needsPlant && !needsDept) {
+    return (
+      <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
+        This role is global (no location / plant / department scope required).
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid gap-2">
+      {needsLoc && (
+        <div>
+          <Label className="text-xs">Location</Label>
+          <Select
+            value={value.location_id ?? ""}
+            onValueChange={(v) => onChange({ location_id: v || null, plant_id: null, plant_ids: [], department_id: null })}
+          >
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="Select location" />
+            </SelectTrigger>
+            <SelectContent>
+              {locations.map((l) => (
+                <SelectItem key={l.id} value={l.id}>
+                  {l.location}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {needsPlant && (
+        <div className="space-y-1.5">
+          <Label className="text-xs">Plants (Select one or more)</Label>
+          <div className="grid grid-cols-2 gap-2 border border-border bg-background rounded-md p-3 max-h-48 overflow-y-auto">
+            {filteredPlants.length === 0 ? (
+              <div className="text-xs text-muted-foreground col-span-2 text-center py-2">Select a location first</div>
+            ) : (
+              filteredPlants.map((p) => {
+                const selected = value.plant_ids?.includes(p.id) ?? false;
+                return (
+                  <label
+                    key={p.id}
+                    className={cn(
+                      "flex items-center gap-2 rounded border p-2 text-xs font-medium cursor-pointer transition-all hover:bg-muted/40",
+                      selected ? "border-primary bg-primary/5 text-primary font-bold" : "border-border bg-background"
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      className="rounded text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                      checked={selected}
+                      onChange={(e) => {
+                        const current = value.plant_ids || [];
+                        const next = e.target.checked
+                          ? [...current, p.id]
+                          : current.filter((id) => id !== p.id);
+                        onChange({ ...value, plant_ids: next, plant_id: next[0] || null, department_id: null });
+                      }}
+                    />
+                    <span className="truncate">{p.name}</span>
+                  </label>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+      {needsDept && (
+        <div>
+          <Label className="text-xs">Department</Label>
+          <Select
+            value={value.department_id ?? ""}
+            onValueChange={(v) => onChange({ ...value, department_id: v || null })}
+          >
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="Select department" />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredDepts.map((d) => (
+                <SelectItem key={d.id} value={d.id}>
+                  {d.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InviteDialog({
+  onClose,
+  onInvited,
+  locations,
+  plants,
+  departments,
+}: {
+  onClose: () => void;
+  onInvited: () => void;
+  locations: Loc[];
+  plants: Plt[];
+  departments: Dept[];
+}) {
+  const inviteFn = useServerFn(inviteUser);
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<AppRole>("dept_user");
+  const [scope, setScope] = useState<{ location_id: string | null; plant_id: string | null; plant_ids?: string[] | null; department_id: string | null }>({
+    location_id: null,
+    plant_id: null,
+    plant_ids: [],
+    department_id: null,
+  });
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    if (!email) return toast.error("Email is required.");
+    setBusy(true);
+    try {
+      await inviteFn({
+        data: {
+          email,
+          roles: [
+            {
+              role,
+              location_id: scope.location_id,
+              plant_id: scope.plant_id,
+              plant_ids: scope.plant_ids,
+              department_id: scope.department_id,
+            },
+          ],
+        },
+      });
+      toast.success("User added. They can sign in with OTP on this email.");
+      onInvited();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <DialogContent className="max-w-lg">
+      <DialogHeader>
+        <DialogTitle>Add a user</DialogTitle>
+        <DialogDescription>
+          Creates a dashboard user with the chosen role and scope. The user can sign in from the login page by entering this email and the OTP sent to it. No invite email is sent, and no employee record is created — manage employees separately from the Employees page.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="grid gap-3 py-2">
+        <div>
+          <Label className="text-xs">Email address</Label>
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="name@company.com"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Initial role</Label>
+          <Select value={role} onValueChange={(v) => { setRole(v as AppRole); setScope({ location_id: null, plant_id: null, plant_ids: [], department_id: null }); }}>
+            <SelectTrigger className="h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ROLES.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {ROLE_LABEL[r]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <ScopePicker
+          role={role}
+          locations={locations}
+          plants={plants}
+          departments={departments}
+          value={scope}
+          onChange={setScope}
+        />
+      </div>
+      <DialogFooter>
+        <Button variant="ghost" onClick={onClose} disabled={busy}>
+          Cancel
+        </Button>
+        <Button onClick={submit} disabled={busy}>
+          {busy ? "Adding…" : "Add user"}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
+
+function AddRoleDialog({
+  open,
+  onClose,
+  user,
+  onAdded,
+  locations,
+  plants,
+  departments,
+}: {
+  open: boolean;
+  onClose: () => void;
+  user: { user_id: string; email: string };
+  onAdded: () => void;
+  locations: Loc[];
+  plants: Plt[];
+  departments: Dept[];
+}) {
+  const addRoleFn = useServerFn(addRole);
+  const [role, setRole] = useState<AppRole>("dept_user");
+  const [scope, setScope] = useState<{ location_id: string | null; plant_id: string | null; plant_ids?: string[] | null; department_id: string | null }>({
+    location_id: null,
+    plant_id: null,
+    plant_ids: [],
+    department_id: null,
+  });
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    setBusy(true);
+    try {
+      await addRoleFn({
+        data: {
+          user_id: user.user_id,
+          role,
+          location_id: scope.location_id,
+          plant_ids: scope.plant_ids,
+          department_id: scope.department_id,
+        },
+      });
+      toast.success("Role assigned.");
+      onAdded();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Assign role</DialogTitle>
+          <DialogDescription>{user.email}</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 py-2">
+          <div>
+            <Label className="text-xs">Role</Label>
+            <Select value={role} onValueChange={(v) => { setRole(v as AppRole); setScope({ location_id: null, plant_id: null, plant_ids: [], department_id: null }); }}>
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLES.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <ScopePicker
+            role={role}
+            locations={locations}
+            plants={plants}
+            departments={departments}
+            value={scope}
+            onChange={setScope}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button onClick={submit} disabled={busy}>
+            {busy ? "Saving…" : "Assign role"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditRoleDialog({
+  open,
+  onClose,
+  roleRow,
+  onUpdated,
+  locations,
+  plants,
+  departments,
+}: {
+  open: boolean;
+  onClose: () => void;
+  roleRow: RoleRow;
+  onUpdated: () => void;
+  locations: Loc[];
+  plants: Plt[];
+  departments: Dept[];
+}) {
+  const updateRoleFn = useServerFn(updateRole);
+  const [role, setRole] = useState<AppRole>(roleRow.role);
+  const [scope, setScope] = useState<{
+    location_id: string | null;
+    plant_id: string | null;
+    plant_ids?: string[] | null;
+    department_id: string | null;
+  }>({
+    location_id: roleRow.location_id,
+    plant_id: roleRow.plant_id,
+    department_id: roleRow.department_id,
+  });
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    setBusy(true);
+    try {
+      await updateRoleFn({
+        data: {
+          id: roleRow.id,
+          role,
+          location_id: scope.location_id,
+          plant_id: scope.plant_id,
+          department_id: scope.department_id,
+        },
+      });
+      toast.success("Role & Scope updated in database.");
+      onUpdated();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Role & Scope</DialogTitle>
+          <DialogDescription>Modify assigned role type or location/plant/department scope in database.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 py-2">
+          <div>
+            <Label className="text-xs">Role</Label>
+            <Select
+              value={role}
+              onValueChange={(v) => {
+                setRole(v as AppRole);
+                setScope({ location_id: null, plant_id: null, plant_ids: [], department_id: null });
+              }}
+            >
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLES.map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <ScopePicker
+            role={role}
+            locations={locations}
+            plants={plants}
+            departments={departments}
+            value={scope}
+            onChange={setScope}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button onClick={submit} disabled={busy}>
+            {busy ? "Updating…" : "Save changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditUserDialog({
+  open,
+  onClose,
+  user,
+  onUpdated,
+}: {
+  open: boolean;
+  onClose: () => void;
+  user: { user_id: string; email: string };
+  onUpdated: () => void;
+}) {
+  const updateUserEmailFn = useServerFn(updateUserEmail);
+  const [email, setEmail] = useState(user.email);
+  const [busy, setBusy] = useState(false);
+
+  async function submit() {
+    if (!email.trim()) return toast.error("Email is required.");
+    setBusy(true);
+    try {
+      await updateUserEmailFn({
+        data: {
+          user_id: user.user_id,
+          email: email.trim(),
+        },
+      });
+      toast.success("User email updated in database.");
+      onUpdated();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit User Email</DialogTitle>
+          <DialogDescription>Update the primary email address for this user.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-3 py-2">
+          <div>
+            <Label className="text-xs">Email address</Label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@company.com"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button onClick={submit} disabled={busy}>
+            {busy ? "Saving…" : "Save email"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

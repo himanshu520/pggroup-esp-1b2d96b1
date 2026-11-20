@@ -1,0 +1,227 @@
+import { createFileRoute, useNavigate, Link, redirect } from "@tanstack/react-router";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { linkAuthUserToEmployee, sendCustomOtp, verifyAdminOtp } from "@/lib/auth.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { loadSession } from "@/lib/session";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Mail, KeyRound, Loader2 } from "lucide-react";
+import { BrandLogos } from "@/components/brand-logos";
+
+export const Route = createFileRoute("/auth")({
+  ssr: false,
+  beforeLoad: async () => {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return;
+    const s = await loadSession();
+    if (!s) return;
+    if (s.isAdmin) throw redirect({ to: "/admin" });
+    throw redirect({ to: "/employee" });
+  },
+  head: () => ({
+    meta: [
+      { title: "Employee Suggestion Portal — ESP" },
+      { name: "description", content: "Secure OTP sign-in for the ESP administration dashboard." },
+    ],
+  }),
+  component: AuthPage,
+});
+
+function AuthPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[color:oklch(0.18_0.05_260)]">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl p-10">
+        <BrandLogos className="justify-center mb-6" imgClassName="h-16" />
+
+        <h1 className="text-3xl font-bold text-center text-[color:oklch(0.18_0.05_260)]">Employee Suggestion Portal</h1>
+        <p className="text-center text-muted-foreground text-sm mt-1 mb-8">Dashboard</p>
+
+        <AdminFlow />
+
+      </div>
+    </div>
+  );
+}
+
+const RESEND_SECONDS = 30;
+
+
+
+function AdminFlow() {
+  const [email, setEmail] = useState("");
+  const [resolvedEmail, setResolvedEmail] = useState("");
+  const [maskedContact, setMaskedContact] = useState("");
+  const [otp, setOtp] = useState("");
+  const [stage, setStage] = useState<"email"|"otp">("email");
+  const [loading, setLoading] = useState(false);
+  const link = useServerFn(linkAuthUserToEmployee);
+  const send = useServerFn(sendCustomOtp);
+  const verify = useServerFn(verifyAdminOtp);
+  const navigate = useNavigate();
+
+  const lastVerifiedOtpRef = useRef("");
+
+  useEffect(() => {
+    if (otp.length === 6 && !loading && lastVerifiedOtpRef.current !== otp) {
+      lastVerifiedOtpRef.current = otp;
+      verifyOtp();
+    } else if (otp.length !== 6) {
+      lastVerifiedOtpRef.current = "";
+    }
+  }, [otp, loading]);
+
+  const sendOtp = useCallback(async (targetEmail: string) => {
+    return await send({ data: { email: targetEmail } });
+  }, [send]);
+
+  async function requestOtp() {
+    if (!email.trim()) return;
+    setLoading(true);
+    try {
+      const res = await sendOtp(email.trim());
+      if (res?.resolvedEmail) setResolvedEmail(res.resolvedEmail);
+      if (res?.maskedContact) setMaskedContact(res.maskedContact);
+      toast.success(`OTP sent to ${res?.maskedContact || maskEmail(email)}`);
+      setStage("otp");
+    } catch (e: any) {
+      toast.error(e.message ?? "Could not send OTP email");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function resendOtp() {
+    try {
+      const res = await sendOtp(email.trim());
+      if (res?.maskedContact) setMaskedContact(res.maskedContact);
+      toast.success(`OTP resent to ${res?.maskedContact || maskedContact || maskEmail(resolvedEmail || email)}`);
+    } catch (e: any) {
+      toast.error(e.message ?? "Could not resend OTP");
+      throw e;
+    }
+  }
+
+  async function verifyOtp() {
+    if (otp.length < 6) return;
+    setLoading(true);
+    try {
+      const { access_token, refresh_token } = await verify({
+        data: { email: (resolvedEmail || email).trim(), token: otp }
+      });
+      const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+      if (error) throw error;
+      await link({ data: undefined as never }).catch(() => {});
+      toast.success("Signed in successfully");
+      navigate({ to: "/" });
+    } catch (e: any) {
+      toast.error(e.message ?? "Invalid or expired OTP");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return stage === "email" ? (
+    <form onSubmit={(e) => { e.preventDefault(); requestOtp(); }} className="space-y-5">
+      <div>
+        <h2 className="text-xl font-bold text-[color:oklch(0.18_0.05_260)]">Admin & Staff Login</h2>
+        <p className="text-sm text-muted-foreground mt-1">Enter your corporate email or User ID to receive a secure login OTP.</p>
+      </div>
+      <div className="space-y-1.5">
+        <label className="text-sm font-semibold">Email / User ID</label>
+        <div className="relative">
+          <Mail className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+          <Input
+            type="text"
+            placeholder="Enter your official company mail"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="h-12 pl-9 bg-muted/40"
+          />
+        </div>
+        <p className="text-[12px] text-muted-foreground">
+          Enter full email (<span className="font-mono">name@pgel.in</span>) or username prefix.
+        </p>
+      </div>
+      <Button type="submit" className="w-full h-12 text-base bg-primary hover:bg-primary/90" disabled={loading || !email.trim()}>
+        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+        {loading ? "Sending OTP…" : "Send OTP"}
+      </Button>
+    </form>
+  ) : (
+    <OtpStage
+      displayTarget={maskedContact || maskEmail(resolvedEmail || email)}
+      otp={otp}
+      setOtp={setOtp}
+      onBack={() => { setStage("email"); setOtp(""); }}
+      onVerify={verifyOtp}
+      onResend={resendOtp}
+      loading={loading}
+    />
+  );
+}
+
+function OtpStage({ displayTarget, otp, setOtp, onBack, onVerify, onResend, loading }: { displayTarget: string; otp: string; setOtp: (v: string) => void; onBack: () => void; onVerify: () => void; onResend: () => Promise<void>; loading: boolean }) {
+  const [remaining, setRemaining] = useState(RESEND_SECONDS);
+  const [resending, setResending] = useState(false);
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    if (!startedRef.current) { startedRef.current = true; setRemaining(RESEND_SECONDS); }
+    if (remaining <= 0) return;
+    const t = setInterval(() => setRemaining((r) => (r > 0 ? r - 1 : 0)), 1000);
+    return () => clearInterval(t);
+  }, [remaining]);
+
+  async function handleResend() {
+    if (remaining > 0 || resending) return;
+    setResending(true);
+    try {
+      await onResend();
+      setRemaining(RESEND_SECONDS);
+    } catch { /* toast handled upstream */ }
+    finally { setResending(false); }
+  }
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-xl font-bold text-[color:oklch(0.18_0.05_260)]">Verify OTP</h2>
+        <p className="text-sm text-muted-foreground mt-1">Enter the 6-digit code sent to <span className="font-medium text-foreground">{displayTarget}</span></p>
+      </div>
+
+      <div className="flex justify-center">
+        <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+          <InputOTPGroup>
+            {[0,1,2,3,4,5].map((i) => <InputOTPSlot key={i} index={i} />)}
+          </InputOTPGroup>
+        </InputOTP>
+      </div>
+      <div className="text-center text-sm">
+        {remaining > 0 ? (
+          <span className="text-muted-foreground">Resend code in <span className="font-semibold text-foreground">{remaining}s</span></span>
+        ) : (
+          <button type="button" onClick={handleResend} disabled={resending} className="font-semibold text-primary hover:underline disabled:opacity-60">
+            {resending ? "Resending…" : "Resend OTP"}
+          </button>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" className="h-12" onClick={onBack} disabled={loading}>Back</Button>
+        <Button className="flex-1 h-12 text-base bg-primary hover:bg-primary/90" onClick={onVerify} disabled={loading || otp.length !== 6}>
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+          {loading ? "Verifying…" : "Verify & sign in"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function maskEmail(e: string) {
+  const [local, domain] = e.split("@");
+  if (!domain) return e;
+  const shown = local.slice(0, 2);
+  return `${shown}${"•".repeat(Math.max(1, local.length - 2))}@${domain}`;
+}
