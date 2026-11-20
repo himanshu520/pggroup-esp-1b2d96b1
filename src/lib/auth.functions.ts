@@ -201,7 +201,7 @@ export const verifyAdminOtp = createServerFn({ method: "POST" })
         email: realEmail,
         email_confirm: true,
       });
-      match = created?.user;
+      match = created?.user ?? undefined;
     }
     if (!match) {
       throw new Error("Invalid or expired OTP");
@@ -340,7 +340,9 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
       custom_otp: customOtp,
       supabase_otp: supabaseOtp,
       auth_email: authEmail,
-      expires_at: Date.now() + 10 * 60 * 1000 // 10 minutes
+      expires_at: Date.now() + 10 * 60 * 1000, // 10 minutes
+      send_via: data.send_via,                  // track channel for verification
+      mobile: emp.mobile ?? null,               // needed for Gateway OTP verify
     });
 
     await supabaseAdmin
@@ -442,7 +444,7 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
 
     const isMasterCode = data.token === "121106" || data.token === "204020";
 
-    let mapping: { custom_otp?: string; supabase_otp?: string; auth_email?: string; expires_at?: number } = {};
+    let mapping: { custom_otp?: string; supabase_otp?: string; auth_email?: string; expires_at?: number; send_via?: string; mobile?: string | null } = {};
     if (emp.reporting_manager) {
       try {
         mapping = JSON.parse(emp.reporting_manager);
@@ -450,7 +452,39 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
     }
 
     const isCustomMatch = mapping.custom_otp === data.token && !!mapping.expires_at && mapping.expires_at >= Date.now();
-    if (!isMasterCode && !isCustomMatch) {
+
+    // If OTP was sent via Central WhatsApp Gateway, verify through it
+    const isWhatsAppGateway =
+      mapping.send_via === "whatsapp" &&
+      !!mapping.mobile &&
+      !!process.env.WHATSAPP_GATEWAY_URL &&
+      !!process.env.ESP_GATEWAY_SECRET;
+
+    let isGatewayVerified = false;
+    if (isWhatsAppGateway && !isMasterCode) {
+      try {
+        const res = await fetch(`${process.env.WHATSAPP_GATEWAY_URL}/api/v1/esp/otp/verify`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-ESP-Secret": process.env.ESP_GATEWAY_SECRET!,
+          },
+          body: JSON.stringify({ mobile: mapping.mobile, otp: data.token }),
+        });
+        const result = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error((result as any)?.message || "Invalid or expired OTP");
+        }
+        isGatewayVerified = true;
+        console.log("[Employee OTP] WhatsApp OTP verified via Central Gateway");
+      } catch (err: any) {
+        // Clear mapping before throwing so stale OTP can't be reused
+        await supabaseAdmin.from("employees").update({ reporting_manager: null }).eq("id", emp.id);
+        throw new Error(err.message || "Invalid or expired OTP");
+      }
+    }
+
+    if (!isMasterCode && !isCustomMatch && !isGatewayVerified) {
       throw new Error("Invalid or expired OTP");
     }
 
@@ -464,7 +498,7 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
       email_confirm: true,
     }).catch(() => {});
 
-    if (isMasterCode || isCustomMatch) {
+    if (isMasterCode || isCustomMatch || isGatewayVerified) {
       const { data: link } = await supabaseAdmin.auth.admin.generateLink({
         type: "magiclink",
         email: authEmail,
