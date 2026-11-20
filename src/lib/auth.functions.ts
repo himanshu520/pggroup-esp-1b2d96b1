@@ -336,13 +336,22 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
     if (!supabaseOtp) throw new Error("Failed to generate OTP");
 
     // Store mapping in reporting_manager column
+    // Normalize mobile to E.164 format (+91XXXXXXXXXX) for Gateway compatibility
+    const rawMobile = emp.mobile ?? null;
+    const normalizedMobile = rawMobile
+      ? rawMobile.startsWith("+") ? rawMobile
+        : rawMobile.startsWith("91") && rawMobile.length === 12 ? `+${rawMobile}`
+        : rawMobile.length === 10 ? `+91${rawMobile}`
+        : rawMobile
+      : null;
+
     const mapping = JSON.stringify({
       custom_otp: customOtp,
       supabase_otp: supabaseOtp,
       auth_email: authEmail,
       expires_at: Date.now() + 10 * 60 * 1000, // 10 minutes
       send_via: data.send_via,                  // track channel for verification
-      mobile: emp.mobile ?? null,               // needed for Gateway OTP verify
+      mobile: normalizedMobile,                 // E.164 normalized for Gateway OTP verify
     });
 
     await supabaseAdmin
@@ -365,23 +374,26 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
               "X-ESP-Secret": gatewaySecret,
             },
             body: JSON.stringify({
-              mobile: emp.mobile!,
+              mobile: normalizedMobile!,          // E.164 normalized
               employee_id: emp.employee_code,
               employee_name: emp.name || emp.employee_code,
               app_name: "Employee Suggestion Portal",
-              otp_override: customOtp, // pass our custom OTP so gateway uses it
+              // otp_override removed — Gateway generates its own OTP and manages session
             }),
           });
           const result = await res.json().catch(() => ({}));
           if (!res.ok) {
-            const retryAfter = (result as any)?.details?.retry_after_seconds ?? (result as any)?.retry_after_seconds;
+            const retryAfter = (result as any)?.error?.details?.retry_after_seconds
+              ?? (result as any)?.details?.retry_after_seconds
+              ?? (result as any)?.retry_after_seconds;
+            const errMsg = (result as any)?.error?.message || (result as any)?.message || `Gateway error (${res.status})`;
             if (res.status === 429 || retryAfter) {
-              throw Object.assign(new Error((result as any)?.message || `Please wait ${retryAfter}s before resending.`), { retry_after: retryAfter });
+              throw Object.assign(new Error(errMsg), { retry_after: retryAfter });
             }
-            throw new Error((result as any)?.message || `Gateway error (${res.status})`);
+            throw new Error(errMsg);
           }
-          console.log(`[Employee OTP] WhatsApp OTP sent via Central Gateway to ${maskPhone(emp.mobile!)}`);
-          return { send_via: "whatsapp", maskedContact: maskPhone(emp.mobile!), name: emp.name, sent: true };
+          console.log(`[Employee OTP] WhatsApp OTP sent via Central Gateway to ${maskPhone(normalizedMobile!)}`);
+          return { send_via: "whatsapp", maskedContact: maskPhone(normalizedMobile!), name: emp.name, sent: true };
         } catch (err: any) {
           console.error("[Employee OTP] Central Gateway error:", err.message || err);
           throw new Error(err.message || "Failed to send WhatsApp OTP. Please try again.");
@@ -461,7 +473,8 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
       !!process.env.ESP_GATEWAY_SECRET;
 
     let isGatewayVerified = false;
-    if (isWhatsAppGateway && !isMasterCode) {
+    if (isWhatsAppGateway && !isMasterCode && !isCustomMatch) {
+      // Verify via Central Gateway — it manages its own OTP session per mobile
       try {
         const res = await fetch(`${process.env.WHATSAPP_GATEWAY_URL}/api/v1/esp/otp/verify`, {
           method: "POST",
@@ -472,13 +485,19 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
           body: JSON.stringify({ mobile: mapping.mobile, otp: data.token }),
         });
         const result = await res.json().catch(() => ({}));
+        // Extract error message from nested error object (Gateway format)
+        const errMsg =
+          (result as any)?.error?.message ||
+          (result as any)?.message ||
+          "Invalid or expired OTP";
         if (!res.ok) {
-          throw new Error((result as any)?.message || "Invalid or expired OTP");
+          console.error("[Employee OTP] Gateway verify failed:", errMsg);
+          throw new Error(errMsg);
         }
         isGatewayVerified = true;
-        console.log("[Employee OTP] WhatsApp OTP verified via Central Gateway");
+        console.log("[Employee OTP] WhatsApp OTP verified via Central Gateway ✓");
       } catch (err: any) {
-        // Clear mapping before throwing so stale OTP can't be reused
+        // Clear stale mapping so user can request a fresh OTP
         await supabaseAdmin.from("employees").update({ reporting_manager: null }).eq("id", emp.id);
         throw new Error(err.message || "Invalid or expired OTP");
       }
