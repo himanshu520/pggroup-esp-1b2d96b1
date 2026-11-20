@@ -349,14 +349,51 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
       .eq("id", emp.id);
 
     if (data.send_via === "whatsapp") {
-      // Send the custom 6-digit OTP via WhatsApp
-      const { sendOtpWhatsApp } = await import("./whatsapp.server");
-      try {
-        await sendOtpWhatsApp(emp.mobile!, customOtp, emp.name);
-        return { send_via: "whatsapp", maskedContact: maskPhone(emp.mobile!), name: emp.name, sent: true };
-      } catch (waErr: any) {
-        console.error("[Employee OTP] WhatsApp dispatch error:", waErr);
-        throw new Error(waErr.message || "Failed to send OTP via WhatsApp");
+      // Send OTP via Central PG GROUP WhatsApp Gateway
+      const gatewayUrl = process.env.WHATSAPP_GATEWAY_URL;
+      const gatewaySecret = process.env.ESP_GATEWAY_SECRET;
+
+      if (gatewayUrl && gatewaySecret) {
+        // Use Central Gateway (preferred)
+        try {
+          const res = await fetch(`${gatewayUrl}/api/v1/esp/otp/send`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-ESP-Secret": gatewaySecret,
+            },
+            body: JSON.stringify({
+              mobile: emp.mobile!,
+              employee_id: emp.employee_code,
+              employee_name: emp.name || emp.employee_code,
+              app_name: "Employee Suggestion Portal",
+              otp_override: customOtp, // pass our custom OTP so gateway uses it
+            }),
+          });
+          const result = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            const retryAfter = (result as any)?.details?.retry_after_seconds ?? (result as any)?.retry_after_seconds;
+            if (res.status === 429 || retryAfter) {
+              throw Object.assign(new Error((result as any)?.message || `Please wait ${retryAfter}s before resending.`), { retry_after: retryAfter });
+            }
+            throw new Error((result as any)?.message || `Gateway error (${res.status})`);
+          }
+          console.log(`[Employee OTP] WhatsApp OTP sent via Central Gateway to ${maskPhone(emp.mobile!)}`);
+          return { send_via: "whatsapp", maskedContact: maskPhone(emp.mobile!), name: emp.name, sent: true };
+        } catch (err: any) {
+          console.error("[Employee OTP] Central Gateway error:", err.message || err);
+          throw new Error(err.message || "Failed to send WhatsApp OTP. Please try again.");
+        }
+      } else {
+        // Fallback: legacy whatsapp.server providers
+        const { sendOtpWhatsApp } = await import("./whatsapp.server");
+        try {
+          await sendOtpWhatsApp(emp.mobile!, customOtp, emp.name);
+          return { send_via: "whatsapp", maskedContact: maskPhone(emp.mobile!), name: emp.name, sent: true };
+        } catch (waErr: any) {
+          console.error("[Employee OTP] WhatsApp dispatch error:", waErr);
+          throw new Error(waErr.message || "Failed to send OTP via WhatsApp");
+        }
       }
     } else {
       // Default: Send the custom 6-digit OTP via Email
