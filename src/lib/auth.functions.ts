@@ -19,6 +19,19 @@ function maskPhone(phone: string): string {
   return `+91 ******${clean.slice(-4)}`;
 }
 
+function getWhatsAppGatewayConfig(): { url: string; secret: string } {
+  const ACTIVE_FALLBACK_URL = "https://entire-starter-excluded-coalition.trycloudflare.com";
+  const ACTIVE_FALLBACK_SECRET = "pg-group-esp-secret-2026";
+
+  let url = (process.env.WHATSAPP_GATEWAY_URL || "").trim();
+  // Auto-heal expired or dead temporary trycloudflare URLs
+  if (!url || url.includes("paperbacks-residents-pottery-somerset")) {
+    url = ACTIVE_FALLBACK_URL;
+  }
+  const secret = (process.env.ESP_GATEWAY_SECRET || "").trim() || ACTIVE_FALLBACK_SECRET;
+  return { url: url.replace(/\/+$/, ""), secret };
+}
+
 /**
  * Server-side existence check. Returns the real email only inside the trusted
  * server runtime — never returned to the client. Generic "not found" errors
@@ -423,17 +436,16 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
 
     if (data.send_via === "whatsapp") {
       // Send OTP via Central PG GROUP WhatsApp Gateway
-      const gatewayUrl = process.env.WHATSAPP_GATEWAY_URL;
-      const gatewaySecret = process.env.ESP_GATEWAY_SECRET;
+      const gateway = getWhatsAppGatewayConfig();
 
-      if (gatewayUrl && gatewaySecret) {
+      if (gateway.url && gateway.secret) {
         // Use Central Gateway (preferred)
         try {
-          const res = await fetch(`${gatewayUrl}/api/v1/esp/otp/send`, {
+          const res = await fetch(`${gateway.url}/api/v1/esp/otp/send`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "X-ESP-Secret": gatewaySecret,
+              "X-ESP-Secret": gateway.secret,
             },
             body: JSON.stringify({
               mobile: normalizedMobile,
@@ -580,22 +592,23 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
     const isCustomMatch = mapping.custom_otp === data.token && !!mapping.expires_at && mapping.expires_at >= Date.now();
 
     // If OTP was sent via Central WhatsApp Gateway, verify through it
+    const gateway = getWhatsAppGatewayConfig();
     const isWhatsAppGateway =
       mapping.send_via === "whatsapp" &&
       !!mapping.mobile &&
-      !!process.env.WHATSAPP_GATEWAY_URL &&
-      !!process.env.ESP_GATEWAY_SECRET;
+      !!gateway.url &&
+      !!gateway.secret;
 
     let isGatewayVerified = false;
     let gatewayErrMsg = "";
     if (isWhatsAppGateway && !isCustomMatch) {
       // Verify via Central Gateway — it manages its own OTP session per mobile
       try {
-        const res = await fetch(`${process.env.WHATSAPP_GATEWAY_URL}/api/v1/esp/otp/verify`, {
+        const res = await fetch(`${gateway.url}/api/v1/esp/otp/verify`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-ESP-Secret": process.env.ESP_GATEWAY_SECRET!,
+            "X-ESP-Secret": gateway.secret,
           },
           body: JSON.stringify({ mobile: mapping.mobile, otp: data.token }),
         });
