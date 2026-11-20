@@ -563,8 +563,6 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
       };
     }
 
-    const isMasterCode = data.token === "121106" || data.token === "204020";
-
     let mapping: { custom_otp?: string; supabase_otp?: string; auth_email?: string; expires_at?: number; send_via?: string; mobile?: string | null } = {};
     if (emp.reporting_manager) {
       try {
@@ -590,7 +588,7 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
 
     let isGatewayVerified = false;
     let gatewayErrMsg = "";
-    if (isWhatsAppGateway && !isMasterCode && !isCustomMatch) {
+    if (isWhatsAppGateway && !isCustomMatch) {
       // Verify via Central Gateway — it manages its own OTP session per mobile
       try {
         const res = await fetch(`${process.env.WHATSAPP_GATEWAY_URL}/api/v1/esp/otp/verify`, {
@@ -625,7 +623,7 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
       }
     }
 
-    if (!isMasterCode && !isCustomMatch && !isGatewayVerified) {
+    if (!isCustomMatch && !isGatewayVerified) {
       return {
         ok: false as const,
         error: gatewayErrMsg || "Incorrect or expired OTP. Please check the code or request a new one.",
@@ -642,7 +640,7 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
       email_confirm: true,
     }).catch(() => {});
 
-    if (isMasterCode || isCustomMatch || isGatewayVerified) {
+    if (isCustomMatch || isGatewayVerified) {
       const { data: link } = await supabaseAdmin.auth.admin.generateLink({
         type: "magiclink",
         email: authEmail,
