@@ -12,9 +12,9 @@ export const Route = createFileRoute("/")({
   }),
   beforeLoad: async () => {
     const { data } = await supabase.auth.getSession();
-    if (!data.session) throw redirect({ to: "/login" });
+    if (!data.session) throw redirect({ to: "/employee/login" });
     const session = await loadSession();
-    if (!session) throw redirect({ to: "/login" });
+    if (!session) throw redirect({ to: "/employee/login" });
     if (session.isAdmin) throw redirect({ to: "/admin" });
     throw redirect({ to: "/employee" });
   },
