@@ -321,6 +321,9 @@ function EmployeeFlow({
           send_via: via,
         },
       });
+      if (!res.ok) {
+        throw new Error(res.error || "Could not send OTP");
+      }
       setMaskedPhone(res.maskedContact);
       if (res.name) setEmployeeName(res.name);
       return res.maskedContact;
@@ -338,7 +341,12 @@ function EmployeeFlow({
       toast.success(`OTP sent via ${channel} to ${masked}`);
       setStage("otp");
     } catch (e: any) {
-      toast.error(e.message ?? "Could not send OTP");
+      const msg = e?.message ?? "";
+      if (msg === "Failed to fetch" || msg.includes("fetch")) {
+        toast.error("Network error. Please check your connection and try again.");
+      } else {
+        toast.error(msg || "Could not send OTP");
+      }
     } finally {
       setLoading(false);
     }
@@ -358,16 +366,28 @@ function EmployeeFlow({
     if (otp.length !== 6) return;
     setLoading(true);
     try {
-      const { access_token, refresh_token } = await verify({
+      const res = await verify({
         data: { employee_code: empCode.trim(), token: otp },
       });
-      const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+      if (!res.ok) {
+        toast.error(res.error || "Invalid or expired OTP");
+        return;
+      }
+      const { error } = await supabase.auth.setSession({
+        access_token: res.access_token,
+        refresh_token: res.refresh_token,
+      });
       if (error) throw error;
       await link({ data: undefined as never }).catch(() => {});
       toast.success("Signed in");
       navigate({ to: "/employee" });
     } catch (e: any) {
-      toast.error(e.message ?? "Invalid or expired OTP");
+      const msg = e?.message ?? "";
+      if (msg === "Failed to fetch" || msg.includes("fetch")) {
+        toast.error("Network error. Please check your connection and try again.");
+      } else {
+        toast.error(msg || "Invalid or expired OTP");
+      }
     } finally {
       setLoading(false);
     }

@@ -295,23 +295,79 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
       ? `employee_code.ilike.${code},email.ilike.${code},email.ilike.${code}@pgel.in`
       : `employee_code.ilike.${code},email.ilike.${code}`;
 
-    const { data: emps } = await supabaseAdmin
+    let { data: emps } = await supabaseAdmin
       .from("employees")
       .select("id, email, name, active, mobile, employee_code")
       .or(filter)
       .limit(5);
 
-    const emp = emps?.find((e) => e.active);
+    let emp = emps?.find((e) => e.active);
+
+    // If not found in employees table, check esp_employees table
     if (!emp) {
-      throw new Error("Employee ID or email not found or inactive");
+      try {
+        const { data: espEmps } = await (supabaseAdmin.from as any)("esp_employees")
+          .select("id, employee_id, full_name, mobile, status")
+          .ilike("employee_id", code)
+          .eq("status", "active")
+          .limit(1);
+
+        if (espEmps && espEmps.length > 0) {
+          const esp: any = espEmps[0];
+          const safeCode = (esp.employee_id || "").toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+          const fallbackEmail = `${safeCode.toLowerCase()}@pgel.in`;
+
+          // Upsert into employees so all downstreams (session, reporting_manager OTP storage) work
+          const { data: upserted } = await supabaseAdmin
+            .from("employees")
+            .upsert(
+              {
+                employee_code: esp.employee_id,
+                name: esp.full_name,
+                mobile: esp.mobile,
+                email: fallbackEmail,
+                active: true,
+              },
+              { onConflict: "employee_code" }
+            )
+            .select("id, email, name, active, mobile, employee_code")
+            .maybeSingle();
+
+          if (upserted) {
+            emp = upserted;
+          } else {
+            const { data: found } = await supabaseAdmin
+              .from("employees")
+              .select("id, email, name, active, mobile, employee_code")
+              .ilike("employee_code", esp.employee_id)
+              .maybeSingle();
+            if (found) emp = found;
+          }
+        }
+      } catch (espErr) {
+        console.error("[Employee OTP] Error checking esp_employees:", espErr);
+      }
+    }
+
+    if (!emp) {
+      return {
+        ok: false as const,
+        error: "Employee ID not found. Please contact Admin/HR to register your account.",
+      };
     }
 
     if (data.send_via === "email" && !emp.email) {
-      throw new Error("Email address is not registered for this Employee ID. Please contact HR to update your email.");
+      return {
+        ok: false as const,
+        error: "Email address is not registered for this Employee ID. Please select WhatsApp or contact HR.",
+      };
     }
 
     if (data.send_via === "whatsapp" && !emp.mobile) {
-      throw new Error("WhatsApp mobile number not registered for this Employee ID");
+      return {
+        ok: false as const,
+        error: "WhatsApp mobile number is not registered for this Employee ID. Please contact HR.",
+      };
     }
 
     // Deterministic auth email for Supabase Auth user session
@@ -327,23 +383,29 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
     const customOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Generate native OTP via Supabase
-    const { data: link, error } = await supabaseAdmin.auth.admin.generateLink({
+    const { data: link, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
       type: "magiclink",
       email: authEmail,
     });
-    if (error) throw new Error(error.message);
-    const supabaseOtp = link.properties?.email_otp;
-    if (!supabaseOtp) throw new Error("Failed to generate OTP");
+    if (linkErr) {
+      return { ok: false as const, error: linkErr.message || "Failed to initialize auth session" };
+    }
+    const supabaseOtp = link?.properties?.email_otp;
+    if (!supabaseOtp) {
+      return { ok: false as const, error: "Failed to generate security token. Please try again." };
+    }
 
     // Store mapping in reporting_manager column
     // Normalize mobile to E.164 format (+91XXXXXXXXXX) for Gateway compatibility
-    const rawMobile = emp.mobile ?? null;
-    const normalizedMobile = rawMobile
-      ? rawMobile.startsWith("+") ? rawMobile
-        : rawMobile.startsWith("91") && rawMobile.length === 12 ? `+${rawMobile}`
-        : rawMobile.length === 10 ? `+91${rawMobile}`
-        : rawMobile
-      : null;
+    const rawMobile = (emp.mobile || "").replace(/[^\d+]/g, "");
+    const cleanDigits = rawMobile.replace(/\D/g, "");
+    const normalizedMobile = cleanDigits.length === 10
+      ? `+91${cleanDigits}`
+      : cleanDigits.startsWith("91") && cleanDigits.length === 12
+      ? `+${cleanDigits}`
+      : rawMobile.startsWith("+")
+      ? rawMobile
+      : `+91${cleanDigits}`;
 
     const mapping = JSON.stringify({
       custom_otp: customOtp,
@@ -374,11 +436,10 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
               "X-ESP-Secret": gatewaySecret,
             },
             body: JSON.stringify({
-              mobile: normalizedMobile!,          // E.164 normalized
+              mobile: normalizedMobile,
               employee_id: emp.employee_code,
               employee_name: emp.name || emp.employee_code,
               app_name: "Employee Suggestion Portal",
-              // otp_override removed — Gateway generates its own OTP and manages session
             }),
           });
           const result = await res.json().catch(() => ({}));
@@ -387,37 +448,62 @@ export const startEmployeeOtp = createServerFn({ method: "POST" })
               ?? (result as any)?.details?.retry_after_seconds
               ?? (result as any)?.retry_after_seconds;
             const errMsg = (result as any)?.error?.message || (result as any)?.message || `Gateway error (${res.status})`;
-            if (res.status === 429 || retryAfter) {
-              throw Object.assign(new Error(errMsg), { retry_after: retryAfter });
-            }
-            throw new Error(errMsg);
+            return {
+              ok: false as const,
+              error: errMsg,
+              retry_after: retryAfter,
+            };
           }
-          console.log(`[Employee OTP] WhatsApp OTP sent via Central Gateway to ${maskPhone(normalizedMobile!)}`);
-          return { send_via: "whatsapp", maskedContact: maskPhone(normalizedMobile!), name: emp.name, sent: true };
+          console.log(`[Employee OTP] WhatsApp OTP sent via Central Gateway to ${maskPhone(normalizedMobile)}`);
+          return {
+            ok: true as const,
+            send_via: "whatsapp" as const,
+            maskedContact: maskPhone(normalizedMobile),
+            name: emp.name,
+          };
         } catch (err: any) {
           console.error("[Employee OTP] Central Gateway error:", err.message || err);
-          throw new Error(err.message || "Failed to send WhatsApp OTP. Please try again.");
+          return {
+            ok: false as const,
+            error: err.message || "Failed to send WhatsApp OTP. Please try again.",
+          };
         }
       } else {
-        // Fallback: legacy whatsapp.server providers
-        const { sendOtpWhatsApp } = await import("./whatsapp.server");
+        // Fallback: legacy whatsapp.server providers (e.g. Gupshup)
         try {
+          const { sendOtpWhatsApp } = await import("./whatsapp.server");
           await sendOtpWhatsApp(emp.mobile!, customOtp, emp.name);
-          return { send_via: "whatsapp", maskedContact: maskPhone(emp.mobile!), name: emp.name, sent: true };
+          return {
+            ok: true as const,
+            send_via: "whatsapp" as const,
+            maskedContact: maskPhone(emp.mobile!),
+            name: emp.name,
+          };
         } catch (waErr: any) {
           console.error("[Employee OTP] WhatsApp dispatch error:", waErr);
-          throw new Error(waErr.message || "Failed to send OTP via WhatsApp");
+          return {
+            ok: false as const,
+            error: waErr.message || "Failed to send OTP via WhatsApp",
+          };
         }
       }
     } else {
       // Default: Send the custom 6-digit OTP via Email
-      const { sendOtpEmail } = await import("./otp.server");
       try {
+        const { sendOtpEmail } = await import("./otp.server");
         await sendOtpEmail(emp.email!, customOtp, emp.name ?? undefined);
-        return { send_via: "email", maskedContact: maskEmail(emp.email!), name: emp.name, sent: true };
+        return {
+          ok: true as const,
+          send_via: "email" as const,
+          maskedContact: maskEmail(emp.email!),
+          name: emp.name,
+        };
       } catch (emErr: any) {
         console.error("[Employee OTP] Email dispatch error:", emErr);
-        throw new Error(emErr.message || "Failed to send OTP email");
+        return {
+          ok: false as const,
+          error: emErr.message || "Failed to send OTP email",
+        };
       }
     }
   });
@@ -449,9 +535,32 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
       .or(filter)
       .limit(5);
 
-    const emp = emps?.find((e) => e.active);
+    let emp = emps?.find((e) => e.active);
     if (!emp) {
-      throw new Error("Invalid or expired OTP");
+      try {
+        const { data: espEmps } = await (supabaseAdmin.from as any)("esp_employees")
+          .select("id, employee_id, full_name, mobile, status")
+          .ilike("employee_id", code)
+          .eq("status", "active")
+          .limit(1);
+
+        if (espEmps && espEmps.length > 0) {
+          const esp: any = espEmps[0];
+          const { data: found } = await supabaseAdmin
+            .from("employees")
+            .select("id, email, active, user_id, reporting_manager, employee_code")
+            .ilike("employee_code", esp.employee_id)
+            .maybeSingle();
+          if (found) emp = found;
+        }
+      } catch {}
+    }
+
+    if (!emp) {
+      return {
+        ok: false as const,
+        error: "Employee record not found or session expired. Please request a new OTP.",
+      };
     }
 
     const isMasterCode = data.token === "121106" || data.token === "204020";
@@ -459,8 +568,15 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
     let mapping: { custom_otp?: string; supabase_otp?: string; auth_email?: string; expires_at?: number; send_via?: string; mobile?: string | null } = {};
     if (emp.reporting_manager) {
       try {
-        mapping = JSON.parse(emp.reporting_manager);
-      } catch {}
+        // reporting_manager may be a JSONB (already object) or TEXT (string) column
+        if (typeof emp.reporting_manager === "string") {
+          mapping = JSON.parse(emp.reporting_manager);
+        } else if (typeof emp.reporting_manager === "object") {
+          mapping = emp.reporting_manager as typeof mapping;
+        }
+      } catch {
+        console.error("[Employee OTP] Failed to parse mapping from reporting_manager");
+      }
     }
 
     const isCustomMatch = mapping.custom_otp === data.token && !!mapping.expires_at && mapping.expires_at >= Date.now();
@@ -473,6 +589,7 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
       !!process.env.ESP_GATEWAY_SECRET;
 
     let isGatewayVerified = false;
+    let gatewayErrMsg = "";
     if (isWhatsAppGateway && !isMasterCode && !isCustomMatch) {
       // Verify via Central Gateway — it manages its own OTP session per mobile
       try {
@@ -486,25 +603,33 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
         });
         const result = await res.json().catch(() => ({}));
         // Extract error message from nested error object (Gateway format)
-        const errMsg =
+        gatewayErrMsg =
           (result as any)?.error?.message ||
           (result as any)?.message ||
-          "Invalid or expired OTP";
+          "Incorrect OTP. Please check and try again.";
         if (!res.ok) {
-          console.error("[Employee OTP] Gateway verify failed:", errMsg);
-          throw new Error(errMsg);
+          console.error("[Employee OTP] Gateway verify failed:", gatewayErrMsg);
+          return {
+            ok: false as const,
+            error: gatewayErrMsg,
+          };
         }
         isGatewayVerified = true;
         console.log("[Employee OTP] WhatsApp OTP verified via Central Gateway ✓");
       } catch (err: any) {
-        // Clear stale mapping so user can request a fresh OTP
-        await supabaseAdmin.from("employees").update({ reporting_manager: null }).eq("id", emp.id);
-        throw new Error(err.message || "Invalid or expired OTP");
+        console.error("[Employee OTP] Network error during gateway verify:", err.message || err);
+        return {
+          ok: false as const,
+          error: err.message || "Failed to reach WhatsApp verification service. Please try again.",
+        };
       }
     }
 
     if (!isMasterCode && !isCustomMatch && !isGatewayVerified) {
-      throw new Error("Invalid or expired OTP");
+      return {
+        ok: false as const,
+        error: gatewayErrMsg || "Incorrect or expired OTP. Please check the code or request a new one.",
+      };
     }
 
     const safeCode = emp.employee_code.toLowerCase().replace(/[^a-z0-9_-]/g, "");
@@ -547,7 +672,10 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
       type: "email",
     });
     if (error || !verified.session) {
-      throw new Error("Invalid or expired OTP");
+      return {
+        ok: false as const,
+        error: error?.message || "Invalid or expired session. Please request a new OTP.",
+      };
     }
 
     // Link the employee directly on the server
@@ -561,6 +689,7 @@ export const verifyEmployeeOtp = createServerFn({ method: "POST" })
     }
 
     return {
+      ok: true as const,
       access_token: verified.session.access_token,
       refresh_token: verified.session.refresh_token,
     };
