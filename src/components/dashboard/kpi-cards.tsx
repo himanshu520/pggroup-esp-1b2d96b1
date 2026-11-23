@@ -562,22 +562,43 @@ function KPICardsSectionComponent({
       {/* 9 KPI Cards 1-Row Grid Container */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2 w-full">
         {cards.map((card) => {
+          const isQrCard = (card as any).isQrCard;
+
+          // Pure QR Card: Entire card is filled exclusively with the QR code
+          if (isQrCard) {
+            return (
+              <div
+                key={card.id}
+                onClick={() => setIsQrModalOpen(true)}
+                title="Employee Portal QR — Click to enlarge, copy link or print poster"
+                className="relative overflow-hidden rounded-xl p-1.5 flex items-center justify-center cursor-pointer border-2 border-cyan-400/80 dark:border-cyan-500 bg-white dark:bg-white shadow-2xs transition-all hover:shadow-md hover:scale-[1.03] active:scale-[0.99] group h-full min-h-[82px]"
+              >
+                <div className="w-full h-full flex items-center justify-center">
+                  <QRCodeSVG
+                    value={employeePortalUrl}
+                    size={80}
+                    level="M"
+                    fgColor="#0f172a"
+                    bgColor="#ffffff"
+                    includeMargin={true}
+                    className="w-full h-full max-h-[76px] aspect-square object-contain"
+                  />
+                </div>
+              </div>
+            );
+          }
+
           const Icon = card.icon;
           const animVal = useAnimatedCount(typeof card.value === "number" ? card.value : 0);
-          const isQrCard = (card as any).isQrCard;
 
           return (
             <div
               key={card.id}
               onClick={() => {
-                if (isQrCard) {
-                  setIsQrModalOpen(true);
-                  return;
-                }
                 setSelectedKpiId(card.id as KpiCardId);
                 setIsDialogOpen(true);
               }}
-              title={isQrCard ? "Click to view full employee portal QR code & share options" : "Click to view detailed popup breakdown"}
+              title="Click to view detailed popup breakdown"
               className={`relative overflow-hidden rounded-xl p-2 flex flex-col justify-between cursor-pointer border shadow-2xs transition-all hover:shadow-md hover:scale-[1.03] active:scale-[0.99] group ${card.lightBg}`}
             >
               {/* Top Row: Title & Icon */}
@@ -613,58 +634,31 @@ function KPICardsSectionComponent({
                 </div>
               )}
 
-              {/* Middle Row: Animated Main Value or QR Code */}
-              {isQrCard ? (
-                <div className="my-1 flex items-center justify-between gap-1.5 bg-white/90 dark:bg-slate-900/90 p-1 rounded-md border border-cyan-200/60 dark:border-cyan-800/60">
-                  <div className="bg-white p-0.5 rounded shrink-0 shadow-2xs">
-                    <QRCodeSVG
-                      value={employeePortalUrl}
-                      size={32}
-                      level="M"
-                      fgColor="#0f172a"
-                      bgColor="#ffffff"
-                      includeMargin={false}
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1 flex flex-col justify-center">
-                    <span className="text-[10px] font-extrabold text-cyan-950 dark:text-cyan-200 leading-tight truncate">
-                      Mobile Portal
-                    </span>
-                    <span className="text-[8px] text-cyan-700 dark:text-cyan-400 font-medium truncate">
-                      Scan to Submit
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="my-0.5 flex items-baseline justify-between gap-1">
-                  <span className="text-base font-black text-slate-900 dark:text-slate-100 tracking-tight leading-none truncate">
-                    {card.textValue ? (
-                      card.textValue
-                    ) : card.currencyValue !== undefined ? (
-                      `₹${(card.currencyValue / 100000).toFixed(1)}L`
-                    ) : (
-                      `${animVal}${card.suffix || ""}`
-                    )}
-                  </span>
-                </div>
-              )}
+              {/* Middle Row: Animated Main Value */}
+              <div className="my-0.5 flex items-baseline justify-between gap-1">
+                <span className="text-base font-black text-slate-900 dark:text-slate-100 tracking-tight leading-none truncate">
+                  {card.textValue ? (
+                    card.textValue
+                  ) : card.currencyValue !== undefined ? (
+                    `₹${(card.currencyValue / 100000).toFixed(1)}L`
+                  ) : (
+                    `${animVal}${card.suffix || ""}`
+                  )}
+                </span>
+              </div>
 
               {/* Bottom Row: Growth Badge & Detail Indicator */}
               <div className="flex items-center justify-between text-[9px] pt-1 border-t border-slate-200/60 dark:border-slate-800">
                 <span
                   className={`inline-flex items-center gap-0.5 font-bold px-1 py-0.2 rounded-full ${
-                    isQrCard
-                      ? "bg-cyan-100 text-cyan-800 dark:bg-cyan-950/80 dark:text-cyan-300"
-                      : card.growthType === "up"
+                    card.growthType === "up"
                       ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300"
                       : card.growthType === "down"
                       ? "bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300"
                       : "bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300"
                   }`}
                 >
-                  {isQrCard ? (
-                    <QrCodeIcon className="w-2.5 h-2.5" />
-                  ) : card.growthType === "up" ? (
+                  {card.growthType === "up" ? (
                     <TrendingUp className="w-2.5 h-2.5" />
                   ) : card.growthType === "down" ? (
                     <TrendingDown className="w-2.5 h-2.5" />
@@ -672,7 +666,7 @@ function KPICardsSectionComponent({
                   {card.growth}
                 </span>
                 <span className="text-[8px] text-muted-foreground opacity-60 group-hover:opacity-100 font-bold">
-                  {isQrCard ? "QR &rarr;" : "Details &rarr;"}
+                  Details &rarr;
                 </span>
               </div>
             </div>
