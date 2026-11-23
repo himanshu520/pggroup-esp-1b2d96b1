@@ -316,7 +316,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
               <div className="min-w-0">
                 <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider block">Best Suggestion of Month</span>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                  {bestSug ? bestSug.employeeName : "Pending Committee Nomination"}
+                  {bestSug ? bestSug.employeeName : "Pending Nomination"}
                 </h3>
                 <span className="text-[10px] text-muted-foreground truncate block">
                   {bestSug ? `${bestSug.department} • ${bestSug.plant}` : "No official nomination for this scope"}
