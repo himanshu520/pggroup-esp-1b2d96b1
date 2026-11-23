@@ -124,15 +124,8 @@ function DashboardChartsSectionComponent({ suggestions }: DashboardChartsProps) 
   const plantData = useMemo(() => {
     const counts: Record<string, number> = {};
     suggestions.forEach((s) => {
-      let rawPlant = (s.plant && s.plant !== "—" ? s.plant : "Unassigned").trim();
-      let normalizedPlant = rawPlant;
-      const upper = rawPlant.toUpperCase();
-      if (upper.includes("NGM")) {
-        normalizedPlant = "NGM-KAROLI";
-      } else {
-        normalizedPlant = "PGTL-BHIWADI";
-      }
-      counts[normalizedPlant] = (counts[normalizedPlant] || 0) + 1;
+      const plantName = (s.plant && s.plant !== "—" ? s.plant : "Unassigned").trim();
+      counts[plantName] = (counts[plantName] || 0) + 1;
     });
 
     return Object.entries(counts)
@@ -144,28 +137,11 @@ function DashboardChartsSectionComponent({ suggestions }: DashboardChartsProps) 
   const categoryData = useMemo(() => {
     const counts: Record<string, number> = {};
     suggestions.forEach((s) => {
-      let cat = (s.category && s.category !== "—" ? s.category : "General").trim();
-      if (cat.includes("Productivity")) cat = "Productivity";
-      else if (cat.includes("Fool")) cat = "Fool Proofing";
-      else if (cat.includes("Welfare") || cat.includes("Safety")) cat = "Safety & Welfare";
-      else if (cat.length > 16) cat = cat.slice(0, 14) + "..";
+      const cat = (s.category && s.category !== "—" ? s.category : "General").trim();
       counts[cat] = (counts[cat] || 0) + 1;
     });
 
-    const entries = Object.entries(counts);
-    const main: Record<string, number> = {};
-    let others = 0;
-
-    entries.forEach(([cat, count]) => {
-      if (count <= 3 || cat === "Others") {
-        others += count;
-      } else {
-        main[cat] = count;
-      }
-    });
-    if (others > 0) main["Others"] = others;
-
-    return Object.entries(main)
+    return Object.entries(counts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
   }, [suggestions]);
@@ -192,7 +168,7 @@ function DashboardChartsSectionComponent({ suggestions }: DashboardChartsProps) 
       if (deptPending[dept] === undefined) {
         deptPending[dept] = 0;
       }
-      if (s.status !== "implemented" && s.status !== "closed" && s.status !== "rejected" && s.status !== "dropped") {
+      if (s.status !== "implemented" && (s.status as string) !== "closed" && s.status !== "rejected" && s.status !== "dropped") {
         deptPending[dept] += 1;
       }
     });
@@ -307,13 +283,14 @@ function DashboardChartsSectionComponent({ suggestions }: DashboardChartsProps) 
     suggestions.forEach((s) => {
       const p = (s.plant && s.plant !== "—" ? s.plant : s.department || "General").trim();
       if (!map[p]) map[p] = { expected: 0, actual: 0 };
-      const exp = Number(s.expectedSaving ?? (s as any).expected_saving ?? 0);
-      const act = Number(s.actualCost ?? (s as any).actual_cost ?? s.savings ?? 0);
-      map[p].expected += exp > 0 ? exp : Math.round((act || 30000) * 1.35);
-      map[p].actual += act > 0 ? act : Math.round((exp || 25000) * 0.75);
+      const exp = Number(s.expectedSaving ?? 0);
+      const act = Number(s.actualCost ?? 0);
+      map[p].expected += exp;
+      map[p].actual += act;
     });
 
     return Object.entries(map)
+      .filter(([_, stat]) => stat.expected > 0 || stat.actual > 0)
       .map(([name, stat]) => ({
         name: name.length > 12 ? name.slice(0, 10) + ".." : name,
         "Expected (₹)": Math.round(stat.expected),
@@ -347,12 +324,12 @@ function DashboardChartsSectionComponent({ suggestions }: DashboardChartsProps) 
   // 11. Year-wise Comparison (2025 vs 2026)
   const yearComparisonData = useMemo(() => {
     const total26 = suggestions.filter((s) => s.year === 2026 || !s.year).length;
-    const impl26 = suggestions.filter((s) => (s.year === 2026 || !s.year) && (s.status === "implemented" || s.status === "closed")).length;
+    const impl26 = suggestions.filter((s) => (s.year === 2026 || !s.year) && (s.status === "implemented" || (s.status as string) === "closed")).length;
     const savings26 = Math.round(suggestions.filter((s) => s.year === 2026 || !s.year).reduce((acc, s) => acc + (s.savings || 0), 0) / 100000);
     const awards26 = suggestions.filter((s) => (s.year === 2026 || !s.year) && s.award && s.award !== "None").length;
 
     const total25 = suggestions.filter((s) => s.year === 2025).length;
-    const impl25 = suggestions.filter((s) => s.year === 2025 && (s.status === "implemented" || s.status === "closed")).length;
+    const impl25 = suggestions.filter((s) => s.year === 2025 && (s.status === "implemented" || (s.status as string) === "closed")).length;
     const savings25 = Math.round(suggestions.filter((s) => s.year === 2025).reduce((acc, s) => acc + (s.savings || 0), 0) / 100000);
     const awards25 = suggestions.filter((s) => s.year === 2025 && s.award && s.award !== "None").length;
 
@@ -373,7 +350,7 @@ function DashboardChartsSectionComponent({ suggestions }: DashboardChartsProps) 
       if (sugs.length === 0) return 0;
       if (type === "Participation") return Math.min(100, Math.round((sugs.length / Math.max(1, suggestions.length)) * 100));
       if (type === "Implementation") {
-        const implCount = sugs.filter((s) => s.status === "implemented" || s.status === "closed").length;
+        const implCount = sugs.filter((s) => s.status === "implemented" || (s.status as string) === "closed").length;
         return Math.round((implCount / sugs.length) * 100);
       }
       if (type === "Avg Points") {
@@ -384,7 +361,7 @@ function DashboardChartsSectionComponent({ suggestions }: DashboardChartsProps) 
         const totalSav = sugs.reduce((acc, s) => acc + s.savings, 0);
         return Math.min(100, Math.round((totalSav / 100000) * 10));
       }
-      return Math.min(100, Math.round((sugs.filter((s) => s.status === "implemented" || s.status === "closed").length / Math.max(1, sugs.length)) * 100));
+      return Math.min(100, Math.round((sugs.filter((s) => s.status === "implemented" || (s.status as string) === "closed").length / Math.max(1, sugs.length)) * 100));
     };
 
     const subjects = ["Participation", "Implementation", "Avg Points", "Savings", "Completion %"];
@@ -425,7 +402,7 @@ function DashboardChartsSectionComponent({ suggestions }: DashboardChartsProps) 
     return MONTHS.slice(0, 7).map((m) => {
       const monthSugs = suggestions.filter((s) => getSuggestionMonth(s) === m);
       const submitted = monthSugs.length;
-      const completed = monthSugs.filter((s) => s.status === "implemented" || s.status === "closed").length;
+      const completed = monthSugs.filter((s) => s.status === "implemented" || (s.status as string) === "closed").length;
       return {
         week: `${m} 26`,
         Submitted: submitted,

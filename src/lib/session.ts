@@ -44,12 +44,15 @@ export async function loadSession(): Promise<SessionProfile | null> {
   ]);
 
   const rawRoles = (rolesRaw ?? []) as SessionProfile["roles"];
-  const roles = rawRoles.map((r) => ({
-    ...r,
-    location_id: r.location_id ?? employee?.location_id ?? null,
-    plant_id: r.plant_id ?? employee?.plant_id ?? null,
-    department_id: r.department_id ?? employee?.department_id ?? null,
-  }));
+  const roles = rawRoles.map((r) => {
+    const isGlobal = r.role === "super_admin" || r.role === "corporate_admin";
+    return {
+      ...r,
+      location_id: r.location_id ?? (isGlobal ? null : (employee?.location_id ?? null)),
+      plant_id: r.plant_id ?? (isGlobal ? null : (employee?.plant_id ?? null)),
+      department_id: r.department_id ?? (isGlobal ? null : (employee?.department_id ?? null)),
+    };
+  });
   const adminRoles: AppRole[] = ["super_admin","corporate_admin","hr","admin","location_admin","plant_admin","department_admin","pe_user","dept_user","mgmt_viewer","md"];
   const isAdmin = roles.some((r) => adminRoles.includes(r.role));
   const isPE = roles.some((r) => r.role === "pe_user");
@@ -134,17 +137,18 @@ export function isDeptAccessible(deptId: string | null, plantId: string | null, 
 
 export function isSuggestionAccessible(
   sug: {
-    location_id: string | null;
-    plant_id: string | null;
-    department_id: string | null;
+    location_id?: string | null;
+    plant_id?: string | null;
+    department_id?: string | null;
     current_department_id?: string | null;
     status?: string;
+    plants?: { location_id?: string | null } | null;
   } | null,
   roles: SessionProfile["roles"] | undefined
 ): boolean {
   if (!sug || !roles || roles.length === 0) return false;
 
-  // Super Admin & Corporate Admin with no location/plant restrictions have full global visibility
+  // Super Admin & Corporate Admin with no explicit location/plant restriction have full global visibility
   const hasGlobalAdmin = roles.some(
     (r) =>
       (r.role === "super_admin" || r.role === "corporate_admin") &&
@@ -154,31 +158,36 @@ export function isSuggestionAccessible(
   );
   if (hasGlobalAdmin) return true;
 
+  const sugLocId = sug.location_id || (sug as any).plants?.location_id || null;
+  const sugPlantId = sug.plant_id || null;
+  const sugDeptId = sug.department_id || null;
+  const sugCurrentDeptId = sug.current_department_id || null;
+
   return roles.some((r) => {
     // MD can only view implemented or closed suggestions
     if (r.role === "md") {
       if (sug.status !== "implemented" && sug.status !== "closed") return false;
-      if (r.location_id && r.location_id !== sug.location_id) return false;
-      if (r.plant_id && r.plant_id !== sug.plant_id) return false;
+      if (r.location_id && r.location_id !== sugLocId) return false;
+      if (r.plant_id && r.plant_id !== sugPlantId) return false;
       return true;
     }
 
     // Department match (e.g., dept_user, department_admin)
     if (r.department_id) {
       const match =
-        sug.department_id === r.department_id ||
-        sug.current_department_id === r.department_id;
+        sugDeptId === r.department_id ||
+        sugCurrentDeptId === r.department_id;
       if (!match) return false;
     }
 
     // Plant match (e.g., plant_admin, plant-level pe_user, plant-level admin)
     if (r.plant_id) {
-      if (sug.plant_id !== r.plant_id) return false;
+      if (sugPlantId !== r.plant_id) return false;
     }
 
     // Location/State match (e.g., location_admin, state-level hr)
-    if (r.location_id) {
-      if (sug.location_id !== r.location_id) return false;
+    if (r.location_id && !r.plant_id) {
+      if (sugLocId !== r.location_id) return false;
     }
 
     return true;

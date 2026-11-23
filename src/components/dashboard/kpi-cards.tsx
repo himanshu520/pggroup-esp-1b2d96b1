@@ -42,6 +42,7 @@ import {
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/lib/session";
 import { KpiDetailDialog, type KpiCardId } from "./kpi-detail-dialog";
 
 interface KPICardsProps {
@@ -192,24 +193,40 @@ function KPICardsSectionComponent({
     },
   });
 
+  const { data: session } = useSession();
+  const isGlobalAdmin = useMemo(() => {
+    return session?.roles?.some(
+      (r) => (r.role === "super_admin" || r.role === "corporate_admin") && !r.location_id && !r.plant_id
+    ) ?? false;
+  }, [session?.roles]);
+
   const uniquePlants = useMemo(() => {
     const fromSugs = Array.from(new Set(suggestions.map((s) => s.plant).filter((p) => p && p !== "—")));
-    return Array.from(new Set([...dbPlants, ...fromSugs]));
-  }, [dbPlants, suggestions]);
+    if (isGlobalAdmin && dbPlants.length > 0) {
+      return Array.from(new Set([...fromSugs, ...dbPlants])).sort();
+    }
+    return fromSugs.sort();
+  }, [isGlobalAdmin, dbPlants, suggestions]);
 
   const uniqueDepts = useMemo(() => {
     const fromSugs = Array.from(new Set(suggestions.map((s) => s.department).filter((d) => d && d !== "—")));
-    return Array.from(new Set([...dbDepts, ...fromSugs]));
-  }, [dbDepts, suggestions]);
+    if (isGlobalAdmin && dbDepts.length > 0) {
+      return Array.from(new Set([...fromSugs, ...dbDepts])).sort();
+    }
+    return fromSugs.sort();
+  }, [isGlobalAdmin, dbDepts, suggestions]);
 
   const uniqueStates = useMemo(() => {
-    const fromSugs = Array.from(new Set(suggestions.map((s) => s.state).filter((st) => st && st !== "—")));
-    return Array.from(new Set([...dbStates, ...fromSugs]));
-  }, [dbStates, suggestions]);
+    const fromSugs = Array.from(new Set(suggestions.map((s) => s.state || s.location).filter((st) => st && st !== "—")));
+    if (isGlobalAdmin && dbStates.length > 0) {
+      return Array.from(new Set([...fromSugs, ...dbStates])).sort();
+    }
+    return fromSugs.sort();
+  }, [isGlobalAdmin, dbStates, suggestions]);
 
   const uniqueCategories = useMemo(() => {
     const fromSugs = Array.from(new Set(suggestions.map((s) => s.category).filter((c) => c && c !== "—")));
-    return Array.from(new Set([...dbCategories, ...fromSugs]));
+    return Array.from(new Set([...fromSugs, ...dbCategories])).sort();
   }, [dbCategories, suggestions]);
 
   const isFilterBarOpen = externalFilterBarOpen !== undefined ? externalFilterBarOpen : internalFilterBarOpen;

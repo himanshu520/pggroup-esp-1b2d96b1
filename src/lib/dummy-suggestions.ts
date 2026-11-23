@@ -30,6 +30,9 @@ export interface EmployeeSuggestion {
   expectedSaving?: number;
   actualCost?: number;
   savings: number; // in INR
+  plantId?: string;
+  locationId?: string;
+  departmentId?: string;
 }
 
 export interface DashboardFilters {
@@ -106,13 +109,10 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
         else if (s.status === "rejected") implStatus = "Rejected";
         else if (s.status === "dropped") implStatus = "On Hold";
 
-        const rawPlantName = String(s.plants?.name || s.plant || "").toUpperCase();
-        let mappedPlant = s.plants?.name || s.plant || "General Plant";
-        if (rawPlantName.includes("NGM")) {
-          mappedPlant = "NGM-KAROLI";
-        } else if (rawPlantName.includes("PGTL") || rawPlantName.includes("BHIWADI")) {
-          mappedPlant = "PGTL-BHIWADI";
-        }
+        // Accurate real Plant, Location & State from database without artificial overrides
+        const realPlantName = s.plants?.name || s.plant || "General Plant";
+        const realLocation = s.locations?.location || s.plants?.locations?.location || "—";
+        const realState = s.locations?.state || s.plants?.locations?.state || "—";
 
         return {
           id: s.id || `sug-${Math.random()}`,
@@ -122,9 +122,12 @@ export function mapDatabaseSuggestionsToUI(dbSugs: any[]): EmployeeSuggestion[] 
           gender: (s.employees?.gender as "Male" | "Female" | "Others") || "Male",
           employeePhoto: s.employees?.avatar_url || "",
           department: s.current_departments?.name || s.departments?.name || "General",
-          plant: mappedPlant,
-          state: s.plants?.locations?.state || s.locations?.state || "Rajasthan",
-          location: s.plants?.locations?.location || s.locations?.location || "Bhiwadi",
+          plant: realPlantName,
+          state: realState,
+          location: realLocation,
+          plantId: s.plant_id || "",
+          locationId: s.location_id || "",
+          departmentId: s.department_id || "",
           category: s.categories?.name || "Kaizen",
           suggestionTitle: s.title || "Suggestion Idea",
           description: s.description || s.title || "",

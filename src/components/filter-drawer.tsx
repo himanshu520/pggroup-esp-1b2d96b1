@@ -9,6 +9,7 @@ import type { DashboardFilters } from "@/lib/dummy-suggestions";
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/lib/session";
 
 interface FilterDrawerProps {
   filters: DashboardFilters;
@@ -81,10 +82,27 @@ export function FilterDrawer({ filters, onApplyFilters, onResetFilters }: Filter
     },
   });
 
+  const { data: session } = useSession();
+  const isGlobalAdmin = session?.roles?.some(
+    (r) => (r.role === "super_admin" || r.role === "corporate_admin") && !r.location_id && !r.plant_id
+  ) ?? false;
+
+  const rawPlantOptions = plantOptions;
+  const scopedPlants = isGlobalAdmin
+    ? rawPlantOptions
+    : Array.from(new Set(session?.roles?.map((r) => r.plants?.name).filter(Boolean) as string[]));
+  const finalPlantOptions = scopedPlants.length > 0 ? scopedPlants : rawPlantOptions;
+
+  const rawLocationOptions = dbLocations.length > 0 ? dbLocations : ["Bawal", "Karoli", "Manesar", "Gurgaon", "Haridwar", "Chennai", "Pune"];
+  const scopedLocations = isGlobalAdmin
+    ? rawLocationOptions
+    : Array.from(new Set(session?.roles?.map((r) => r.locations?.location).filter(Boolean) as string[]));
+  const locationOptions = scopedLocations.length > 0 ? scopedLocations : rawLocationOptions;
+
   const deptOptions = dbDepts.length > 0 ? dbDepts : DEPARTMENTS;
   const stateOptions = dbStates.length > 0 ? dbStates : STATES;
   const categoryOptions = dbCategories.length > 0 ? dbCategories : CATEGORIES;
-  const locationOptions = dbLocations.length > 0 ? dbLocations : ["Bawal", "Karoli", "Manesar", "Gurgaon", "Haridwar", "Chennai", "Pune"];
+  const plantListOptions = finalPlantOptions;
 
   useEffect(() => {
     setDraft(filters);
@@ -188,7 +206,7 @@ export function FilterDrawer({ filters, onApplyFilters, onResetFilters }: Filter
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Plants</SelectItem>
-                  {plantOptions.map((p) => (
+                  {plantListOptions.map((p) => (
                     <SelectItem key={p} value={p}>
                       {p}
                     </SelectItem>

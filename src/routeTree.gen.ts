@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as EmployeeRouteImport } from './routes/employee'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminAuditRouteImport } from './routes/admin.audit'
@@ -56,6 +57,11 @@ const AuthRoute = AuthRouteImport.update({
 const EmployeeRoute = EmployeeRouteImport.update({
   id: '/employee',
   path: '/employee',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -184,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
   '/employee': typeof EmployeeRouteWithChildren
+  '/login': typeof LoginRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/database': typeof AdminDatabaseRoute
@@ -243,6 +250,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/auth': typeof AuthRoute
   '/employee': typeof EmployeeRouteWithChildren
+  '/login': typeof LoginRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/database': typeof AdminDatabaseRoute
@@ -274,8 +282,8 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
-    | '/login'
     | '/employee'
+    | '/login'
     | '/admin/analytics'
     | '/admin/audit'
     | '/admin/database'
@@ -333,8 +341,8 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/auth'
-    | '/login'
     | '/employee'
+    | '/login'
     | '/admin/analytics'
     | '/admin/audit'
     | '/admin/database'
@@ -365,8 +373,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   AuthRoute: typeof AuthRoute
-  LoginRoute: typeof LoginRoute
   EmployeeRoute: typeof EmployeeRouteWithChildren
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -392,18 +400,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/employee': {
       id: '/employee'
       path: '/employee'
       fullPath: '/employee'
       preLoaderRoute: typeof EmployeeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -656,8 +664,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   AuthRoute: AuthRoute,
-  LoginRoute: LoginRoute,
   EmployeeRoute: EmployeeRouteWithChildren,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

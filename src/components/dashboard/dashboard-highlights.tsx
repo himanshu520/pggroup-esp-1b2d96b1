@@ -4,6 +4,7 @@ import { getSuggestionPoints } from "@/lib/dummy-suggestions";
 import type { EmployeeSuggestion } from "@/lib/dummy-suggestions";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useSession, isSuggestionAccessible } from "@/lib/session";
 
 interface DashboardHighlightsProps {
   suggestions: EmployeeSuggestion[];
@@ -18,7 +19,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
       const p = (s.plant && s.plant !== "—" ? s.plant : "Unassigned").trim();
       if (!plantStats[p]) plantStats[p] = { total: 0, implemented: 0, savings: 0, points: 0 };
       plantStats[p].total += 1;
-      if (s.status === "implemented" || s.status === "closed") plantStats[p].implemented += 1;
+      if (s.status === "implemented" || (s.status as string) === "closed") plantStats[p].implemented += 1;
       plantStats[p].savings += s.savings || 0;
       plantStats[p].points += getSuggestionPoints(s);
     });
@@ -47,7 +48,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
       if (!deptStats[d]) deptStats[d] = { points: 0, total: 0, implemented: 0 };
       deptStats[d].points += getSuggestionPoints(s);
       deptStats[d].total += 1;
-      if (s.status === "implemented" || s.status === "closed") deptStats[d].implemented += 1;
+      if (s.status === "implemented" || (s.status as string) === "closed") deptStats[d].implemented += 1;
     });
 
     const sorted = Object.entries(deptStats).sort((a, b) => b[1].points - a[1].points);
@@ -62,25 +63,35 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
     };
   }, [suggestions]);
 
+  const { data: sess } = useSession();
+
   // 3. Official Nominated Best Suggestion of Month from best_suggestions DB table
-  const { data: nominatedBestSug = null } = useQuery({
-    queryKey: ["official-best-suggestion-dashboard-card"],
+  const { data: bestSug = null } = useQuery({
+    queryKey: ["official-best-suggestion-dashboard-card", sess?.roles],
     queryFn: async () => {
-      const { data } = await supabase
+      const res = await supabase
         .from("best_suggestions" as any)
         .select("*, suggestions(*, employees(*, departments(name), plants(name), locations(location)), categories(name))")
         .eq("category", "month")
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(20);
 
-      if (!data || !(data as any).suggestions) return null;
-      const s = (data as any).suggestions;
+      const list = (res.data as any[]) ?? [];
+      if (list.length === 0) return null;
+
+      // Filter nominated best suggestions by user's location & plant access
+      const accessibleNominated = list.find((item: any) => {
+        if (!item?.suggestions) return false;
+        return isSuggestionAccessible(item.suggestions, sess?.roles);
+      });
+
+      if (!accessibleNominated || !accessibleNominated.suggestions) return null;
+      const s = accessibleNominated.suggestions;
       const emp = s.employees;
 
-      let beforeImg = (data as any).before_image_url || s.before_image_url || "";
-      let afterImg = (data as any).after_image_url || (data as any).image_url || s.after_image_url || "";
-      const reason = (data as any).selection_reason || "";
+      let beforeImg = accessibleNominated.before_image_url || s.before_image_url || "";
+      let afterImg = accessibleNominated.after_image_url || accessibleNominated.image_url || s.after_image_url || "";
+      const reason = accessibleNominated.selection_reason || "";
 
       if ((!beforeImg || !afterImg) && reason.startsWith("POKA_YOKE_IMAGES:")) {
         try {
@@ -99,42 +110,40 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
         department: emp?.departments?.name || "General",
         plant: emp?.plants?.name || "Plant",
         savings: Number(s.expected_saving || s.actual_cost || 0),
-        points: (s.status === "implemented" || s.status === "closed") ? 5 : ((s.status === "rejected" || s.status === "dropped" || s.status === "fake_closure") ? -2 : 0),
+        points: (s.status === "implemented" || (s.status as string) === "closed") ? 5 : ((s.status === "rejected" || s.status === "dropped" || s.status === "fake_closure") ? -2 : 0),
         beforeImage: beforeImg,
         afterImage: afterImg,
       };
     },
   });
 
-  const fallbackBestSug = useMemo(() => {
-    return (
-      suggestions.find((s) => s.status === "implemented" || s.status === "closed" || s.status === "approved") ||
-      suggestions[0] ||
-      null
-    );
-  }, [suggestions]);
-
-  const bestSug = nominatedBestSug || fallbackBestSug;
-
   // 4. Official Nominated Best Fool Proofing (Poka-Yoke)
-  const { data: nominatedFoolProofing = null } = useQuery({
-    queryKey: ["official-foolproofing-dashboard-card"],
+  const { data: bestFoolProofing = null } = useQuery({
+    queryKey: ["official-foolproofing-dashboard-card", sess?.roles],
     queryFn: async () => {
-      const { data } = await supabase
+      const res = await supabase
         .from("best_suggestions" as any)
         .select("*, suggestions(*, employees(*, departments(name), plants(name), locations(location)), categories(name))")
         .eq("category", "foolproofing")
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(20);
 
-      if (!data || !(data as any).suggestions) return null;
-      const s = (data as any).suggestions;
+      const list = (res.data as any[]) ?? [];
+      if (list.length === 0) return null;
+
+      // Filter nominated fool proofing by user's location & plant access
+      const accessibleNominated = list.find((item: any) => {
+        if (!item?.suggestions) return false;
+        return isSuggestionAccessible(item.suggestions, sess?.roles);
+      });
+
+      if (!accessibleNominated || !accessibleNominated.suggestions) return null;
+      const s = accessibleNominated.suggestions;
       const emp = s.employees;
 
-      let beforeImg = (data as any).before_image_url || s.before_image_url || "";
-      let afterImg = (data as any).after_image_url || (data as any).image_url || s.after_image_url || "";
-      const reason = (data as any).selection_reason || "";
+      let beforeImg = accessibleNominated.before_image_url || s.before_image_url || "";
+      let afterImg = accessibleNominated.after_image_url || accessibleNominated.image_url || s.after_image_url || "";
+      const reason = accessibleNominated.selection_reason || "";
 
       if ((!beforeImg || !afterImg) && reason.startsWith("POKA_YOKE_IMAGES:")) {
         try {
@@ -157,15 +166,6 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
       };
     },
   });
-
-  const fallbackFoolProofing = useMemo(() => {
-    return (
-      suggestions.find((s) => s.category?.toLowerCase().includes("fool") || s.suggestionType?.toLowerCase().includes("fool")) ||
-      null
-    );
-  }, [suggestions]);
-
-  const bestFoolProofing = nominatedFoolProofing || fallbackFoolProofing;
 
   // 5. Dynamic King of Suggestion / Champion
   const kingOfSug = useMemo(() => {
@@ -305,20 +305,21 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
               <div className="min-w-0">
                 <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider block">Best Suggestion of Month</span>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                  {bestSug ? bestSug.employeeName : "No Submissions Yet"}
+                  {bestSug ? bestSug.employeeName : "Pending Committee Nomination"}
                 </h3>
                 <span className="text-[10px] text-muted-foreground truncate block">
-                  {bestSug ? `${bestSug.department} • ${bestSug.plant}` : "Corporate"}
+                  {bestSug ? `${bestSug.department} • ${bestSug.plant}` : "No official nomination for this scope"}
                 </span>
               </div>
             </div>
+            {bestSug && <Award className="w-6 h-6 text-emerald-600 shrink-0" />}
           </div>
           <div className="p-2.5 rounded-xl bg-white/95 dark:bg-slate-900/90 border border-emerald-200/70 dark:border-emerald-900/40 shadow-2xs my-2">
             <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 line-clamp-1">
-              {bestSug ? bestSug.suggestionTitle : "Awaiting Employee Ideas"}
+              {bestSug ? bestSug.suggestionTitle : "Awaiting Evaluation Committee Selection"}
             </h4>
             <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">
-              {bestSug ? bestSug.description : "No active suggestion description available."}
+              {bestSug ? bestSug.description : "Official Best Suggestion of the Month has not been nominated yet for this location/plant."}
             </p>
           </div>
 
@@ -376,7 +377,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
               <div className="min-w-0">
                 <span className="text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider block">Best Fool Proofing (Poka-Yoke)</span>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                  {bestFoolProofing ? bestFoolProofing.employeeName : "No Fool Proofing Recorded"}
+                  {bestFoolProofing ? bestFoolProofing.employeeName : "Pending Nomination"}
                 </h3>
               </div>
             </div>
@@ -385,31 +386,14 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 my-2">
-            <div>
-              <span className="text-[10px] font-bold text-rose-600 block mb-0.5">BEFORE: Process Image</span>
-              {bestFoolProofing?.beforeImage ? (
-                <img src={bestFoolProofing.beforeImage} alt="Before" className="w-full h-20 rounded-md object-cover border border-rose-200 cursor-pointer hover:scale-105 transition-transform" onClick={() => window.open(bestFoolProofing.beforeImage, "_blank")} />
-              ) : (
-                <div className="w-full h-20 rounded-md bg-white/70 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 text-xs">
-                  <ImageIcon className="w-5 h-5 mr-1" /> No Image
-                </div>
-              )}
-            </div>
-            <div>
-              <span className="text-[10px] font-bold text-emerald-600 block mb-0.5">AFTER: Solution Image</span>
-              {bestFoolProofing?.afterImage ? (
-                <img src={bestFoolProofing.afterImage} alt="After" className="w-full h-20 rounded-md object-cover border border-emerald-200 cursor-pointer hover:scale-105 transition-transform" onClick={() => window.open(bestFoolProofing.afterImage, "_blank")} />
-              ) : (
-                <div className="w-full h-20 rounded-md bg-white/70 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 text-xs">
-                  <ImageIcon className="w-5 h-5 mr-1" /> No Image
-                </div>
-              )}
-            </div>
+          <div className="p-2.5 rounded-xl bg-white/95 dark:bg-slate-900/90 border border-purple-200/70 dark:border-purple-900/40 shadow-2xs my-2">
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 line-clamp-1">
+              {bestFoolProofing ? bestFoolProofing.suggestionTitle : "Awaiting Committee Selection"}
+            </h4>
+            <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+              {bestFoolProofing ? (bestFoolProofing.description || "Verified Poka-Yoke solution") : "No official Poka-Yoke solution nominated yet for this location/plant."}
+            </p>
           </div>
-          <p className="text-[10px] text-muted-foreground line-clamp-1">
-            {bestFoolProofing ? bestFoolProofing.suggestionTitle : "No Poka-Yoke solution recorded."}
-          </p>
         </div>
 
         {/* Card 5: King of Suggestion / Y-to-Y Champion */}
