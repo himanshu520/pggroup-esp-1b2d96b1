@@ -190,10 +190,13 @@ async function sendEmailsToUsers(
 
   const host = (process.env.SMTP_HOST ?? "smtp.office365.com").trim().replace(/^["']|["']$/g, "");
   const port = Number((process.env.SMTP_PORT ?? "587").toString().trim().replace(/^["']|["']$/g, ""));
-  const user = (process.env.SMTP_USER ?? "verify.software2040@pgel.in").trim().replace(/^["']|["']$/g, "");
-  let pass = (process.env.SMTP_PASS ?? "fmdrdczrxkpjrbsv").trim().replace(/^["']|["']$/g, "");
-  if (pass === "nsxfmjjkskdrbbtt" || !pass) {
-    pass = "fmdrdczrxkpjrbsv";
+  let user = (process.env.SMTP_USER ?? "software.2040@pgel.in").trim().replace(/^["']|["']$/g, "");
+  let pass = (process.env.SMTP_PASS ?? "strtphkgpymmdxzz").trim().replace(/^["']|["']$/g, "");
+  if (user === "verify.software2040@pgel.in" || !user) {
+    user = "software.2040@pgel.in";
+  }
+  if (pass === "nsxfmjjkskdrbbtt" || pass === "fmdrdczrxkpjrbsv" || !pass) {
+    pass = "strtphkgpymmdxzz";
   }
   const appUrl = (process.env.APP_URL ?? "").trim().replace(/^["']|["']$/g, "");
 

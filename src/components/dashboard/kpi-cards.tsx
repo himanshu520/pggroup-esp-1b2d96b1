@@ -20,11 +20,25 @@ import {
   Building2,
   Tag,
   Layers,
+  QrCode as QrCodeIcon,
+  Copy,
+  Check,
+  ExternalLink,
+  Printer,
 } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
 import { normalizeStatusCategory, type EmployeeSuggestion, type DashboardFilters } from "@/lib/dummy-suggestions";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { QRCodeSVG } from "@/components/ui/qr-code";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,6 +76,88 @@ function KPICardsSectionComponent({
   const [internalFilterBarOpen, setInternalFilterBarOpen] = useState(false);
   const [selectedKpiId, setSelectedKpiId] = useState<KpiCardId | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Compute live Employee Portal URL
+  const employeePortalUrl = useMemo(() => {
+    if (typeof window !== "undefined") {
+      return `${window.location.origin}/employee`;
+    }
+    return "https://pggroup-esp-1b2d96b1.vercel.app/employee";
+  }, []);
+
+  const handleCopyUrl = () => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(employeePortalUrl);
+      setCopied(true);
+      toast.success("Employee portal link copied!", {
+        description: employeePortalUrl,
+      });
+      setTimeout(() => setCopied(false), 2500);
+    }
+  };
+
+  const handlePrintQr = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast.error("Please allow popups to print QR Code");
+      return;
+    }
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>PG Group — Employee Suggestion Portal QR</title>
+          <style>
+            body {
+              font-family: system-ui, -apple-system, sans-serif;
+              text-align: center;
+              padding: 40px 20px;
+              color: #0f172a;
+            }
+            .card {
+              max-width: 450px;
+              margin: 0 auto;
+              border: 3px solid #0284c7;
+              border-radius: 20px;
+              padding: 30px;
+              box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            }
+            h1 { font-size: 24px; margin-bottom: 6px; color: #0369a1; }
+            h2 { font-size: 16px; margin-top: 0; color: #475569; font-weight: normal; }
+            .qr-box { margin: 25px auto; display: inline-block; padding: 15px; border: 2px dashed #94a3b8; border-radius: 12px; }
+            .url { font-size: 14px; font-weight: bold; color: #0284c7; word-break: break-all; margin: 15px 0; }
+            .instructions { font-size: 13px; color: #64748b; margin-top: 15px; line-height: 1.5; }
+            @media print {
+              body { padding: 0; }
+              .card { box-shadow: none; border-color: #000; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <h1>PG Group — ESP</h1>
+            <h2>Employee Suggestion Portal / कर्मचारी सुझाव पोर्टल</h2>
+            <div class="qr-box">
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(employeePortalUrl)}" width="240" height="240" alt="QR Code" />
+            </div>
+            <p class="url">${employeePortalUrl}</p>
+            <p class="instructions">
+              <strong>Scan using Phone Camera, WhatsApp, or Google Lens</strong><br/>
+              मोबाइल कैमरा से स्कैन करें और तुरंत अपना सुझाव दर्ज करें।
+            </p>
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   // Dynamic Master Queries from Supabase
   const { data: dbPlants = [] } = useQuery({
@@ -308,16 +404,15 @@ function KPICardsSectionComponent({
       comparison: "Top Points",
     },
     {
-      id: "speed",
-      title: "Avg Impl. Speed",
-      value: kpiData.avgTimeDays,
-      suffix: " Days",
-      growth: "Execution",
-      growthType: "down",
-      icon: Zap,
-      lightBg: "bg-rose-50/90 dark:bg-rose-950/30 border-rose-200/90 dark:border-rose-800/60",
-      iconBg: "bg-rose-500 text-white",
-      comparison: "Cycle time",
+      id: "employee_qr",
+      title: "Employee Portal QR",
+      growth: "Scan & Submit",
+      growthType: "neutral",
+      icon: QrCodeIcon,
+      lightBg: "bg-cyan-50/90 dark:bg-cyan-950/30 border-cyan-200/90 dark:border-cyan-800/60",
+      iconBg: "bg-cyan-600 text-white",
+      comparison: "Mobile Link",
+      isQrCard: true,
     },
   ];
 
@@ -469,15 +564,20 @@ function KPICardsSectionComponent({
         {cards.map((card) => {
           const Icon = card.icon;
           const animVal = useAnimatedCount(typeof card.value === "number" ? card.value : 0);
+          const isQrCard = (card as any).isQrCard;
 
           return (
             <div
               key={card.id}
               onClick={() => {
+                if (isQrCard) {
+                  setIsQrModalOpen(true);
+                  return;
+                }
                 setSelectedKpiId(card.id as KpiCardId);
                 setIsDialogOpen(true);
               }}
-              title="Click to view detailed popup breakdown"
+              title={isQrCard ? "Click to view full employee portal QR code & share options" : "Click to view detailed popup breakdown"}
               className={`relative overflow-hidden rounded-xl p-2 flex flex-col justify-between cursor-pointer border shadow-2xs transition-all hover:shadow-md hover:scale-[1.03] active:scale-[0.99] group ${card.lightBg}`}
             >
               {/* Top Row: Title & Icon */}
@@ -513,38 +613,67 @@ function KPICardsSectionComponent({
                 </div>
               )}
 
-              {/* Middle Row: Animated Main Value */}
-              <div className="my-0.5 flex items-baseline justify-between gap-1">
-                <span className="text-base font-black text-slate-900 dark:text-slate-100 tracking-tight leading-none truncate">
-                  {card.textValue ? (
-                    card.textValue
-                  ) : card.currencyValue !== undefined ? (
-                    `₹${(card.currencyValue / 100000).toFixed(1)}L`
-                  ) : (
-                    `${animVal}${card.suffix || ""}`
-                  )}
-                </span>
-              </div>
+              {/* Middle Row: Animated Main Value or QR Code */}
+              {isQrCard ? (
+                <div className="my-1 flex items-center justify-between gap-1.5 bg-white/90 dark:bg-slate-900/90 p-1 rounded-md border border-cyan-200/60 dark:border-cyan-800/60">
+                  <div className="bg-white p-0.5 rounded shrink-0 shadow-2xs">
+                    <QRCodeSVG
+                      value={employeePortalUrl}
+                      size={32}
+                      level="M"
+                      fgColor="#0f172a"
+                      bgColor="#ffffff"
+                      includeMargin={false}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1 flex flex-col justify-center">
+                    <span className="text-[10px] font-extrabold text-cyan-950 dark:text-cyan-200 leading-tight truncate">
+                      Mobile Portal
+                    </span>
+                    <span className="text-[8px] text-cyan-700 dark:text-cyan-400 font-medium truncate">
+                      Scan to Submit
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="my-0.5 flex items-baseline justify-between gap-1">
+                  <span className="text-base font-black text-slate-900 dark:text-slate-100 tracking-tight leading-none truncate">
+                    {card.textValue ? (
+                      card.textValue
+                    ) : card.currencyValue !== undefined ? (
+                      `₹${(card.currencyValue / 100000).toFixed(1)}L`
+                    ) : (
+                      `${animVal}${card.suffix || ""}`
+                    )}
+                  </span>
+                </div>
+              )}
 
               {/* Bottom Row: Growth Badge & Detail Indicator */}
               <div className="flex items-center justify-between text-[9px] pt-1 border-t border-slate-200/60 dark:border-slate-800">
                 <span
                   className={`inline-flex items-center gap-0.5 font-bold px-1 py-0.2 rounded-full ${
-                    card.growthType === "up"
+                    isQrCard
+                      ? "bg-cyan-100 text-cyan-800 dark:bg-cyan-950/80 dark:text-cyan-300"
+                      : card.growthType === "up"
                       ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300"
                       : card.growthType === "down"
                       ? "bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300"
                       : "bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300"
                   }`}
                 >
-                  {card.growthType === "up" ? (
+                  {isQrCard ? (
+                    <QrCodeIcon className="w-2.5 h-2.5" />
+                  ) : card.growthType === "up" ? (
                     <TrendingUp className="w-2.5 h-2.5" />
                   ) : card.growthType === "down" ? (
                     <TrendingDown className="w-2.5 h-2.5" />
                   ) : null}
                   {card.growth}
                 </span>
-                <span className="text-[8px] text-muted-foreground opacity-60 group-hover:opacity-100 font-bold">Details &rarr;</span>
+                <span className="text-[8px] text-muted-foreground opacity-60 group-hover:opacity-100 font-bold">
+                  {isQrCard ? "QR &rarr;" : "Details &rarr;"}
+                </span>
               </div>
             </div>
           );
@@ -558,6 +687,84 @@ function KPICardsSectionComponent({
         kpiId={selectedKpiId}
         suggestions={suggestions}
       />
+
+      {/* Employee Portal QR Code Dialog */}
+      <Dialog open={isQrModalOpen} onOpenChange={setIsQrModalOpen}>
+        <DialogContent className="max-w-md p-6 bg-white dark:bg-slate-900 border border-border shadow-xl rounded-2xl">
+          <DialogHeader className="text-center sm:text-center pb-2">
+            <div className="mx-auto w-12 h-12 rounded-full bg-cyan-100 dark:bg-cyan-950/80 text-cyan-600 flex items-center justify-center mb-2">
+              <QrCodeIcon className="w-6 h-6" />
+            </div>
+            <DialogTitle className="text-lg font-black text-foreground">
+              Employee Suggestion Portal QR
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Scan with any mobile camera, WhatsApp or Google Lens to instantly open the employee suggestion page.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center justify-center py-3">
+            {/* High-Resolution QR Card */}
+            <div className="relative p-4 bg-white rounded-2xl border-2 border-cyan-500/30 shadow-lg flex flex-col items-center">
+              <div className="mb-2 text-[11px] font-black tracking-wider text-slate-700 uppercase">
+                PG Group • ESP
+              </div>
+              <QRCodeSVG
+                value={employeePortalUrl}
+                size={220}
+                level="M"
+                fgColor="#0f172a"
+                bgColor="#ffffff"
+                includeMargin={false}
+                className="rounded-lg"
+              />
+              <div className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Live Employee Form
+              </div>
+            </div>
+
+            {/* Direct URL Box */}
+            <div className="w-full mt-4 p-2 bg-muted/60 dark:bg-slate-800/60 rounded-lg border border-border/80 flex items-center justify-between gap-2">
+              <span className="text-xs font-mono text-muted-foreground truncate select-all px-1">
+                {employeePortalUrl}
+              </span>
+              <Button
+                size="sm"
+                variant={copied ? "default" : "outline"}
+                onClick={handleCopyUrl}
+                className="h-7 px-2.5 text-xs font-bold shrink-0 gap-1"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? "Copied" : "Copy"}
+              </Button>
+            </div>
+
+            {/* Hindi Instruction */}
+            <p className="mt-3 text-[11px] text-center text-muted-foreground font-medium">
+              कर्मचारी अपने फोन के कैमरे से स्कैन करके बिना किसी ऐप के सीधा सुझाव सबमिट कर सकते हैं।
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 pt-2 border-t border-border/60">
+            <Button
+              variant="outline"
+              onClick={handlePrintQr}
+              className="flex-1 h-9 text-xs font-bold gap-1.5"
+            >
+              <Printer className="w-4 h-4" /> Print QR Poster
+            </Button>
+            <Button
+              asChild
+              className="flex-1 h-9 text-xs font-bold gap-1.5 bg-cyan-600 hover:bg-cyan-700 text-white"
+            >
+              <a href={employeePortalUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-4 h-4" /> Open Portal
+              </a>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -375,6 +375,17 @@ function AppShellInner({
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {/* Live Blinking Indicator */}
+          <div
+            className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 select-none shadow-2xs transition-transform hover:scale-105"
+            title="System Status: Live & Real-time"
+          >
+            <span className="relative flex h-2 sm:h-2.5 w-2 sm:w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 sm:h-2.5 w-2 sm:w-2.5 bg-emerald-500"></span>
+            </span>
+            <span className="text-[10px] sm:text-xs font-black tracking-widest text-emerald-700 dark:text-emerald-300">LIVE</span>
+          </div>
           {filterSlot}
           <NotificationBell />
           <DropdownMenu>

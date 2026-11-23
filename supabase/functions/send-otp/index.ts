@@ -33,10 +33,13 @@ Deno.serve(async (req) => {
 
     const host = (Deno.env.get("SMTP_HOST") ?? "smtp.office365.com").trim().replace(/^["']|["']$/g, "");
     const port = Number((Deno.env.get("SMTP_PORT") ?? "587").toString().trim().replace(/^["']|["']$/g, ""));
-    const user = (Deno.env.get("SMTP_USER") ?? "verify.software2040@pgel.in").trim().replace(/^["']|["']$/g, "");
-    let pass = (Deno.env.get("SMTP_PASS") ?? "fmdrdczrxkpjrbsv").trim().replace(/^["']|["']$/g, "");
-    if (pass === "nsxfmjjkskdrbbtt" || !pass) {
-      pass = "fmdrdczrxkpjrbsv";
+    let user = (Deno.env.get("SMTP_USER") ?? "software.2040@pgel.in").trim().replace(/^["']|["']$/g, "");
+    let pass = (Deno.env.get("SMTP_PASS") ?? "strtphkgpymmdxzz").trim().replace(/^["']|["']$/g, "");
+    if (user === "verify.software2040@pgel.in" || !user) {
+      user = "software.2040@pgel.in";
+    }
+    if (pass === "nsxfmjjkskdrbbtt" || pass === "fmdrdczrxkpjrbsv" || !pass) {
+      pass = "strtphkgpymmdxzz";
     }
     const fromName = "PG Group ESP";
 

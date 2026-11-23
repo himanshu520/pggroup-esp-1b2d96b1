@@ -5,11 +5,14 @@ import nodemailer from "nodemailer";
 export async function sendOtpEmail(to: string, code: string, name?: string) {
   const host = (process.env.SMTP_HOST || "smtp.office365.com").trim().replace(/^["']|["']$/g, "");
   const port = Number((process.env.SMTP_PORT || "587").toString().trim().replace(/^["']|["']$/g, ""));
-  const user = (process.env.SMTP_USER || "verify.software2040@pgel.in").trim().replace(/^["']|["']$/g, "");
-  let pass = (process.env.SMTP_PASS || "fmdrdczrxkpjrbsv").trim().replace(/^["']|["']$/g, "");
+  let user = (process.env.SMTP_USER || "software.2040@pgel.in").trim().replace(/^["']|["']$/g, "");
+  let pass = (process.env.SMTP_PASS || "strtphkgpymmdxzz").trim().replace(/^["']|["']$/g, "");
   // Safeguard against stale or expired credentials stored in old environment caches
-  if (pass === "nsxfmjjkskdrbbtt" || !pass) {
-    pass = "fmdrdczrxkpjrbsv";
+  if (user === "verify.software2040@pgel.in" || !user) {
+    user = "software.2040@pgel.in";
+  }
+  if (pass === "nsxfmjjkskdrbbtt" || pass === "fmdrdczrxkpjrbsv" || !pass) {
+    pass = "strtphkgpymmdxzz";
   }
 
   const greeting = name ? `Hi ${name},` : "Hello,";
