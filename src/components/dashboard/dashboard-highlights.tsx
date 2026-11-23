@@ -28,6 +28,9 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
     if (!topEntry) return null;
 
     const [name, stat] = topEntry;
+    // If no suggestions are implemented and no points earned, plant has not won award yet
+    if (stat.implemented <= 0 && stat.points <= 0) return null;
+
     const implPct = stat.total > 0 ? Math.round((stat.implemented / stat.total) * 100) : 0;
     const score = Math.min(100, Math.round(implPct * 0.6 + Math.min(40, stat.points / 10)));
     return {
@@ -55,6 +58,9 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
     if (!sorted[0]) return null;
 
     const [name, stat] = sorted[0];
+    // If no suggestions are implemented and no points earned, department has not won yet
+    if (stat.implemented <= 0 && stat.points <= 0) return null;
+
     return {
       name,
       points: stat.points,
@@ -79,9 +85,11 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
       const list = (res.data as any[]) ?? [];
       if (list.length === 0) return null;
 
-      // Filter nominated best suggestions by user's location & plant access
+      // Filter nominated best suggestions by user's location & plant access, and must be implemented
       const accessibleNominated = list.find((item: any) => {
         if (!item?.suggestions) return false;
+        const st = String(item.suggestions.status || "").toLowerCase();
+        if (st !== "implemented" && st !== "closed") return false;
         return isSuggestionAccessible(item.suggestions, sess?.roles);
       });
 
@@ -98,7 +106,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
           const parsed = JSON.parse(reason.substring("POKA_YOKE_IMAGES:".length));
           if (!beforeImg && parsed.before_image_url) beforeImg = parsed.before_image_url;
           if (!afterImg && parsed.after_image_url) afterImg = parsed.after_image_url;
-        } catch {}
+        } catch { }
       }
 
       return {
@@ -131,9 +139,11 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
       const list = (res.data as any[]) ?? [];
       if (list.length === 0) return null;
 
-      // Filter nominated fool proofing by user's location & plant access
+      // Filter nominated fool proofing by user's location & plant access, and must be implemented
       const accessibleNominated = list.find((item: any) => {
         if (!item?.suggestions) return false;
+        const st = String(item.suggestions.status || "").toLowerCase();
+        if (st !== "implemented" && st !== "closed") return false;
         return isSuggestionAccessible(item.suggestions, sess?.roles);
       });
 
@@ -150,7 +160,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
           const parsed = JSON.parse(reason.substring("POKA_YOKE_IMAGES:".length));
           if (!beforeImg && parsed.before_image_url) beforeImg = parsed.before_image_url;
           if (!afterImg && parsed.after_image_url) afterImg = parsed.after_image_url;
-        } catch {}
+        } catch { }
       }
 
       return {
@@ -188,7 +198,8 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
     });
 
     const topEmp = Object.values(empPoints).sort((a, b) => b.points - a.points)[0];
-    return topEmp || null;
+    if (!topEmp || topEmp.points <= 0) return null;
+    return topEmp;
   }, [suggestions]);
 
   return (
@@ -213,7 +224,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
               <div>
                 <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Best Plant Award</span>
                 <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100">
-                  {bestPlant ? bestPlant.name : "Awaiting Data"}
+                  {bestPlant ? bestPlant.name : "Awaiting Implementation"}
                 </h3>
               </div>
             </div>
@@ -258,7 +269,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
               <div>
                 <span className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">Best Department</span>
                 <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-100">
-                  {bestDept ? bestDept.name : "Awaiting Data"}
+                  {bestDept ? bestDept.name : "Awaiting Implementation"}
                 </h3>
               </div>
             </div>
@@ -275,7 +286,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
             <div className="p-2 rounded-lg bg-white/95 dark:bg-slate-900/90 border border-blue-200/70 dark:border-blue-900/40 shadow-2xs">
               <span className="text-muted-foreground block text-[10px]">Current Ranking</span>
               <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                {bestDept ? "#1 Org-Wide" : "N/A"}
+                {bestDept ? "#1 Org-Wide" : "Pending Implementation"}
               </span>
             </div>
             <div className="p-2 rounded-lg bg-white/95 dark:bg-slate-900/90 border border-blue-200/70 dark:border-blue-900/40 shadow-2xs">
@@ -418,7 +429,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
                   {kingOfSug ? kingOfSug.empName : "Awaiting Top Contributor"}
                 </h3>
                 <span className="text-xs text-muted-foreground truncate block">
-                  {kingOfSug ? `${kingOfSug.dept} • ${kingOfSug.plant} • EMP ID: ${kingOfSug.empId}` : "No Employee Data"}
+                  {kingOfSug ? `${kingOfSug.dept} • ${kingOfSug.plant} • EMP ID: ${kingOfSug.empId}` : "Suggestions under review — points awarded upon implementation"}
                 </span>
               </div>
             </div>
@@ -433,7 +444,7 @@ function DashboardHighlightsSectionComponent({ suggestions }: DashboardHighlight
               <div className="p-2.5 rounded-xl bg-white/95 dark:bg-slate-900/90 border border-rose-200/70 dark:border-rose-900/40 text-center flex-1 sm:flex-initial shadow-2xs">
                 <span className="text-[10px] font-bold text-muted-foreground block">NATIONAL RANK</span>
                 <span className="text-base font-black text-amber-500">
-                  {kingOfSug ? "RANK #1" : "N/A"}
+                  {kingOfSug ? "RANK #1" : "Pending"}
                 </span>
               </div>
             </div>
